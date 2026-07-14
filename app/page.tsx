@@ -69,6 +69,7 @@ export default function StudyHub() {
   const [hydrated, setHydrated] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogOpen = Boolean(editing);
 
   /* Device-local study data is restored after mount. */
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -85,7 +86,7 @@ export default function StudyHub() {
   }, [subjects, hydrated]);
 
   useEffect(() => {
-    if (!editing) return;
+    if (!dialogOpen) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -118,7 +119,7 @@ export default function StudyHub() {
       document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus();
     };
-  }, [editing]);
+  }, [dialogOpen]);
 
   const configuredCount = subjects.filter((subject) => subject.configured).length;
   const totals = useMemo(() => subjects.reduce((result, subject) => {
@@ -166,7 +167,7 @@ export default function StudyHub() {
           </span>
         </Link>
         <div className="header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {configuredCount} / 9 READY</span>
+          <span className="card-count-label"><i aria-hidden="true" /> {configuredCount} / 9 NAMED</span>
           <Link className="outline-button header-link" href="/subjects/network">ネットワークを開く</Link>
         </div>
       </header>
@@ -186,7 +187,7 @@ export default function StudyHub() {
         </section>
 
         <section className="hub-summary" aria-label="全体の学習状況">
-          <div><span>SUBJECTS READY</span><strong>{configuredCount}<small>/9</small></strong></div>
+          <div><span>SUBJECTS NAMED</span><strong>{configuredCount}<small>/9</small></strong></div>
           <div><span>STUDY CARDS</span><strong>{totals.cards}<small>枚</small></strong></div>
           <div><span>MASTERED</span><strong>{totals.mastered}<small>枚</small></strong></div>
           <p>データはこの端末に自動保存。科目名も教材もあとから変更できます。</p>
@@ -202,12 +203,13 @@ export default function StudyHub() {
             {subjects.map((subject) => {
               const metric = metrics[subject.id] ?? { cards: 0, mastered: 0 };
               const completion = metric.cards ? Math.round((metric.mastered / metric.cards) * 100) : 0;
+              const hasMaterial = subject.module === "network" || metric.cards > 0;
               const style = { "--subject-accent": subject.accent } as CSSProperties;
               return (
                 <article className={`subject-tile ${subject.configured ? "is-configured" : "is-empty"}`} style={style} key={subject.id}>
                   <div className="subject-tile-top">
                     <span className="subject-number">{String(subject.order).padStart(2, "0")}</span>
-                    <span className="subject-status">{subject.configured ? "準備済み" : "未設定"}</span>
+                    <span className="subject-status">{!subject.configured ? "未設定" : hasMaterial ? "準備済み" : "教材待ち"}</span>
                   </div>
                   <h3>{subject.name}</h3>
                   <p>{subject.configured

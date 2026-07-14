@@ -12,7 +12,7 @@ export type ProtocolCard = {
 export const ALL_LAYERS: Layer[] = [1, 2, 3, 4, 5, 6, 7];
 
 export const DEFAULT_CARDS: ProtocolCard[] = [
-  ...["EAP", "PEAP", "WEP", "ARP", "GARP", "PPP", "PAP", "CHAP", "PPTP", "L2TP", "CDP", "LLDP", "STP", "RSTP", "MSTP"].map(
+  ...["EAP", "PEAP", "WEP", "TKIP", "ARP", "GARP", "PPP", "PAP", "CHAP", "PPTP", "L2TP", "CDP", "LLDP", "STP", "RSTP", "MSTP"].map(
     (label) => ({ id: `l2-${label.toLowerCase()}`, label, layer: 2 as Layer, source: 1 as const, enabled: true }),
   ),
   ...["IGP", "EGP", "RIP", "EIGRP", "BGP", "DHCP", "ICMP", "NDP", "ESP", "HSRP", "VRRP"].map(

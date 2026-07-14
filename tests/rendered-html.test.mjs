@@ -35,7 +35,10 @@ test("server-renders the nine-subject study hub", async () => {
   assert.match(html, /9教科を/);
   assert.match(html, /科目別の勉強机/);
   assert.match(html, /ネットワークから始める/);
-  assert.match(html, /科目 9/);
+  assert.match(html, /英語/);
+  assert.match(html, /機械力学/);
+  assert.match(html, /材料力学/);
+  assert.match(html, /デジタル回路/);
   assert.match(html, /http:\/\/localhost\/og-test-grid\.png/);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|react-loading-skeleton/);
 });
@@ -94,9 +97,12 @@ test("ships the study hub without starter artifacts", async () => {
 
   assert.match(protocols, /const DEFAULT_CARDS/);
   assert.match(protocols, /"FHRP"/);
+  assert.match(protocols, /"TKIP"/);
   assert.match(studyData, /DEFAULT_SUBJECTS/);
   assert.match(studyData, /test-grid-subjects-v1/);
   assert.match(hubPage, /subjects\.map/);
+  assert.match(hubPage, /\[dialogOpen\]/);
+  assert.doesNotMatch(hubPage, /\[editing\]\);/);
   assert.match(networkPage, /layer-sum-cards-v1/);
   assert.match(networkPage, /mode === "sum"/);
   assert.match(networkPage, /mode === "identify"/);

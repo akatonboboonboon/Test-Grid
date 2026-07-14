@@ -45,20 +45,25 @@ export const SUBJECT_ACCENTS = [
   "#ff9f68",
 ] as const;
 
-export const DEFAULT_SUBJECTS: StudySubject[] = Array.from({ length: 9 }, (_, index) => {
-  const order = index + 1;
-  const isNetwork = order === 1;
-  return {
-    id: (isNetwork ? "network" : `subject-${order}`) as SubjectId,
-    name: isNetwork ? "ネットワーク" : `科目 ${order}`,
-    order,
-    accent: SUBJECT_ACCENTS[index],
-    module: isNetwork ? "network" : "generic",
-    configured: isNetwork,
-    testDate: "",
-    memo: isNetwork ? "Pで終わる用語とOSI層を仕上げる" : "",
-  };
-});
+const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "memo">> = [
+  { id: "subject-2", name: "英語", module: "generic", memo: "教材写真の追加待ち" },
+  { id: "network", name: "ネットワーク", module: "network", memo: "Pで終わる用語とOSI層を仕上げる" },
+  { id: "subject-3", name: "機械力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
+  { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "教材写真の追加待ち" },
+  { id: "subject-5", name: "材料力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
+  { id: "subject-6", name: "スマート制御", module: "generic", memo: "現在資料なし" },
+  { id: "subject-7", name: "確率統計", module: "generic", memo: "教材写真の追加待ち" },
+  { id: "subject-8", name: "応用数学", module: "generic", memo: "教材写真の追加待ち" },
+  { id: "subject-9", name: "デジタル回路", module: "generic", memo: "教材写真の追加待ち" },
+];
+
+export const DEFAULT_SUBJECTS: StudySubject[] = SUBJECT_BLUEPRINTS.map((subject, index) => ({
+  ...subject,
+  order: index + 1,
+  accent: SUBJECT_ACCENTS[index],
+  configured: true,
+  testDate: "",
+}));
 
 const SUBJECT_IDS = new Set(DEFAULT_SUBJECTS.map((subject) => subject.id));
 
@@ -79,9 +84,9 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
   return DEFAULT_SUBJECTS.map((fallback) => {
     const saved = savedById.get(fallback.id);
     if (!saved) return fallback;
-    const name = typeof saved.name === "string" && saved.name.trim()
-      ? saved.name.trim().slice(0, 32)
-      : fallback.name;
+    const savedName = typeof saved.name === "string" ? saved.name.trim() : "";
+    const wasPlaceholder = /^科目\s*[2-9]$/.test(savedName);
+    const name = savedName && !wasPlaceholder ? savedName.slice(0, 32) : fallback.name;
     const accent = typeof saved.accent === "string" && SUBJECT_ACCENTS.includes(saved.accent as typeof SUBJECT_ACCENTS[number])
       ? saved.accent
       : fallback.accent;
@@ -89,9 +94,11 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
       ...fallback,
       name,
       accent,
-      configured: fallback.module === "network" || saved.configured === true,
+      configured: fallback.configured || saved.configured === true,
       testDate: typeof saved.testDate === "string" ? saved.testDate.slice(0, 10) : "",
-      memo: typeof saved.memo === "string" ? saved.memo.trim().slice(0, 120) : "",
+      memo: typeof saved.memo === "string" && saved.memo.trim()
+        ? saved.memo.trim().slice(0, 120)
+        : fallback.memo,
     };
   });
 }

@@ -393,7 +393,7 @@ export default function Home() {
         <section className="intro-block" aria-labelledby="page-title">
           <p className="eyebrow"><span>NETWORK LAYER TRAINING</span><span>PHOTO SET / 01—02</span></p>
           <h1 id="page-title">Pで終わるプロトコルを、<br /><em>瞬時に足す。</em></h1>
-          <p className="lede">略語を層番号へ変換して、そのまま合計。写真から読み取った40語を、テスト仕様の速さまで叩き込みます。</p>
+          <p className="lede">略語を層番号へ変換して、そのまま合計。写真を再確認して読み取った41語を、テスト仕様の速さまで叩き込みます。</p>
         </section>
 
         <section className="practice-panel" aria-label="練習エリア">
@@ -637,7 +637,7 @@ export default function Home() {
 
         <section className="source-note">
           <span>READING NOTE</span>
-          <p><strong>写真から厳密に「P」で終わる40語を抽出。</strong> RIPv2・OSPF・POP3など、末尾がPではない表記は除外しています。FHRPは写真の補助見出しですが、テスト対策用に収録しました。</p>
+          <p><strong>写真から厳密に「P」で終わる41語を抽出。</strong> 再読解でTKIPを追加しました。RIPv2・OSPF・POP3など、末尾がPではない表記は除外しています。FHRPは写真の補助見出しですが、テスト対策用に収録しました。</p>
         </section>
       </main>
 
@@ -696,7 +696,7 @@ export default function Home() {
             </div>
 
             <div className="editor-footer">
-              <button type="button" className={resetArmed ? "danger" : ""} onClick={resetCards}>{resetArmed ? "もう一度押すと初期化" : "初期40語に戻す"}</button>
+              <button type="button" className={resetArmed ? "danger" : ""} onClick={resetCards}>{resetArmed ? "もう一度押すと初期化" : "初期41語に戻す"}</button>
               <button type="button" className="primary-button" onClick={() => setEditorOpen(false)}>編集を完了</button>
             </div>
           </div>
