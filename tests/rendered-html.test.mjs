@@ -49,7 +49,8 @@ test("server-renders the preserved Layer Sum trainer", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>ネットワーク専用ドリル \| TEST\/\/GRID/);
-  assert.match(html, /Pで終わるプロトコル/);
+  assert.match(html, /①〜⑦の用語を/);
+  assert.match(html, /96(?:<!-- -->)? CARDS/);
   assert.match(html, /フラッシュ暗算/);
   assert.match(html, /カードを編集/);
 });
@@ -98,6 +99,16 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(protocols, /const DEFAULT_CARDS/);
   assert.match(protocols, /"FHRP"/);
   assert.match(protocols, /"TKIP"/);
+  for (const label of ["10BASE-T", "IEEE 802.1X", "RIPv2", "QUIC", "TLS1.3", "POP3", "Syslog"]) {
+    assert.ok(protocols.includes(`"${label}"`), `${label} should be included in the OCR corpus`);
+  }
+  assert.match(protocols, /layers\?: Layer\[\]/);
+  assert.match(protocols, /layers:\s*\[1,\s*2\]/);
+  assert.match(protocols, /layers:\s*\[5,\s*7\]/);
+  assert.match(protocols, /layers:\s*\[5,\s*6\]/);
+  assert.match(protocols, /makeCards\(\["SSL"\], 6, 2\)/);
+  assert.match(protocols, /export function cardLayers/);
+  assert.match(protocols, /export function cardLayerLabel/);
   assert.match(studyData, /DEFAULT_SUBJECTS/);
   assert.match(studyData, /test-grid-subjects-v1/);
   assert.match(hubPage, /subjects\.map/);
@@ -106,6 +117,8 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(networkPage, /layer-sum-cards-v1/);
   assert.match(networkPage, /mode === "sum"/);
   assert.match(networkPage, /mode === "identify"/);
+  assert.match(networkPage, /cardLayers\(/);
+  assert.match(networkPage, /cardLayerLabel\(/);
   assert.match(networkPage, /type="number"/);
   assert.doesNotMatch(networkPage, /selectedLayers|対象レイヤー/);
   assert.match(cardsPage, /layer-sum-memory-v1/);

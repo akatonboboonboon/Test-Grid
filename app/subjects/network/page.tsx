@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ALL_LAYERS,
   DEFAULT_CARDS,
+  cardLayerLabel,
+  cardLayers,
   normalizeCards,
   shuffle,
   storageRead,
@@ -69,6 +71,15 @@ function buildSequence(items: ProtocolCard[], count: number) {
     result.push(...batch);
   }
   return result.slice(0, count);
+}
+
+function formatTotals(values: number[]) {
+  if (values.length === 0) return "0";
+  if (values.length === 1) return String(values[0]);
+  if (values.length <= 5) return values.join(" / ");
+  const step = values[1] - values[0];
+  const fixedStep = values.every((value, index) => index === 0 || value - values[index - 1] === step);
+  return `${values[0]}〜${values.at(-1)}${fixedStep && step > 1 ? `（${step}刻み）` : ""}`;
 }
 
 function normalizeStats(value: unknown): Stats {
@@ -182,18 +193,22 @@ export default function Home() {
     [cards],
   );
 
-  const expectedSum = useMemo(
-    () => sequence.reduce((total, card) => total + card.layer, 0),
-    [sequence],
-  );
-
-  const runningTotals = useMemo(() => {
-    let total = 0;
-    return sequence.map((card) => {
-      total += card.layer;
-      return total;
+  const { expectedSums, runningTotals } = useMemo(() => {
+    let totals = new Set([0]);
+    const running = sequence.map((card) => {
+      const next = new Set<number>();
+      totals.forEach((total) => {
+        cardLayers(card).forEach((layer) => next.add(total + layer));
+      });
+      totals = next;
+      return [...totals].sort((left, right) => left - right);
     });
+    return {
+      expectedSums: [...totals].sort((left, right) => left - right),
+      runningTotals: running,
+    };
   }, [sequence]);
+  const expectedLabel = formatTotals(expectedSums);
 
   const identifyScore = identifyAnswers.filter((item) => item.correct).length;
   const currentCard = sequence[index];
@@ -274,7 +289,7 @@ export default function Home() {
   function submitSum(event: React.FormEvent) {
     event.preventDefault();
     if (answer.trim() === "") return;
-    const correct = Number(answer) === expectedSum;
+    const correct = expectedSums.includes(Number(answer));
     setSumCorrect(correct);
     setStats((previous) => {
       const streak = correct ? previous.streak + 1 : 0;
@@ -291,7 +306,7 @@ export default function Home() {
 
   function answerLayer(chosen: Layer) {
     if (phase !== "identify" || feedback || !currentCard) return;
-    const correct = chosen === currentCard.layer;
+    const correct = cardLayers(currentCard).includes(chosen);
     setFeedback({ chosen, correct });
     setIdentifyAnswers((previous) => [...previous, { card: currentCard, chosen, correct }]);
     setStats((previous) => {
@@ -349,6 +364,7 @@ export default function Home() {
         setEditorOpen(false);
         return;
       }
+      if (editorOpen) return;
       const target = event.target as HTMLElement | null;
       if (target?.matches("input, select, textarea, button")) return;
       if (phase === "identify" && /^[1-7]$/.test(event.key)) {
@@ -392,8 +408,8 @@ export default function Home() {
       <main className={phase === "flash" || phase === "countdown" ? "main-layout focus-mode" : "main-layout"}>
         <section className="intro-block" aria-labelledby="page-title">
           <p className="eyebrow"><span>NETWORK LAYER TRAINING</span><span>PHOTO SET / 01—02</span></p>
-          <h1 id="page-title">Pで終わるプロトコルを、<br /><em>瞬時に足す。</em></h1>
-          <p className="lede">略語を層番号へ変換して、そのまま合計。写真を再確認して読み取った41語を、テスト仕様の速さまで叩き込みます。</p>
+          <h1 id="page-title">①〜⑦の用語を、<br /><em>瞬時に足す。</em></h1>
+          <p className="lede">丸数字をそのままOSI層番号へ対応。写真内の99個の層別記載を同名ごとにまとめた96枚で、テスト仕様の速さまで叩き込みます。</p>
         </section>
 
         <section className="practice-panel" aria-label="練習エリア">
@@ -470,7 +486,7 @@ export default function Home() {
                   />
                   <button type="submit" disabled={answer.trim() === ""}>判定する <span>↵</span></button>
                 </form>
-                <p>表示された層番号をすべて足して入力</p>
+                <p>表示された層番号をすべて足して入力。複数層の語は、写真にあるどちらで足しても正解です。</p>
               </div>
             )}
 
@@ -479,7 +495,7 @@ export default function Home() {
                 <div className="flash-meta"><span>CHOOSE THE LAYER</span><span>{String(index + 1).padStart(2, "0")} / {String(sequence.length).padStart(2, "0")}</span></div>
                 <div className={`identify-card ${feedback ? (feedback.correct ? "correct" : "wrong") : ""}`} data-layer={currentCard.layer}>
                   <strong>{currentCard.label}</strong>
-                  {feedback && <small>{feedback.correct ? `正解 — L${currentCard.layer}` : `L${currentCard.layer} が正解`}</small>}
+                  {feedback && <small>{feedback.correct ? `正解 — ${cardLayerLabel(currentCard)}` : `${cardLayerLabel(currentCard)} が正解`}</small>}
                 </div>
                 <div className="layer-keypad" aria-label="層番号を選ぶ">
                   {ALL_LAYERS.map((layer) => (
@@ -488,7 +504,7 @@ export default function Home() {
                       key={layer}
                       onClick={() => answerLayer(layer)}
                       disabled={Boolean(feedback)}
-                      className={feedback?.chosen === layer ? (feedback.correct ? "picked-correct" : "picked-wrong") : feedback && currentCard.layer === layer ? "actual" : ""}
+                      className={feedback?.chosen === layer ? (feedback.correct ? "picked-correct" : "picked-wrong") : feedback && cardLayers(currentCard).includes(layer) ? "actual" : ""}
                     >
                       <span>{layer}</span><small>LAYER</small>
                     </button>
@@ -501,14 +517,14 @@ export default function Home() {
               <div className="result-stage">
                 <div className={`result-banner ${sumCorrect ? "correct" : "wrong"}`}>
                   <span>{sumCorrect ? "PERFECT" : "ONE MORE"}</span>
-                  <strong>{expectedSum}</strong>
+                  <strong>{expectedLabel}</strong>
                   <p>{sumCorrect ? "正解。変換も加算も完了。" : `あなたの回答：${answer || "—"}`}</p>
                 </div>
                 <div className="answer-breakdown" aria-label="出題の内訳">
                   {sequence.map((card, cardIndex) => {
                     return (
                       <div className="breakdown-item" key={`${card.id}-${cardIndex}`} data-layer={card.layer}>
-                        <span>{card.label}</span><strong>L{card.layer}</strong><small>= {runningTotals[cardIndex]}</small>
+                        <span>{card.label}</span><strong>{cardLayerLabel(card)}</strong><small>= {formatTotals(runningTotals[cardIndex])}</small>
                       </div>
                     );
                   })}
@@ -530,7 +546,7 @@ export default function Home() {
                 <div className="identify-review">
                   {identifyAnswers.map((item, answerIndex) => (
                     <div key={`${item.card.id}-${answerIndex}`} className={item.correct ? "correct" : "wrong"}>
-                      <span>{item.card.label}</span><strong>L{item.card.layer}</strong>
+                      <span>{item.card.label}</span><strong>{cardLayerLabel(item.card)}</strong>
                       {!item.correct && <small>回答 L{item.chosen}</small>}
                     </div>
                   ))}
@@ -637,7 +653,7 @@ export default function Home() {
 
         <section className="source-note">
           <span>READING NOTE</span>
-          <p><strong>写真から厳密に「P」で終わる41語を抽出。</strong> 再読解でTKIPを追加しました。RIPv2・OSPF・POP3など、末尾がPではない表記は除外しています。FHRPは写真の補助見出しですが、テスト対策用に収録しました。</p>
+          <p><strong>丸数字①〜⑦を、そのまま第1〜第7層として再読解。</strong> 欄内の用語と実用的な括弧内表記を収録し、規格番号などの説明書きと③より上の欄外メモは除外しました。同じ表記は1枚へ統合し、イーサネット・SSH・TLSは写真どおり複数の層を正解にします。</p>
         </section>
       </main>
 
@@ -663,7 +679,7 @@ export default function Home() {
 
             <div className="editor-groups">
               {ALL_LAYERS.map((layer) => {
-                const layerCards = cards.filter((card) => card.layer === layer);
+                const layerCards = cards.filter((card) => cardLayers(card).includes(layer));
                 return (
                   <section key={layer} className="editor-group">
                     <div className="layer-heading" data-layer={layer}><span>L{layer}</span><strong>{layerCards.length}語</strong></div>
@@ -680,7 +696,16 @@ export default function Home() {
                                 if (!card.label.trim()) updateCard(card.id, { enabled: false });
                               }}
                             />
-                            <select aria-label={`${card.label}の層`} value={card.layer} onChange={(event) => updateCard(card.id, { layer: Number(event.target.value) as Layer })}>
+                            <select aria-label={`${card.label}の層`} value={layer} onChange={(event) => {
+                              const nextLayer = Number(event.target.value) as Layer;
+                              const nextLayers = [...new Set(
+                                cardLayers(card).map((currentLayer) => currentLayer === layer ? nextLayer : currentLayer),
+                              )].sort((left, right) => left - right);
+                              updateCard(card.id, {
+                                layer: nextLayers[0],
+                                layers: nextLayers.length > 1 ? nextLayers : undefined,
+                              });
+                            }}>
                               {ALL_LAYERS.map((optionLayer) => <option value={optionLayer} key={optionLayer}>L{optionLayer}</option>)}
                             </select>
                             <button type="button" className={card.enabled ? "enabled" : "disabled"} onClick={() => updateCard(card.id, { enabled: !card.enabled })}>{card.enabled ? "出題ON" : "出題OFF"}</button>
@@ -696,7 +721,7 @@ export default function Home() {
             </div>
 
             <div className="editor-footer">
-              <button type="button" className={resetArmed ? "danger" : ""} onClick={resetCards}>{resetArmed ? "もう一度押すと初期化" : "初期41語に戻す"}</button>
+              <button type="button" className={resetArmed ? "danger" : ""} onClick={resetCards}>{resetArmed ? "もう一度押すと初期化" : "初期96枚に戻す"}</button>
               <button type="button" className="primary-button" onClick={() => setEditorOpen(false)}>編集を完了</button>
             </div>
           </div>

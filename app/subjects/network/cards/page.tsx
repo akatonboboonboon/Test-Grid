@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  cardLayerLabel,
   DEFAULT_CARDS,
   normalizeCards,
   shuffle,
@@ -52,6 +53,7 @@ export default function CardsPage() {
   }, [progress, hydrated]);
 
   const currentCard = deck[index];
+  const currentLayerLabel = currentCard ? cardLayerLabel(currentCard) : "";
   const masteredCount = useMemo(
     () => cards.filter((card) => progress[card.id] === "mastered").length,
     [cards, progress],
@@ -190,7 +192,7 @@ export default function CardsPage() {
                 className={`memory-card ${flipped ? "is-flipped" : ""}`}
                 data-layer={currentCard.layer}
                 onClick={() => setFlipped((value) => !value)}
-                aria-label={flipped ? `第${currentCard.layer}層。${currentCard.label}の表面に戻す` : `${currentCard.label}の答えを表示`}
+                aria-label={flipped ? `正解は${currentLayerLabel}。${currentCard.label}の表面に戻す` : `${currentCard.label}の答えを表示`}
               >
                 {!flipped ? (
                   <span className="memory-card-face memory-front" key="front">
@@ -201,8 +203,8 @@ export default function CardsPage() {
                 ) : (
                   <span className="memory-card-face memory-back" key="back">
                     <small>ANSWER</small>
-                    <strong>L{currentCard.layer}</strong>
-                    <em>{currentCard.label} — 第{currentCard.layer}層</em>
+                    <strong>{currentLayerLabel}</strong>
+                    <em>{currentCard.label} — {currentLayerLabel}</em>
                   </span>
                 )}
               </button>
