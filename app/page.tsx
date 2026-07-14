@@ -1,19 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ALL_LAYERS,
+  DEFAULT_CARDS,
+  normalizeCards,
+  shuffle,
+  storageRead,
+  storageWrite,
+  type Layer,
+  type ProtocolCard,
+} from "./protocols";
 
-type Layer = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type Mode = "sum" | "identify";
 type Phase = "idle" | "countdown" | "flash" | "answer" | "identify" | "result";
-
-type ProtocolCard = {
-  id: string;
-  label: string;
-  layer: Layer;
-  source: 1 | 2 | "custom";
-  note?: string;
-  enabled: boolean;
-};
 
 type Stats = {
   sumSessions: number;
@@ -30,36 +31,6 @@ type IdentifyAnswer = {
   correct: boolean;
 };
 
-const ALL_LAYERS: Layer[] = [1, 2, 3, 4, 5, 6, 7];
-const ACTIVE_DEFAULT_LAYERS: Layer[] = [2, 3, 4, 7];
-
-const DEFAULT_CARDS: ProtocolCard[] = [
-  ...["EAP", "PEAP", "WEP", "ARP", "GARP", "PPP", "PAP", "CHAP", "PPTP", "L2TP", "CDP", "LLDP", "STP", "RSTP", "MSTP"].map(
-    (label) => ({ id: `l2-${label.toLowerCase()}`, label, layer: 2 as Layer, source: 1 as const, enabled: true }),
-  ),
-  ...["IGP", "EGP", "RIP", "EIGRP", "BGP", "DHCP", "ICMP", "NDP", "ESP", "HSRP", "VRRP"].map(
-    (label) => ({ id: `l3-${label.toLowerCase()}`, label, layer: 3 as Layer, source: 2 as const, enabled: true }),
-  ),
-  {
-    id: "l3-fhrp",
-    label: "FHRP",
-    layer: 3,
-    source: 2,
-    note: "写真では補助見出しとして記載",
-    enabled: true,
-  },
-  ...["UDP", "TCP"].map((label) => ({
-    id: `l4-${label.toLowerCase()}`,
-    label,
-    layer: 4 as Layer,
-    source: 2 as const,
-    enabled: true,
-  })),
-  ...["HTTP", "SMTP", "IMAP", "SCP", "SFTP", "NTP", "SNMP", "FTP", "TFTP", "SIP", "RTP"].map(
-    (label) => ({ id: `l7-${label.toLowerCase()}`, label, layer: 7 as Layer, source: 2 as const, enabled: true }),
-  ),
-];
-
 const EMPTY_STATS: Stats = {
   sumSessions: 0,
   sumCorrect: 0,
@@ -69,64 +40,35 @@ const EMPTY_STATS: Stats = {
   bestStreak: 0,
 };
 
-const SPEEDS = [
-  { label: "鬼速", ms: 350 },
-  { label: "速い", ms: 600 },
-  { label: "標準", ms: 900 },
-  { label: "じっくり", ms: 1400 },
-];
+const MIN_CARD_COUNT = 1;
+const MAX_CARD_COUNT = 100;
+const MIN_SPEED_MS = 100;
+const MAX_SPEED_MS = 10_000;
 
-const COUNTS = [3, 5, 7, 10];
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
 
-function shuffle<T>(items: T[]) {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
+function normalizeCardCount(value: string | number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? clamp(Math.floor(parsed), MIN_CARD_COUNT, MAX_CARD_COUNT) : 5;
+}
+
+function normalizeSpeed(value: string | number) {
+  const seconds = Number(value);
+  return Number.isFinite(seconds) ? clamp(Math.round(seconds * 1000), MIN_SPEED_MS, MAX_SPEED_MS) : 600;
+}
+
+function buildSequence(items: ProtocolCard[], count: number) {
+  const result: ProtocolCard[] = [];
+  while (result.length < count) {
+    const batch = shuffle(items);
+    if (result.length && batch.length > 1 && result.at(-1)?.id === batch[0]?.id) {
+      [batch[0], batch[1]] = [batch[1], batch[0]];
+    }
+    result.push(...batch);
   }
-  return copy;
-}
-
-function storageRead<T>(key: string, fallback: T): T {
-  try {
-    const saved = window.localStorage.getItem(key);
-    return saved ? (JSON.parse(saved) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function storageWrite(key: string, value: unknown) {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Private browsing and storage limits should never block a practice round.
-  }
-}
-
-function isLayer(value: unknown): value is Layer {
-  return typeof value === "number" && ALL_LAYERS.includes(value as Layer);
-}
-
-function normalizeCards(value: unknown): ProtocolCard[] {
-  if (!Array.isArray(value)) return DEFAULT_CARDS;
-  const normalized = value.flatMap((item) => {
-    if (!item || typeof item !== "object") return [];
-    const candidate = item as Partial<ProtocolCard>;
-    if (typeof candidate.id !== "string" || typeof candidate.label !== "string" || !isLayer(candidate.layer)) return [];
-    const label = candidate.label.trim().toUpperCase();
-    if (!label) return [];
-    const source = candidate.source === 1 || candidate.source === 2 || candidate.source === "custom" ? candidate.source : "custom";
-    return [{
-      id: candidate.id,
-      label,
-      layer: candidate.layer,
-      source,
-      note: typeof candidate.note === "string" ? candidate.note : undefined,
-      enabled: candidate.enabled !== false,
-    } satisfies ProtocolCard];
-  });
-  return normalized.length ? normalized : DEFAULT_CARDS;
+  return result.slice(0, count);
 }
 
 function normalizeStats(value: unknown): Stats {
@@ -150,8 +92,9 @@ export default function Home() {
   const [mode, setMode] = useState<Mode>("sum");
   const [phase, setPhase] = useState<Phase>("idle");
   const [cardCount, setCardCount] = useState(5);
+  const [cardCountDraft, setCardCountDraft] = useState("5");
   const [speed, setSpeed] = useState(600);
-  const [selectedLayers, setSelectedLayers] = useState<Layer[]>(ACTIVE_DEFAULT_LAYERS);
+  const [speedDraft, setSpeedDraft] = useState("0.6");
   const [sequence, setSequence] = useState<ProtocolCard[]>([]);
   const [index, setIndex] = useState(0);
   const [countdown, setCountdown] = useState(3);
@@ -177,16 +120,20 @@ export default function Home() {
     const settings = savedSettings && typeof savedSettings === "object" ? savedSettings as {
       cardCount?: unknown;
       speed?: unknown;
-      selectedLayers?: unknown;
     } : {
       cardCount: 5,
       speed: 600,
-      selectedLayers: ACTIVE_DEFAULT_LAYERS,
     };
-    setCardCount(typeof settings.cardCount === "number" && COUNTS.includes(settings.cardCount) ? settings.cardCount : 5);
-    setSpeed(typeof settings.speed === "number" && SPEEDS.some((item) => item.ms === settings.speed) ? settings.speed : 600);
-    const layers = Array.isArray(settings.selectedLayers) ? settings.selectedLayers.filter(isLayer) : ACTIVE_DEFAULT_LAYERS;
-    setSelectedLayers(layers.length ? layers : ACTIVE_DEFAULT_LAYERS);
+    const restoredCount = typeof settings.cardCount === "number"
+      ? normalizeCardCount(settings.cardCount)
+      : 5;
+    const restoredSpeed = typeof settings.speed === "number"
+      ? clamp(Math.round(settings.speed), MIN_SPEED_MS, MAX_SPEED_MS)
+      : 600;
+    setCardCount(restoredCount);
+    setCardCountDraft(String(restoredCount));
+    setSpeed(restoredSpeed);
+    setSpeedDraft(String(Number((restoredSpeed / 1000).toFixed(2))));
     setHydrated(true);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -195,8 +142,8 @@ export default function Home() {
     if (!hydrated) return;
     storageWrite("layer-sum-cards-v1", cards);
     storageWrite("layer-sum-stats-v1", stats);
-    storageWrite("layer-sum-settings-v1", { cardCount, speed, selectedLayers });
-  }, [cards, stats, cardCount, speed, selectedLayers, hydrated]);
+    storageWrite("layer-sum-settings-v1", { cardCount, speed });
+  }, [cards, stats, cardCount, speed, hydrated]);
 
   useEffect(() => {
     if (!editorOpen) return;
@@ -231,14 +178,22 @@ export default function Home() {
   }, [editorOpen]);
 
   const pool = useMemo(
-    () => cards.filter((card) => card.enabled && card.label.trim().length > 0 && selectedLayers.includes(card.layer)),
-    [cards, selectedLayers],
+    () => cards.filter((card) => card.enabled && card.label.trim().length > 0),
+    [cards],
   );
 
   const expectedSum = useMemo(
     () => sequence.reduce((total, card) => total + card.layer, 0),
     [sequence],
   );
+
+  const runningTotals = useMemo(() => {
+    let total = 0;
+    return sequence.map((card) => {
+      total += card.layer;
+      return total;
+    });
+  }, [sequence]);
 
   const identifyScore = identifyAnswers.filter((item) => item.correct).length;
   const currentCard = sequence[index];
@@ -259,8 +214,8 @@ export default function Home() {
 
   useEffect(() => {
     if (phase !== "flash" || !currentCard) return;
-    const visibleMs = Math.max(220, Math.round(speed * 0.72));
-    const blankMs = Math.max(90, speed - visibleMs);
+    const blankMs = Math.max(20, Math.round(speed * 0.22));
+    const visibleMs = Math.max(20, speed - blankMs);
     const timer = window.setTimeout(
       () => {
         if (termVisible) {
@@ -299,8 +254,13 @@ export default function Home() {
 
   function startRound() {
     if (pool.length === 0) return;
-    const length = Math.min(cardCount, pool.length);
-    setSequence(shuffle(pool).slice(0, length));
+    const nextCount = normalizeCardCount(cardCountDraft);
+    const nextSpeed = normalizeSpeed(speedDraft);
+    setCardCount(nextCount);
+    setCardCountDraft(String(nextCount));
+    setSpeed(nextSpeed);
+    setSpeedDraft(String(Number((nextSpeed / 1000).toFixed(2))));
+    setSequence(buildSequence(pool, nextCount));
     setIndex(0);
     setCountdown(3);
     setTermVisible(true);
@@ -346,15 +306,6 @@ export default function Home() {
     });
   }
 
-  function toggleLayer(layer: Layer) {
-    setSelectedLayers((previous) => {
-      if (previous.includes(layer)) {
-        return previous.length === 1 ? previous : previous.filter((item) => item !== layer);
-      }
-      return [...previous, layer].sort((a, b) => a - b);
-    });
-  }
-
   function changeMode(nextMode: Mode) {
     setMode(nextMode);
     setPhase("idle");
@@ -389,7 +340,6 @@ export default function Home() {
       return;
     }
     setCards(DEFAULT_CARDS);
-    setSelectedLayers(ACTIVE_DEFAULT_LAYERS);
     setResetArmed(false);
   }
 
@@ -423,15 +373,16 @@ export default function Home() {
   return (
     <div className="app-frame">
       <header className="topbar">
-        <button className="brand" type="button" onClick={() => changeMode(mode)} aria-label="ホームに戻る">
+        <Link className="brand" href="/" aria-label="暗算トレーニングへ戻る">
           <span className="brand-mark" aria-hidden="true">L/S</span>
           <span>
             <strong>LAYER//SUM</strong>
             <small>PROTOCOL FLASH DRILL</small>
           </span>
-        </button>
+        </Link>
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {cards.filter((card) => card.enabled).length} CARDS</span>
+          <Link className="outline-button header-link" href="/cards">暗記カード</Link>
           <button className="outline-button" type="button" onClick={() => setEditorOpen(true)} disabled={!["idle", "result"].includes(phase)}>
             カードを編集
           </button>
@@ -511,7 +462,7 @@ export default function Home() {
                     type="number"
                     inputMode="numeric"
                     min="0"
-                    max="99"
+                    max={sequence.length * 7}
                     value={answer}
                     onChange={(event) => setAnswer(event.target.value)}
                     aria-label="層番号の合計"
@@ -555,10 +506,9 @@ export default function Home() {
                 </div>
                 <div className="answer-breakdown" aria-label="出題の内訳">
                   {sequence.map((card, cardIndex) => {
-                    const running = sequence.slice(0, cardIndex + 1).reduce((sum, item) => sum + item.layer, 0);
                     return (
                       <div className="breakdown-item" key={`${card.id}-${cardIndex}`} data-layer={card.layer}>
-                        <span>{card.label}</span><strong>L{card.layer}</strong><small>= {running}</small>
+                        <span>{card.label}</span><strong>L{card.layer}</strong><small>= {runningTotals[cardIndex]}</small>
                       </div>
                     );
                   })}
@@ -600,46 +550,75 @@ export default function Home() {
 
             <fieldset>
               <legend><span>01</span> 枚数</legend>
-              <div className="segmented-control">
-                {COUNTS.map((count) => (
-                  <button type="button" key={count} className={cardCount === count ? "active" : ""} onClick={() => setCardCount(count)}>{count}</button>
-                ))}
+              <div className="number-setting">
+                <div className="number-input-shell">
+                  <input
+                    id="card-count"
+                    type="number"
+                    inputMode="numeric"
+                    min={MIN_CARD_COUNT}
+                    max={MAX_CARD_COUNT}
+                    step="1"
+                    value={cardCountDraft}
+                    onChange={(event) => {
+                      setCardCountDraft(event.target.value);
+                      const parsed = Number(event.target.value);
+                      if (Number.isFinite(parsed) && parsed >= MIN_CARD_COUNT && parsed <= MAX_CARD_COUNT) {
+                        setCardCount(Math.floor(parsed));
+                      }
+                    }}
+                    onBlur={() => {
+                      const next = normalizeCardCount(cardCountDraft);
+                      setCardCount(next);
+                      setCardCountDraft(String(next));
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.currentTarget.blur();
+                    }}
+                    aria-describedby="card-count-help"
+                  />
+                  <span>枚</span>
+                </div>
+                <small id="card-count-help">1〜100枚。カード数を超えると重複して出題。</small>
               </div>
             </fieldset>
 
             {mode === "sum" && (
               <fieldset>
-                <legend><span>02</span> 表示速度</legend>
-                <div className="speed-list">
-                  {SPEEDS.map((item) => (
-                    <button type="button" key={item.ms} className={speed === item.ms ? "active" : ""} onClick={() => setSpeed(item.ms)}>
-                      <span>{item.label}</span><small>{item.ms / 1000} sec</small>
-                    </button>
-                  ))}
+                <legend><span>02</span> 1枚の表示時間</legend>
+                <div className="number-setting">
+                  <div className="number-input-shell">
+                    <input
+                      id="flash-speed"
+                      type="number"
+                      inputMode="decimal"
+                      min="0.1"
+                      max="10"
+                      step="0.05"
+                      value={speedDraft}
+                      onChange={(event) => {
+                        setSpeedDraft(event.target.value);
+                        const parsed = Number(event.target.value);
+                        if (Number.isFinite(parsed) && parsed >= 0.1 && parsed <= 10) {
+                          setSpeed(Math.round(parsed * 1000));
+                        }
+                      }}
+                      onBlur={() => {
+                        const next = normalizeSpeed(speedDraft);
+                        setSpeed(next);
+                        setSpeedDraft(String(Number((next / 1000).toFixed(2))));
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.blur();
+                      }}
+                      aria-describedby="flash-speed-help"
+                    />
+                    <span>秒</span>
+                  </div>
+                  <small id="flash-speed-help">0.1〜10秒。小数で自由に指定できます。</small>
                 </div>
               </fieldset>
             )}
-
-            <fieldset>
-              <legend><span>{mode === "sum" ? "03" : "02"}</span> 対象レイヤー</legend>
-              <div className="layer-toggles">
-                {ALL_LAYERS.map((layer) => {
-                  const available = cards.some((card) => card.enabled && card.layer === layer);
-                  return (
-                    <button
-                      type="button"
-                      key={layer}
-                      disabled={!available}
-                      className={selectedLayers.includes(layer) ? "active" : ""}
-                      onClick={() => toggleLayer(layer)}
-                      aria-pressed={selectedLayers.includes(layer)}
-                      title={available ? `${layer}層を切り替える` : `${layer}層の対象語なし`}
-                    >{layer}</button>
-                  );
-                })}
-              </div>
-              <p className="field-note">1・5・6層は、写真内に末尾Pの語がありません。</p>
-            </fieldset>
 
             <button type="button" className="start-button" onClick={startRound} disabled={pool.length === 0}>
               <span>{mode === "sum" ? "暗算を始める" : "即答を始める"}</span>
