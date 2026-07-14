@@ -5,6 +5,6 @@ export const metadata: Metadata = {
   description: "Pで終わるネットワーク用語を1枚ずつめくり、OSI層番号を暗記するカードページ。",
 };
 
-export default function LegacyCardsLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function CardsLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return children;
 }
