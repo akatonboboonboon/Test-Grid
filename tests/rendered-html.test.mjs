@@ -63,7 +63,7 @@ test("server-renders the memorization card page", async () => {
   const html = await response.text();
   assert.match(html, /暗記カード \| ネットワーク \| TEST\/\/GRID/);
   assert.match(html, /まず覚える/);
-  assert.match(html, /タップして層を確認/);
+  assert.match(html, /タップして層と正式名称を確認/);
   assert.match(html, /未暗記だけ復習/);
 });
 
@@ -103,6 +103,10 @@ test("ships the study hub without starter artifacts", async () => {
     assert.ok(protocols.includes(`"${label}"`), `${label} should be included in the OCR corpus`);
   }
   assert.match(protocols, /layers\?: Layer\[\]/);
+  assert.match(protocols, /fullName\?: string/);
+  assert.match(protocols, /PROTOCOL_FORMAL_NAMES/);
+  assert.match(protocols, /"SFTP": "SSH File Transfer Protocol"/);
+  assert.match(protocols, /"RADIUS": "Remote Authentication Dial-In User Service"/);
   assert.match(protocols, /layers:\s*\[1,\s*2\]/);
   assert.match(protocols, /layers:\s*\[5,\s*7\]/);
   assert.match(protocols, /layers:\s*\[5,\s*6\]/);
@@ -119,10 +123,18 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(networkPage, /mode === "identify"/);
   assert.match(networkPage, /cardLayers\(/);
   assert.match(networkPage, /cardLayerLabel\(/);
+  assert.match(networkPage, /chosen: Layer \| null/);
+  assert.match(networkPage, /identifyLimit/);
+  assert.match(networkPage, /performance\.now\(\)/);
+  assert.match(networkPage, /clearInterval/);
+  assert.match(networkPage, /時間切れ/);
+  assert.match(networkPage, /1問ごとの制限時間/);
   assert.match(networkPage, /type="number"/);
   assert.doesNotMatch(networkPage, /selectedLayers|対象レイヤー/);
   assert.match(cardsPage, /layer-sum-memory-v1/);
   assert.match(cardsPage, /memory-card/);
+  assert.match(cardsPage, /currentCard\?\.fullName/);
+  assert.match(cardsPage, /memory-full-name/);
   assert.match(subjectPage, /parseBulk/);
   assert.match(subjectPage, /一問一答/);
   assert.match(layout, /generateMetadata/);

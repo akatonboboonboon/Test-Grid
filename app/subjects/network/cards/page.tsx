@@ -54,6 +54,7 @@ export default function CardsPage() {
 
   const currentCard = deck[index];
   const currentLayerLabel = currentCard ? cardLayerLabel(currentCard) : "";
+  const currentFullName = currentCard?.fullName?.trim() || "正式名称未登録";
   const masteredCount = useMemo(
     () => cards.filter((card) => progress[card.id] === "mastered").length,
     [cards, progress],
@@ -164,7 +165,7 @@ export default function CardsPage() {
             <p className="eyebrow"><span>MEMORY MODE</span><span>FRONT → BACK</span></p>
             <h1>まず覚える。<br /><em>それから、足す。</em></h1>
           </div>
-          <p>表の略語を見て層番号を思い出し、カードをめくって確認。覚えたカードと復習カードは、この端末に記録されます。</p>
+          <p>表の略語を見て層番号と正式名称を思い出し、カードをめくって確認。覚えたカードと復習カードは、この端末に記録されます。</p>
         </section>
 
         <section className="memory-progress" aria-label="暗記進捗">
@@ -192,19 +193,24 @@ export default function CardsPage() {
                 className={`memory-card ${flipped ? "is-flipped" : ""}`}
                 data-layer={currentCard.layer}
                 onClick={() => setFlipped((value) => !value)}
-                aria-label={flipped ? `正解は${currentLayerLabel}。${currentCard.label}の表面に戻す` : `${currentCard.label}の答えを表示`}
+                aria-pressed={flipped}
+                aria-label={flipped
+                  ? `${currentCard.label}。正式名称は${currentFullName}。層は${currentLayerLabel}。表面に戻す`
+                  : `${currentCard.label}の層と正式名称を表示`}
               >
                 {!flipped ? (
                   <span className="memory-card-face memory-front" key="front">
                     <small>PROTOCOL</small>
                     <strong>{currentCard.label}</strong>
-                    <em>タップして層を確認</em>
+                    <em>タップして層と正式名称を確認</em>
                   </span>
                 ) : (
                   <span className="memory-card-face memory-back" key="back">
-                    <small>ANSWER</small>
-                    <strong>{currentLayerLabel}</strong>
-                    <em>{currentCard.label} — {currentLayerLabel}</em>
+                    <small>OSI LAYER</small>
+                    <strong className="memory-layer-answer">{currentLayerLabel}</strong>
+                    <span className="memory-answer-label">{currentCard.label}</span>
+                    <span className="memory-full-name">{currentFullName}</span>
+                    <em>タップして表に戻る</em>
                   </span>
                 )}
               </button>

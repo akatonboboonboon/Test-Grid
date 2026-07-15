@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ALL_LAYERS,
   DEFAULT_CARDS,
@@ -29,8 +29,9 @@ type Stats = {
 
 type IdentifyAnswer = {
   card: ProtocolCard;
-  chosen: Layer;
+  chosen: Layer | null;
   correct: boolean;
+  timedOut: boolean;
 };
 
 const EMPTY_STATS: Stats = {
@@ -46,6 +47,9 @@ const MIN_CARD_COUNT = 1;
 const MAX_CARD_COUNT = 100;
 const MIN_SPEED_MS = 100;
 const MAX_SPEED_MS = 10_000;
+const MIN_IDENTIFY_LIMIT_MS = 500;
+const MAX_IDENTIFY_LIMIT_MS = 30_000;
+const DEFAULT_IDENTIFY_LIMIT_MS = 3_000;
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -59,6 +63,13 @@ function normalizeCardCount(value: string | number) {
 function normalizeSpeed(value: string | number) {
   const seconds = Number(value);
   return Number.isFinite(seconds) ? clamp(Math.round(seconds * 1000), MIN_SPEED_MS, MAX_SPEED_MS) : 600;
+}
+
+function normalizeIdentifyLimit(value: string | number) {
+  const seconds = Number(value);
+  return Number.isFinite(seconds)
+    ? clamp(Math.round(seconds * 1000), MIN_IDENTIFY_LIMIT_MS, MAX_IDENTIFY_LIMIT_MS)
+    : DEFAULT_IDENTIFY_LIMIT_MS;
 }
 
 function buildSequence(items: ProtocolCard[], count: number) {
@@ -106,6 +117,9 @@ export default function Home() {
   const [cardCountDraft, setCardCountDraft] = useState("5");
   const [speed, setSpeed] = useState(600);
   const [speedDraft, setSpeedDraft] = useState("0.6");
+  const [identifyLimit, setIdentifyLimit] = useState(DEFAULT_IDENTIFY_LIMIT_MS);
+  const [identifyLimitDraft, setIdentifyLimitDraft] = useState("3");
+  const [identifyRemaining, setIdentifyRemaining] = useState(DEFAULT_IDENTIFY_LIMIT_MS);
   const [sequence, setSequence] = useState<ProtocolCard[]>([]);
   const [index, setIndex] = useState(0);
   const [countdown, setCountdown] = useState(3);
@@ -113,14 +127,16 @@ export default function Home() {
   const [answer, setAnswer] = useState("");
   const [sumCorrect, setSumCorrect] = useState<boolean | null>(null);
   const [identifyAnswers, setIdentifyAnswers] = useState<IdentifyAnswer[]>([]);
-  const [feedback, setFeedback] = useState<{ chosen: Layer; correct: boolean } | null>(null);
+  const [feedback, setFeedback] = useState<{ chosen: Layer | null; correct: boolean; timedOut: boolean } | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
+  const [newFullName, setNewFullName] = useState("");
   const [newLayer, setNewLayer] = useState<Layer>(2);
   const [resetArmed, setResetArmed] = useState(false);
   const answerRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const editorCloseRef = useRef<HTMLButtonElement>(null);
+  const identifyLockedRef = useRef(false);
 
   /* Device-local preferences can only be restored after the client mounts. */
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -131,9 +147,11 @@ export default function Home() {
     const settings = savedSettings && typeof savedSettings === "object" ? savedSettings as {
       cardCount?: unknown;
       speed?: unknown;
+      identifyLimit?: unknown;
     } : {
       cardCount: 5,
       speed: 600,
+      identifyLimit: DEFAULT_IDENTIFY_LIMIT_MS,
     };
     const restoredCount = typeof settings.cardCount === "number"
       ? normalizeCardCount(settings.cardCount)
@@ -141,10 +159,16 @@ export default function Home() {
     const restoredSpeed = typeof settings.speed === "number"
       ? clamp(Math.round(settings.speed), MIN_SPEED_MS, MAX_SPEED_MS)
       : 600;
+    const restoredIdentifyLimit = typeof settings.identifyLimit === "number"
+      ? clamp(Math.round(settings.identifyLimit), MIN_IDENTIFY_LIMIT_MS, MAX_IDENTIFY_LIMIT_MS)
+      : DEFAULT_IDENTIFY_LIMIT_MS;
     setCardCount(restoredCount);
     setCardCountDraft(String(restoredCount));
     setSpeed(restoredSpeed);
     setSpeedDraft(String(Number((restoredSpeed / 1000).toFixed(2))));
+    setIdentifyLimit(restoredIdentifyLimit);
+    setIdentifyLimitDraft(String(Number((restoredIdentifyLimit / 1000).toFixed(1))));
+    setIdentifyRemaining(restoredIdentifyLimit);
     setHydrated(true);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -153,8 +177,8 @@ export default function Home() {
     if (!hydrated) return;
     storageWrite("layer-sum-cards-v1", cards);
     storageWrite("layer-sum-stats-v1", stats);
-    storageWrite("layer-sum-settings-v1", { cardCount, speed });
-  }, [cards, stats, cardCount, speed, hydrated]);
+    storageWrite("layer-sum-settings-v1", { cardCount, speed, identifyLimit });
+  }, [cards, stats, cardCount, speed, identifyLimit, hydrated]);
 
   useEffect(() => {
     if (!editorOpen) return;
@@ -213,6 +237,25 @@ export default function Home() {
   const identifyScore = identifyAnswers.filter((item) => item.correct).length;
   const currentCard = sequence[index];
 
+  const finishIdentify = useCallback((chosen: Layer | null) => {
+    if (phase !== "identify" || feedback || !currentCard || identifyLockedRef.current) return;
+    identifyLockedRef.current = true;
+    const correct = chosen !== null && cardLayers(currentCard).includes(chosen);
+    const timedOut = chosen === null;
+    setFeedback({ chosen, correct, timedOut });
+    setIdentifyAnswers((previous) => [...previous, { card: currentCard, chosen, correct, timedOut }]);
+    setStats((previous) => {
+      const streak = correct ? previous.streak + 1 : 0;
+      return {
+        ...previous,
+        identifyAnswers: previous.identifyAnswers + 1,
+        identifyCorrect: previous.identifyCorrect + (correct ? 1 : 0),
+        streak,
+        bestStreak: Math.max(previous.bestStreak, streak),
+      };
+    });
+  }, [phase, feedback, currentCard]);
+
   useEffect(() => {
     if (phase !== "countdown") return;
     const timer = window.setTimeout(() => {
@@ -267,14 +310,38 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [phase, feedback, index, sequence.length]);
 
+  useEffect(() => {
+    if (phase !== "identify" || feedback || !currentCard) return;
+    identifyLockedRef.current = false;
+    const deadline = performance.now() + identifyLimit;
+    setIdentifyRemaining(identifyLimit);
+    const updateClock = () => {
+      setIdentifyRemaining(Math.max(0, deadline - performance.now()));
+    };
+    const interval = window.setInterval(updateClock, 100);
+    const timeout = window.setTimeout(() => {
+      setIdentifyRemaining(0);
+      finishIdentify(null);
+    }, identifyLimit);
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(timeout);
+    };
+  }, [phase, feedback, currentCard, identifyLimit, finishIdentify]);
+
   function startRound() {
     if (pool.length === 0) return;
     const nextCount = normalizeCardCount(cardCountDraft);
     const nextSpeed = normalizeSpeed(speedDraft);
+    const nextIdentifyLimit = normalizeIdentifyLimit(identifyLimitDraft);
     setCardCount(nextCount);
     setCardCountDraft(String(nextCount));
     setSpeed(nextSpeed);
     setSpeedDraft(String(Number((nextSpeed / 1000).toFixed(2))));
+    setIdentifyLimit(nextIdentifyLimit);
+    setIdentifyLimitDraft(String(Number((nextIdentifyLimit / 1000).toFixed(1))));
+    setIdentifyRemaining(nextIdentifyLimit);
+    identifyLockedRef.current = false;
     setSequence(buildSequence(pool, nextCount));
     setIndex(0);
     setCountdown(3);
@@ -305,20 +372,7 @@ export default function Home() {
   }
 
   function answerLayer(chosen: Layer) {
-    if (phase !== "identify" || feedback || !currentCard) return;
-    const correct = cardLayers(currentCard).includes(chosen);
-    setFeedback({ chosen, correct });
-    setIdentifyAnswers((previous) => [...previous, { card: currentCard, chosen, correct }]);
-    setStats((previous) => {
-      const streak = correct ? previous.streak + 1 : 0;
-      return {
-        ...previous,
-        identifyAnswers: previous.identifyAnswers + 1,
-        identifyCorrect: previous.identifyCorrect + (correct ? 1 : 0),
-        streak,
-        bestStreak: Math.max(previous.bestStreak, streak),
-      };
-    });
+    finishIdentify(chosen);
   }
 
   function changeMode(nextMode: Mode) {
@@ -340,12 +394,14 @@ export default function Home() {
       {
         id: `custom-${Date.now()}`,
         label,
+        fullName: newFullName.trim() || undefined,
         layer: newLayer,
         source: "custom",
         enabled: true,
       },
     ]);
     setNewLabel("");
+    setNewFullName("");
   }
 
   function resetCards() {
@@ -454,7 +510,11 @@ export default function Home() {
               <div className="countdown-stage">
                 <span>FOCUS</span>
                 <strong key={countdown}>{countdown}</strong>
-                <small>{sequence.length} CARDS / {speed} MS</small>
+                <small>
+                  {sequence.length} CARDS / {mode === "sum"
+                    ? `${speed} MS`
+                    : `${Number((identifyLimit / 1000).toFixed(1))} SEC / QUESTION`}
+                </small>
               </div>
             )}
 
@@ -493,15 +553,32 @@ export default function Home() {
             {phase === "identify" && currentCard && (
               <div className="identify-stage">
                 <div className="flash-meta"><span>CHOOSE THE LAYER</span><span>{String(index + 1).padStart(2, "0")} / {String(sequence.length).padStart(2, "0")}</span></div>
+                <div
+                  className={`identify-timer ${!feedback && identifyRemaining <= identifyLimit * 0.25 ? "urgent" : ""}`}
+                  aria-hidden="true"
+                >
+                  <strong>{feedback?.timedOut ? "TIME UP" : `${(identifyRemaining / 1000).toFixed(1)}s`}</strong>
+                  <span className="identify-timer-track">
+                    <i style={{ width: `${Math.max(0, Math.min(100, (identifyRemaining / identifyLimit) * 100))}%` }} />
+                  </span>
+                </div>
+                <p className="sr-announcement" aria-live="polite">
+                  {`${currentCard.label}。制限時間は${Number((identifyLimit / 1000).toFixed(1))}秒です。`}
+                </p>
                 <div className={`identify-card ${feedback ? (feedback.correct ? "correct" : "wrong") : ""}`} data-layer={currentCard.layer}>
                   <strong>{currentCard.label}</strong>
-                  {feedback && <small>{feedback.correct ? `正解 — ${cardLayerLabel(currentCard)}` : `${cardLayerLabel(currentCard)} が正解`}</small>}
+                  {feedback && <small>{feedback.timedOut
+                    ? `時間切れ — ${cardLayerLabel(currentCard)} が正解`
+                    : feedback.correct
+                      ? `正解 — ${cardLayerLabel(currentCard)}`
+                      : `${cardLayerLabel(currentCard)} が正解`}</small>}
                 </div>
                 <div className="layer-keypad" aria-label="層番号を選ぶ">
                   {ALL_LAYERS.map((layer) => (
                     <button
                       type="button"
                       key={layer}
+                      aria-label={`第${layer}層`}
                       onClick={() => answerLayer(layer)}
                       disabled={Boolean(feedback)}
                       className={feedback?.chosen === layer ? (feedback.correct ? "picked-correct" : "picked-wrong") : feedback && cardLayers(currentCard).includes(layer) ? "actual" : ""}
@@ -547,7 +624,7 @@ export default function Home() {
                   {identifyAnswers.map((item, answerIndex) => (
                     <div key={`${item.card.id}-${answerIndex}`} className={item.correct ? "correct" : "wrong"}>
                       <span>{item.card.label}</span><strong>{cardLayerLabel(item.card)}</strong>
-                      {!item.correct && <small>回答 L{item.chosen}</small>}
+                      {!item.correct && <small>{item.timedOut ? "時間切れ" : `回答 L${item.chosen}`}</small>}
                     </div>
                   ))}
                 </div>
@@ -636,11 +713,51 @@ export default function Home() {
               </fieldset>
             )}
 
+            {mode === "identify" && (
+              <fieldset>
+                <legend><span>02</span> 1問の制限時間</legend>
+                <div className="number-setting">
+                  <div className="number-input-shell">
+                    <input
+                      id="identify-limit"
+                      type="number"
+                      inputMode="decimal"
+                      min="0.5"
+                      max="30"
+                      step="0.1"
+                      value={identifyLimitDraft}
+                      onChange={(event) => {
+                        setIdentifyLimitDraft(event.target.value);
+                        const parsed = Number(event.target.value);
+                        if (Number.isFinite(parsed) && parsed >= 0.5 && parsed <= 30) {
+                          setIdentifyLimit(Math.round(parsed * 1000));
+                        }
+                      }}
+                      onBlur={() => {
+                        const next = normalizeIdentifyLimit(identifyLimitDraft);
+                        setIdentifyLimit(next);
+                        setIdentifyLimitDraft(String(Number((next / 1000).toFixed(1))));
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.blur();
+                      }}
+                      aria-describedby="identify-limit-help"
+                    />
+                    <span>秒</span>
+                  </div>
+                  <small id="identify-limit-help">0.5〜30秒。1問ごとの制限時間です。</small>
+                </div>
+              </fieldset>
+            )}
+
             <button type="button" className="start-button" onClick={startRound} disabled={pool.length === 0}>
               <span>{mode === "sum" ? "暗算を始める" : "即答を始める"}</span>
               <b>START →</b>
             </button>
-            <p className="keyboard-hint"><kbd>ENTER</kbd> で回答を確定</p>
+            <p className="keyboard-hint">{mode === "sum"
+              ? <><kbd>ENTER</kbd> で回答を確定</>
+              : <><kbd>1</kbd>〜<kbd>7</kbd> キーでも回答</>}
+            </p>
           </aside>
         )}
 
@@ -668,11 +785,12 @@ export default function Home() {
             </div>
             <div className="editor-notice">
               <strong>読み取り違いがあれば、ここで直接直せます。</strong>
-              <p>変更はこの端末に自動保存。表示名・層・出題のON/OFFを編集できます。</p>
+              <p>変更はこの端末に自動保存。表示名・正式名称・層・出題のON/OFFを編集できます。</p>
             </div>
 
             <form className="add-card-form" onSubmit={addCard}>
               <label><span>新しい略語</span><input value={newLabel} onChange={(event) => setNewLabel(event.target.value)} placeholder="例: BFD" /></label>
+              <label className="add-full-name"><span>正式名称</span><input value={newFullName} onChange={(event) => setNewFullName(event.target.value)} placeholder="例: Bidirectional Forwarding Detection" /></label>
               <label><span>層</span><select value={newLayer} onChange={(event) => setNewLayer(Number(event.target.value) as Layer)}>{ALL_LAYERS.map((layer) => <option value={layer} key={layer}>L{layer}</option>)}</select></label>
               <button type="submit">追加する</button>
             </form>
@@ -709,6 +827,13 @@ export default function Home() {
                               {ALL_LAYERS.map((optionLayer) => <option value={optionLayer} key={optionLayer}>L{optionLayer}</option>)}
                             </select>
                             <button type="button" className={card.enabled ? "enabled" : "disabled"} onClick={() => updateCard(card.id, { enabled: !card.enabled })}>{card.enabled ? "出題ON" : "出題OFF"}</button>
+                            <input
+                              aria-label={`${card.label}の正式名称`}
+                              className="editor-full-name"
+                              value={card.fullName ?? ""}
+                              onChange={(event) => updateCard(card.id, { fullName: event.target.value })}
+                              placeholder="正式名称未登録"
+                            />
                             {card.note && <small>{card.note}</small>}
                             {card.source === "custom" && <button type="button" className="delete-card" onClick={() => setCards((previous) => previous.filter((item) => item.id !== card.id))}>削除</button>}
                           </div>

@@ -425,6 +425,43 @@ button:disabled {
   letter-spacing: 0.15em;
 }
 
+.identify-timer {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 74px minmax(0, 1fr);
+  margin-top: 14px;
+}
+
+.identify-timer > strong {
+  color: var(--lime);
+  font-family: var(--mono);
+  font-size: 17px;
+  letter-spacing: -0.04em;
+}
+
+.identify-timer-track {
+  background: rgba(244, 240, 230, 0.16);
+  display: block;
+  height: 7px;
+  overflow: hidden;
+}
+
+.identify-timer-track i {
+  background: var(--lime);
+  display: block;
+  height: 100%;
+  transition: width 100ms linear;
+}
+
+.identify-timer.urgent > strong {
+  color: var(--red);
+}
+
+.identify-timer.urgent .identify-timer-track i {
+  background: var(--red);
+}
+
 .flash-card {
   align-items: center;
   background: var(--paper);
@@ -1175,12 +1212,14 @@ kbd {
 .memory-card-face {
   align-items: center;
   animation: memory-face-in 220ms ease-out;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  inset: 0;
   justify-content: center;
+  min-height: inherit;
   padding: 48px;
-  position: absolute;
+  position: relative;
+  width: 100%;
 }
 
 @keyframes memory-face-in {
@@ -1195,13 +1234,16 @@ kbd {
   letter-spacing: 0.2em;
 }
 
-.memory-card-face strong {
+.memory-card-face > strong {
   font-family: var(--mono);
-  font-size: clamp(74px, 11vw, 142px);
+  font-size: clamp(42px, 8vw, 112px);
   font-style: normal;
   letter-spacing: -0.09em;
   line-height: 0.95;
   margin: 25px 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .memory-card-face em {
@@ -1211,8 +1253,32 @@ kbd {
   font-weight: 700;
 }
 
-.memory-back strong {
+.memory-back > strong {
   color: var(--card-accent);
+  font-size: clamp(58px, 9vw, 110px);
+  margin: 20px 0 14px;
+}
+
+.memory-answer-label {
+  font-family: var(--mono);
+  font-size: clamp(18px, 2.7vw, 30px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.memory-full-name {
+  color: rgba(244, 240, 230, 0.82);
+  font-size: clamp(13px, 1.8vw, 19px);
+  font-weight: 750;
+  line-height: 1.45;
+  margin: 12px auto 18px;
+  max-width: 680px;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .memory-side {
@@ -1482,7 +1548,7 @@ footer p {
   border: 1px solid var(--line-dark);
   display: grid;
   gap: 10px;
-  grid-template-columns: 1fr 100px auto;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(240px, 1.4fr) 100px auto;
   margin-bottom: 28px;
   padding: 16px;
 }
@@ -1566,7 +1632,7 @@ footer p {
   align-items: center;
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(120px, 1fr) 80px 88px auto auto;
+  grid-template-columns: minmax(120px, 0.8fr) 80px 88px minmax(240px, 1.4fr) auto auto;
 }
 
 .editor-row button {
@@ -1747,6 +1813,15 @@ footer p {
     padding: 18px;
   }
 
+  .identify-timer {
+    grid-template-columns: 62px minmax(0, 1fr);
+    margin-top: 11px;
+  }
+
+  .identify-timer > strong {
+    font-size: 15px;
+  }
+
   .flash-card {
     min-height: 320px;
   }
@@ -1851,6 +1926,10 @@ footer p {
     grid-template-columns: 1fr 80px;
   }
 
+  .add-card-form .add-full-name {
+    grid-column: 1 / -1;
+  }
+
   .add-card-form button {
     grid-column: 1 / -1;
   }
@@ -1868,6 +1947,10 @@ footer p {
 
   .editor-row {
     grid-template-columns: minmax(90px, 1fr) 66px 76px;
+  }
+
+  .editor-row .editor-full-name {
+    grid-column: 1 / -1;
   }
 
   .editor-row small,
@@ -1959,8 +2042,17 @@ footer p {
     padding: 30px 18px;
   }
 
-  .memory-card-face strong {
-    font-size: clamp(66px, 22vw, 92px);
+  .memory-card-face > strong {
+    font-size: clamp(34px, 11vw, 70px);
+  }
+
+  .memory-back > strong {
+    font-size: clamp(52px, 16vw, 86px);
+  }
+
+  .memory-full-name {
+    font-size: 13px;
+    line-height: 1.38;
   }
 
   .memory-side {
