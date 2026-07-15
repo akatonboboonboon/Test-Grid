@@ -140,6 +140,13 @@ test("server-renders the memorization card page", async () => {
   assert.match(html, /未暗記だけ復習/);
 });
 
+test("network cards hide layer colors until the answer is revealed", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(css, /\.memory-card\s*\{[\s\S]*?--card-accent:\s*var\(--paper-dim\);[\s\S]*?--layer-accent:\s*var\(--yellow\);/);
+  assert.match(css, /\.memory-card\.is-flipped\s*\{\s*--card-accent:\s*var\(--layer-accent\);\s*\}/);
+  assert.doesNotMatch(css, /\.memory-card\[data-layer="(?:2|3|4|7)"\][^{]*\{[^}]*--card-accent/);
+});
+
 test("server-renders the English exam lab", async () => {
   const response = await render("/subjects/subject-2");
   assert.equal(response.status, 200);
@@ -151,6 +158,9 @@ test("server-renders the English exam lab", async () => {
   assert.match(html, /Chapter 15|Ch\.15/);
   assert.match(html, /Chapter 19|Ch\.19/);
   assert.match(html, /MEMORY BOOK/);
+  assert.match(html, /出題方向/);
+  assert.match(html, /日 → 英/);
+  assert.match(html, /英 → 日/);
 });
 
 test("server-renders the probability and statistics exam lab", async () => {
@@ -269,6 +279,13 @@ test("supports translation grading, explanations, genre filters, and the course-
   assert.match(englishPage, /normalizeJapanese/);
   assert.match(englishPage, /bigramSimilarity/);
   assert.match(englishPage, /japaneseKeywords/);
+  assert.match(englishPage, /isAcceptableJapaneseMeaning/);
+  assert.match(englishPage, /grading === "japanese-semantic"/);
+  assert.equal(
+    ENGLISH_QUESTIONS.filter((question) => question.group === "語彙・熟語（英→日）").length,
+    ENGLISH_VOCAB.length,
+  );
+  assert.match(englishPage, /日本語で入力（同じ意味なら言い換え可）/);
   assert.match(englishPage, /和訳入力/);
   assert.match(englishPage, /import \{ EnglishQuestionExplanation, EnglishVocabInsight \}/);
   assert.match(englishPage, /<EnglishQuestionExplanation question=\{currentQuestion\}/);

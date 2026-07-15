@@ -17,6 +17,7 @@ export type EnglishQuestion = {
   unit: string;
   group: string;
   format: "input" | "choice" | "order" | "translation";
+  grading?: "japanese-semantic";
   prompt: string;
   answer: string;
   accepted?: string[];
@@ -922,6 +923,26 @@ const VOCAB_QUESTIONS: EnglishQuestion[] = ENGLISH_VOCAB.map((card) => ({
   explanation: card.note,
 }));
 
+function japaneseMeaningCandidates(meaning: string) {
+  const candidates = meaning
+    .split(/\s*(?:、|\/|／)\s*/)
+    .map((candidate) => candidate.trim())
+    .filter(Boolean);
+  return candidates.length > 1 ? candidates : undefined;
+}
+
+const REVERSE_VOCAB_QUESTIONS: EnglishQuestion[] = ENGLISH_VOCAB.map((card) => ({
+  id: `reverse-question-${card.id}`,
+  unit: card.unit,
+  group: "語彙・熟語（英→日）",
+  format: "input",
+  grading: "japanese-semantic",
+  prompt: `「${card.en}」の意味を日本語で答える。`,
+  answer: card.ja,
+  accepted: japaneseMeaningCandidates(card.ja),
+  explanation: card.note,
+}));
+
 const BUILT_ORDER_QUESTIONS: EnglishQuestion[] = ORDER_QUESTIONS.map(
   ([unit, keyword, prompt, tokens, answer], index) => ({
     id: `order-${String(index + 1).padStart(2, "0")}`,
@@ -933,6 +954,153 @@ const BUILT_ORDER_QUESTIONS: EnglishQuestion[] = ORDER_QUESTIONS.map(
     answer,
   }),
 );
+
+const PASSAGE_ORDER_QUESTIONS: EnglishQuestion[] = [
+  {
+    id: "passage-order-ch15-1",
+    unit: "ch15",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.15 本文第4段落から一文を並べ替え：他のものは、化粧品に使える保湿剤を作る。",
+    tokens: ["Others", "create", "moisturizers", "that", "can be used", "in cosmetics"],
+    answer: "Others create moisturizers that can be used in cosmetics.",
+  },
+  {
+    id: "passage-order-ch15-2",
+    unit: "ch15",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.15 本文第6段落の重要部分を並べ替え：この種の仕事が第三次産業革命の始まりを示すと考える人もいる。",
+    tokens: ["Some", "believe", "this kind of work", "marks", "the beginning", "of a third industrial revolution"],
+    answer: "Some believe this kind of work marks the beginning of a third industrial revolution.",
+  },
+  {
+    id: "passage-order-ch15-3",
+    unit: "ch15",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.15 本文第8段落の重要部分を並べ替え：10年前の創業以来、Amyrisはその分野で伝説的な存在になった。",
+    tokens: ["Since", "it was founded", "a decade ago", "Amyris", "has become", "a legend", "in the field"],
+    answer: "Since it was founded a decade ago, Amyris has become a legend in the field.",
+  },
+  {
+    id: "passage-order-ch15-4",
+    unit: "ch15",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.15 本文第9段落の重要部分を並べ替え：科学者たちはゲノム全体をゼロから構築している。",
+    tokens: ["The scientists", "are building", "entire genomes", "from scratch"],
+    answer: "The scientists are building entire genomes from scratch.",
+  },
+  {
+    id: "passage-order-ch16-1",
+    unit: "ch16",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.16 本文第2段落から一文を並べ替え：天気予報に不可欠な雲の形成と動きは、各区画の大気条件に基づいて予測される。",
+    tokens: ["Cloud formation and movements", "which are essential factors", "in weather forecasts", "are predicted", "based on atmospheric conditions", "in each block"],
+    answer: "Cloud formation and movements, which are essential factors in weather forecasts, are predicted based on atmospheric conditions in each block.",
+  },
+  {
+    id: "passage-order-ch16-2",
+    unit: "ch16",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.16 本文第4段落の重要部分を並べ替え：従来の試みでは、各区画を3.5kmまで狭めることができた。",
+    tokens: ["Previous attempts", "have been able", "to narrow", "each block", "down to", "3.5 kilometers"],
+    answer: "Previous attempts have been able to narrow each block down to 3.5 kilometers.",
+  },
+  {
+    id: "passage-order-ch16-3",
+    unit: "ch16",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.16 本文第5段落の重要部分を並べ替え：チームは地球表面を約630億個の六角形区画に分割できた。",
+    tokens: ["The team", "were able", "to split", "the Earth's surface", "into", "some 63 billion", "hexagonal blocks"],
+    answer: "The team were able to split the Earth's surface into some 63 billion hexagonal blocks.",
+  },
+  {
+    id: "passage-order-ch16-4",
+    unit: "ch16",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.16 本文第7段落の重要部分を並べ替え：チームは、より正確な台風・大雨予報のためにシステム改善へ取り組む。",
+    tokens: ["The team", "will work on", "improving", "the system", "for more accurate", "typhoon and heavy rain forecasting"],
+    answer: "The team will work on improving the system for more accurate typhoon and heavy rain forecasting.",
+  },
+  {
+    id: "passage-order-ch18-1",
+    unit: "ch18",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.18 本文第2段落の重要部分を並べ替え：総務省は、ロボット車椅子が介護施設で実用化されると見込んでいる。",
+    tokens: ["The ministry", "expects", "that robot wheelchairs", "will be put", "to practical use", "in nursing care facilities"],
+    answer: "The ministry expects that robot wheelchairs will be put to practical use in nursing care facilities.",
+  },
+  {
+    id: "passage-order-ch18-2",
+    unit: "ch18",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.18 本文第4段落の重要部分を並べ替え：計画中のロボット車椅子は、利用者の意図を検知するセンサーを備える。",
+    tokens: ["The planned robot wheelchairs", "will have", "sensors", "that detect", "users' intentions"],
+    answer: "The planned robot wheelchairs will have sensors that detect users' intentions.",
+  },
+  {
+    id: "passage-order-ch18-3",
+    unit: "ch18",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.18 本文第6段落の重要部分を並べ替え：それらには、コンピューターが利用者の意図を認識するシステムが含まれる。",
+    tokens: ["They", "include", "a system", "in which", "computers", "recognize", "users' intentions"],
+    answer: "They include a system in which computers recognize users' intentions.",
+  },
+  {
+    id: "passage-order-ch18-4",
+    unit: "ch18",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.18 本文第8段落の重要部分を並べ替え：複数の車椅子は、利用者が情報を共有できるようネットワークで接続される。",
+    tokens: ["Multiple wheelchairs", "will be connected", "by networks", "so that", "their users", "will be able", "to share information"],
+    answer: "Multiple wheelchairs will be connected by networks so that their users will be able to share information.",
+  },
+  {
+    id: "passage-order-ch19-1",
+    unit: "ch19",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.19 本文第2段落の重要部分を並べ替え：利用者はDNA配列情報に基づいて、生物の種を容易に特定できる。",
+    tokens: ["Users", "can easily determine", "the species", "of living objects", "based on", "their DNA sequence information"],
+    answer: "Users can easily determine the species of living objects based on their DNA sequence information.",
+  },
+  {
+    id: "passage-order-ch19-2",
+    unit: "ch19",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.19 本文第4段落から一文を並べ替え：専門家でさえ、それらを見分けるのは難しい。",
+    tokens: ["It", "is difficult", "even for experts", "to distinguish", "between them"],
+    answer: "It is difficult even for experts to distinguish between them.",
+  },
+  {
+    id: "passage-order-ch19-3",
+    unit: "ch19",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.19 本文第6段落の重要部分を並べ替え：ソフトウェアは、生物のDNA配列をデータベースに保存されたものと比較できる。",
+    tokens: ["The software", "can compare", "the DNA sequences", "of living objects", "with those", "stored in DNA databases"],
+    answer: "The software can compare the DNA sequences of living objects with those stored in DNA databases.",
+  },
+  {
+    id: "passage-order-ch19-4",
+    unit: "ch19",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.19 本文第8段落の重要部分を並べ替え：ソフトウェアは、新種がどの科または属に属するかを特定できる。",
+    tokens: ["The software", "can determine", "which families or genera", "new species", "belong to"],
+    answer: "The software can determine which families or genera new species belong to.",
+  },
+];
 
 const PASSAGE_TRANSLATION_QUESTIONS: EnglishQuestion[] = ENGLISH_PASSAGES.flatMap((passage) =>
   passage.paragraphs.map((paragraph, index) => ({
@@ -950,6 +1118,8 @@ const PASSAGE_TRANSLATION_QUESTIONS: EnglishQuestion[] = ENGLISH_PASSAGES.flatMa
 export const ENGLISH_QUESTIONS: EnglishQuestion[] = [
   ...CORE_QUESTIONS,
   ...BUILT_ORDER_QUESTIONS,
+  ...PASSAGE_ORDER_QUESTIONS,
   ...VOCAB_QUESTIONS,
+  ...REVERSE_VOCAB_QUESTIONS,
   ...PASSAGE_TRANSLATION_QUESTIONS,
 ].filter((question) => question.unit !== "exam-sample");

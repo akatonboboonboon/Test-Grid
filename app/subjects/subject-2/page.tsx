@@ -16,6 +16,7 @@ import EnglishWeatherFigure from "../../english-weather-figure";
 type Mode = "cards" | "test" | "reading" | "guide";
 type TestPhase = "setup" | "active" | "result";
 type ReadingStudyMode = "memory" | "practice";
+type CardDirection = "ja-en" | "en-ja";
 type CardState = "learning" | "mastered";
 type CardProgress = Record<string, CardState>;
 type OrderToken = { id: string; text: string };
@@ -129,9 +130,36 @@ function isAcceptableTranslation(response: string, references: string[]) {
   });
 }
 
+function isAcceptableJapaneseMeaning(response: string, references: string[]) {
+  const normalizedResponse = normalizeJapanese(response);
+  if (normalizedResponse.length < 2) return false;
+  const normalizedReferences = references.map(normalizeJapanese).filter(Boolean);
+  if (normalizedReferences.includes(normalizedResponse)) return true;
+  return references.some((reference) => {
+    const normalizedReference = normalizeJapanese(reference);
+    const shorter = Math.min(normalizedResponse.length, normalizedReference.length);
+    const longer = Math.max(normalizedResponse.length, normalizedReference.length);
+    const contains = normalizedResponse.includes(normalizedReference)
+      || normalizedReference.includes(normalizedResponse);
+    const hasMeaningfulCharacter = /[一-龯々ァ-ヶA-Za-z0-9]/u.test(normalizedResponse);
+    if (shorter >= 2 && hasMeaningfulCharacter && contains && shorter / longer >= 0.5) return true;
+    if (shorter >= 3 && bigramSimilarity(normalizedResponse, normalizedReference) >= 0.67) return true;
+    const keywords = japaneseKeywords(reference);
+    const matched = keywords.filter((keyword) => normalizedResponse.includes(normalizeJapanese(keyword))).length;
+    return keywords.length > 0 && matched > 0 && matched / keywords.length >= 0.6;
+  });
+}
+
+function isJapaneseAnswerQuestion(question: EnglishQuestion) {
+  return question.format === "translation" || question.grading === "japanese-semantic";
+}
+
 function isCorrectAnswer(question: EnglishQuestion, response: string) {
   if (question.format === "translation") {
     return isAcceptableTranslation(response, [question.answer, ...(question.accepted ?? [])]);
+  }
+  if (question.grading === "japanese-semantic") {
+    return isAcceptableJapaneseMeaning(response, [question.answer, ...(question.accepted ?? [])]);
   }
   const normalized = normalizeAnswer(response);
   return [question.answer, ...(question.accepted ?? [])]
@@ -232,6 +260,7 @@ export default function EnglishSubjectPage() {
   const [cardDeck, setCardDeck] = useState<EnglishVocabCard[]>([...ENGLISH_VOCAB]);
   const [cardIndex, setCardIndex] = useState(0);
   const [cardFlipped, setCardFlipped] = useState(false);
+  const [cardDirection, setCardDirection] = useState<CardDirection>("ja-en");
 
   const [testUnit, setTestUnit] = useState(ALL_UNITS);
   const [questionCountDraft, setQuestionCountDraft] = useState("10");
@@ -417,6 +446,16 @@ export default function EnglishSubjectPage() {
     setAnnouncement(`${nextUnit === ALL_UNITS ? "全単元" : unitLabel(nextUnit)}の暗記帳を開きました。`);
   }
 
+  function changeCardDirection(nextDirection: CardDirection) {
+    setCardDirection(nextDirection);
+    setCardFlipped(false);
+    setAnnouncement(
+      nextDirection === "ja-en"
+        ? "日本語から英語を答える暗記帳に切り替えました。"
+        : "英語から日本語を答える暗記帳に切り替えました。",
+    );
+  }
+
   function moveCard(delta: number) {
     if (!cardDeck.length) return;
     setCardIndex((index) => (index + delta + cardDeck.length) % cardDeck.length);
@@ -577,7 +616,7 @@ export default function EnglishSubjectPage() {
   }
 
   function acceptTestTranslation() {
-    if (!currentQuestion || currentQuestion.format !== "translation" || !feedback || feedback.correct) return;
+    if (!currentQuestion || !isJapaneseAnswerQuestion(currentQuestion) || !feedback || feedback.correct) return;
     setFeedback({ ...feedback, correct: true });
     setTestResults((results) => results.map((result, index) => (
       index === results.length - 1 ? { ...result, correct: true } : result
@@ -733,12 +772,12 @@ export default function EnglishSubjectPage() {
           <div className="english-hero-copy">
             <p><span>SUBJECT 01</span><span>EXAM-STYLE PRACTICE</span></p>
             <h1 id="english-title">英語</h1>
-            <small>全286問を、語源・活用・文法・本文根拠・誤答理由まで分解して反復します。</small>
+            <small>全{ENGLISH_QUESTIONS.length}問を、語源・活用・文法・本文根拠・誤答理由まで分解して反復します。</small>
           </div>
           <button className="english-hero-memory-button" type="button" onClick={openCards}>
             <span>VOCABULARY FIRST</span>
             <strong>暗記帳を開く</strong>
-            <small>日本語を見て英語を答える →</small>
+            <small>日 → 英／英 → 日を切り替えて覚える →</small>
           </button>
         </section>
 
@@ -760,8 +799,17 @@ export default function EnglishSubjectPage() {
           {mode === "cards" && (
             <section className="generic-card-workspace english-card-workspace" aria-labelledby="english-card-title">
               <div className="english-panel-heading">
-                <div><span>MEMORY BOOK</span><h2 id="english-card-title">日本語 → 英語 暗記帳</h2></div>
-                <label className="english-unit-select"><span>単元</span><select value={cardUnit} onChange={(event) => changeCardUnit(event.target.value)}><option value={ALL_UNITS}>全単元</option>{ENGLISH_UNITS.map((unit) => <option key={unit.id} value={unit.id}>{unit.shortTitle}</option>)}</select></label>
+                <div><span>MEMORY BOOK</span><h2 id="english-card-title">{cardDirection === "ja-en" ? "日本語 → 英語" : "英語 → 日本語"} 暗記帳</h2></div>
+                <div className="english-card-settings">
+                  <div className="english-direction-switch" role="group" aria-label="暗記帳の出題方向">
+                    <span>出題方向</span>
+                    <div>
+                      <button type="button" aria-pressed={cardDirection === "ja-en"} onClick={() => changeCardDirection("ja-en")}>日 → 英</button>
+                      <button type="button" aria-pressed={cardDirection === "en-ja"} onClick={() => changeCardDirection("en-ja")}>英 → 日</button>
+                    </div>
+                  </div>
+                  <label className="english-unit-select"><span>単元</span><select value={cardUnit} onChange={(event) => changeCardUnit(event.target.value)}><option value={ALL_UNITS}>全単元</option>{ENGLISH_UNITS.map((unit) => <option key={unit.id} value={unit.id}>{unit.shortTitle}</option>)}</select></label>
+                </div>
               </div>
 
               <div className="generic-progress english-card-progress">
@@ -772,10 +820,10 @@ export default function EnglishSubjectPage() {
               {currentCard ? (
                 <>
                   <div className="generic-deck-meta english-deck-meta"><span>CARD {cardIndex + 1} / {cardDeck.length}</span><span>{unitLabel(currentCard.unit)} · {cardProgress[currentCard.id] === "mastered" ? "覚えた" : cardProgress[currentCard.id] === "learning" ? "未暗記" : "未判定"}</span></div>
-                  <button type="button" className={`generic-flip-card english-flip-card ${cardFlipped ? "is-flipped" : ""}`} onClick={() => setCardFlipped((flipped) => !flipped)} aria-label={cardFlipped ? "日本語面に戻る" : "英語の答えを見る"}>
-                    <span>{cardFlipped ? "ENGLISH ANSWER" : "JAPANESE PROMPT"}</span>
-                    <strong>{cardFlipped ? currentCard.en : currentCard.ja}</strong>
-                    {cardFlipped && currentCard.note ? <small>{currentCard.note}</small> : <small>{cardFlipped ? "覚えていたか判定してください" : "英語を声に出してから、タップして確認"}</small>}
+                  <button type="button" className={`generic-flip-card english-flip-card ${cardFlipped ? "is-flipped" : ""}`} onClick={() => setCardFlipped((flipped) => !flipped)} aria-label={cardFlipped ? `${cardDirection === "ja-en" ? "日本語" : "英語"}の問題面に戻る` : `${cardDirection === "ja-en" ? "英語" : "日本語"}の答えを見る`}>
+                    <span>{cardFlipped ? (cardDirection === "ja-en" ? "ENGLISH ANSWER" : "JAPANESE ANSWER") : (cardDirection === "ja-en" ? "JAPANESE PROMPT" : "ENGLISH PROMPT")}</span>
+                    <strong>{cardFlipped ? (cardDirection === "ja-en" ? currentCard.en : currentCard.ja) : (cardDirection === "ja-en" ? currentCard.ja : currentCard.en)}</strong>
+                    {cardFlipped && currentCard.note ? <small>{currentCard.note}</small> : <small>{cardFlipped ? "覚えていたか判定してください" : cardDirection === "ja-en" ? "英語を声に出してから、タップして確認" : "日本語の意味を答えてから、タップして確認"}</small>}
                   </button>
                   {cardFlipped && <EnglishVocabInsight card={currentCard} />}
                   <div className="generic-card-controls english-card-controls">
@@ -797,7 +845,7 @@ export default function EnglishSubjectPage() {
             <section className="generic-test-workspace english-test-workspace" aria-labelledby="english-test-title">
               {testPhase === "setup" && (
                 <div className="english-test-setup">
-                  <div className="english-panel-heading"><div><span>MOCK EXAM</span><h2 id="english-test-title">模擬テストを作る</h2></div><p>選んだ章とジャンルから、入力・選択・語順整序・和訳を混ぜて出題します。PDF見本だけの問題は含みません。</p></div>
+                  <div className="english-panel-heading"><div><span>MOCK EXAM</span><h2 id="english-test-title">模擬テストを作る</h2></div><p>選んだ章とジャンルから、日→英・英→日の語彙、選択、語順整序、和訳を混ぜて出題します。PDF見本だけの問題は含みません。</p></div>
                   {savedTestSession && (
                     <div className="generic-test-answer english-test-feedback english-saved-test" aria-label="保存中の模擬テスト">
                       <strong>途中のテストがあります</strong>
@@ -836,7 +884,7 @@ export default function EnglishSubjectPage() {
                   {currentQuestion.id.startsWith("ch16-homepage-") && <EnglishWeatherFigure />}
                   <div className="generic-test-question english-test-question"><span>問題</span><h2>{currentQuestion.prompt}</h2></div>
                   <form className="english-answer-form" onSubmit={submitTestAnswer}>
-                    {currentQuestion.format === "input" && <label className="english-input-answer"><span>解答を入力</span><input autoComplete="off" value={typedAnswer} disabled={Boolean(feedback)} onChange={(event) => setTypedAnswer(event.target.value)} placeholder="英語で入力" /></label>}
+                    {currentQuestion.format === "input" && <label className="english-input-answer"><span>{currentQuestion.grading === "japanese-semantic" ? "日本語の意味を入力" : "解答を入力"}</span><input lang={currentQuestion.grading === "japanese-semantic" ? "ja" : "en"} autoComplete="off" value={typedAnswer} disabled={Boolean(feedback)} onChange={(event) => setTypedAnswer(event.target.value)} placeholder={currentQuestion.grading === "japanese-semantic" ? "日本語で入力（同じ意味なら言い換え可）" : "英語で入力"} /></label>}
                     {currentQuestion.format === "translation" && <label className="english-input-answer english-translation-answer"><span>日本語訳を入力</span><textarea rows={5} autoComplete="off" value={typedAnswer} disabled={Boolean(feedback)} onChange={(event) => setTypedAnswer(event.target.value)} placeholder="本文の意味が伝わる自然な日本語で入力" /></label>}
                     {currentQuestion.format === "choice" && <fieldset className="english-choice-answer" disabled={Boolean(feedback)}><legend>正しいものを1つ選択</legend>{currentQuestion.options?.map((option, index) => <label key={`${currentQuestion.id}-${index}`}><input type="radio" name={`choice-${currentQuestion.id}`} value={option} checked={selectedChoice === option} onChange={(event) => setSelectedChoice(event.target.value)} /><span><b>{String.fromCharCode(65 + index)}</b>{option}</span></label>)}</fieldset>}
                     {currentQuestion.format === "order" && <div className="english-order-answer"><span>チップを正しい順に並べる</span><div className="english-order-line" aria-label="作成中の英文">{orderSelected.length ? orderSelected.map((token) => <button key={token.id} type="button" disabled={Boolean(feedback)} onClick={() => removeOrderToken(token)}>{token.text}</button>) : <small>下の語句を順番に選択</small>}</div><div className="english-order-bank">{orderRemaining.map((token) => <button key={token.id} type="button" disabled={Boolean(feedback)} onClick={() => chooseOrderToken(token)}>{token.text}</button>)}</div>{!feedback && <button className="english-order-reset" type="button" onClick={resetOrder}>並べ直す</button>}</div>}
@@ -849,7 +897,7 @@ export default function EnglishSubjectPage() {
                       <p><span>あなたの解答</span>{feedback.response}</p>
                       <p><span>正解</span>{currentQuestion.answer}</p>
                       <EnglishQuestionExplanation question={currentQuestion} />
-                      {currentQuestion.format === "translation" && !feedback.correct && <button className="english-translation-override" type="button" onClick={acceptTestTranslation}>意味は合っていた → 正解にする</button>}
+                      {isJapaneseAnswerQuestion(currentQuestion) && !feedback.correct && <button className="english-translation-override" type="button" onClick={acceptTestTranslation}>意味は合っていた → 正解にする</button>}
                       <button type="button" onClick={nextTestQuestion}>{testIndex === testQuestions.length - 1 ? "結果を見る" : "次の問題へ →"}</button>
                     </div>
                   )}

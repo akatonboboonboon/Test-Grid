@@ -1166,7 +1166,8 @@ kbd {
 }
 
 .memory-card {
-  --card-accent: var(--yellow);
+  --card-accent: var(--paper-dim);
+  --layer-accent: var(--yellow);
   background: var(--ink);
   border: 0;
   box-shadow: 15px 16px 0 var(--card-accent);
@@ -1179,10 +1180,12 @@ kbd {
   width: 100%;
 }
 
-.memory-card[data-layer="2"] { --card-accent: var(--cyan); }
-.memory-card[data-layer="3"] { --card-accent: var(--orange); }
-.memory-card[data-layer="4"] { --card-accent: var(--violet); }
-.memory-card[data-layer="7"] { --card-accent: var(--lime); }
+.memory-card[data-layer="2"] { --layer-accent: var(--cyan); }
+.memory-card[data-layer="3"] { --layer-accent: var(--orange); }
+.memory-card[data-layer="4"] { --layer-accent: var(--violet); }
+.memory-card[data-layer="7"] { --layer-accent: var(--lime); }
+
+.memory-card.is-flipped { --card-accent: var(--layer-accent); }
 
 .memory-card::before,
 .memory-card::after {
@@ -3640,6 +3643,48 @@ footer p {
   gap: 7px;
 }
 
+.english-card-settings {
+  align-items: end;
+  display: flex;
+  gap: 14px;
+}
+
+.english-direction-switch {
+  display: grid;
+  gap: 7px;
+}
+
+.english-direction-switch > span {
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.english-direction-switch > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(66px, 1fr));
+}
+
+.english-direction-switch button {
+  background: #fff;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  min-height: 46px;
+  padding: 8px 10px;
+}
+
+.english-direction-switch button + button {
+  border-left: 0;
+}
+
+.english-direction-switch button[aria-pressed="true"] {
+  background: var(--english-yellow);
+}
+
 .english-unit-select > span,
 .english-reading-tools label > span,
 .english-test-settings label > span,
@@ -4363,6 +4408,11 @@ footer p {
     display: grid;
   }
 
+  .english-card-settings {
+    align-items: stretch;
+    width: 100%;
+  }
+
   .english-reading-tools {
     align-items: stretch;
     width: 100%;
@@ -4424,6 +4474,15 @@ footer p {
 
   .english-reading-tools {
     display: grid;
+  }
+
+  .english-card-settings {
+    display: grid;
+  }
+
+  .english-direction-switch,
+  .english-direction-switch > div {
+    width: 100%;
   }
 
   .english-passage > div > section {

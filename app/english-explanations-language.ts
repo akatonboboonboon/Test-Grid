@@ -2,6 +2,7 @@ import { ENGLISH_QUESTIONS, type EnglishQuestion } from "./english-data";
 
 const EXACT_LANGUAGE_GROUPS = new Set([
   "語彙・熟語（日→英）",
+  "語彙・熟語（英→日）",
   "英→日",
   "単数形",
   "語形・文脈",
@@ -161,6 +162,22 @@ const ORDER_GUIDANCE: Record<string, string> = {
   "order-45": "現在進行形 My sister is applying。apply to + 学校、several + 複数形 graduate schools、時 this month の順です。",
   "order-46": "Scientists have developed で現在完了。an artificial tissue が目的語、to help heal wounds が目的を示し、help の後は原形 heal を使えます。",
   "order-47": "複数主語 Plastic containers of sashimi に are を一致させます。場所は on the store shelves と前置詞句で示します。",
+  "passage-order-ch15-1": "Ch.15本文第4段落の一文です。Others が主語、create が動詞、moisturizers が目的語です。that は moisturizers を先行詞とし、can be used が助動詞を伴う受動態、in cosmetics が用途を示します。",
+  "passage-order-ch15-2": "Ch.15本文第6段落の主節です。Some believe の後には、接続詞 that が省略された目的語節 this kind of work marks ... が続きます。節内では this kind of work が主語、marks が動詞です。",
+  "passage-order-ch15-3": "Ch.15本文第8段落の重要部分です。Since + 過去形は現在まで続く起点を示すため、主節は現在完了 Amyris has become ... になります。it was founded は受動態です。",
+  "passage-order-ch15-4": "Ch.15本文第9段落の重要部分です。The scientists + are building で現在進行形を作り、目的語 entire genomes、方法・出発点を表す from scratch を続けます。",
+  "passage-order-ch16-1": "Ch.16本文第2段落の一文です。主語 Cloud formation and movements は複数なので are predicted。which 節は主語全体を補足し、based on atmospheric conditions は予測の根拠を示します。",
+  "passage-order-ch16-2": "Ch.16本文第4段落の重要部分です。Previous attempts を主語に現在完了 have been able to を置きます。narrow A down to B は『AをBまで狭める』の固定語順です。",
+  "passage-order-ch16-3": "Ch.16本文第5段落の重要部分です。本文の集合名詞 team に合わせて were able to を使います。split A into B のAは the Earth's surface、Bは some 63 billion hexagonal blocks です。",
+  "passage-order-ch16-4": "Ch.16本文第7段落の重要部分です。will の後は原形 work。work on の on は前置詞なので、その後は動名詞 improving を置きます。for 以下が改善の目的です。",
+  "passage-order-ch18-1": "Ch.18本文第2段落の重要部分です。expects の目的語は that 節です。節内の robot wheelchairs が実用化される側なので、未来受動態 will be put to practical use を使います。",
+  "passage-order-ch18-2": "Ch.18本文第4段落の重要部分です。will have の目的語が sensors。関係代名詞 that は sensors を受け、複数先行詞に合わせて detect を用います。",
+  "passage-order-ch18-3": "Ch.18本文第6段落の重要部分です。include の目的語は a system。元の関係 computers recognize ... in the system から、前置詞を関係代名詞の前へ出した in which を作ります。",
+  "passage-order-ch18-4": "Ch.18本文第8段落の重要部分です。Multiple wheelchairs will be connected で未来受動態を作り、手段を by networks で示します。so that 以下は目的・結果で、will be able to + 原形を使います。",
+  "passage-order-ch19-1": "Ch.19本文第2段落の重要部分です。助動詞 can の後は原形 determine。easily は動詞を修飾し、based on their DNA sequence information は判断の根拠を示します。",
+  "passage-order-ch19-2": "Ch.19本文第4段落の一文です。形式主語 It + be + 形容詞 + for 人 + to do の型です。distinguish between ... は『～の間を見分ける』という定型表現です。",
+  "passage-order-ch19-3": "Ch.19本文第6段落の重要部分です。compare A with B のAは the DNA sequences of living objects、Bは those stored in DNA databases。those は DNA sequences の反復を避け、stored 以下が後ろから修飾します。",
+  "passage-order-ch19-4": "Ch.19本文第8段落の重要部分です。determine の目的語は間接疑問 which families or genera new species belong to。間接疑問では疑問文語順にせず、主語 new species を動詞 belong の前へ置きます。",
 };
 
 const VOCAB_ORIGIN_NOTES: Record<string, string> = {
@@ -386,6 +403,19 @@ function buildVocabularyExplanation(question: EnglishQuestion) {
   ].filter(Boolean));
 }
 
+function buildReverseVocabularyExplanation(question: EnglishQuestion) {
+  const expression = question.prompt.match(/「(.+?)」/)?.[1] ?? question.prompt;
+  const variants = Array.from(new Set([question.answer, ...(question.accepted ?? [])]));
+  return detail([
+    "【意味】「" + expression + "」は、教材では「" + question.answer + "」を表します。" + (variants.length > 1 ? "「" + variants.join("」「") + "」も意味の核が同じ正答候補です。" : ""),
+    "【品詞・形】" + inferVocabularyShape(expression, question.answer),
+    "【語源・覚え方】" + buildMemoryHint(expression),
+    "【正解の理由】英語表現「" + expression + "」が指す中心概念を、日本語では「" + question.answer + "」と表せるためです。本文中の使われ方まで思い出して答えます。",
+    "【採点】語順や言い回しが模範解答と完全一致しなくても、同義語または意味の核が合っていれば正解として扱います。自動判定が外れた場合は、解説下のボタンで正解へ変更できます。",
+    question.explanation ? "【補足】" + question.explanation : "",
+  ].filter(Boolean));
+}
+
 function buildOrderExplanation(question: EnglishQuestion) {
   const guidance = ORDER_GUIDANCE[question.id];
   if (!guidance) return "";
@@ -399,6 +429,7 @@ function buildOrderExplanation(question: EnglishQuestion) {
 
 function buildLanguageExplanation(question: EnglishQuestion) {
   if (question.group === "語彙・熟語（日→英）") return buildVocabularyExplanation(question);
+  if (question.group === "語彙・熟語（英→日）") return buildReverseVocabularyExplanation(question);
   if (question.group.startsWith("語順整序｜")) return buildOrderExplanation(question);
   return SPECIAL_EXPLANATIONS[question.id] ?? "";
 }

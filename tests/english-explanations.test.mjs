@@ -62,7 +62,7 @@ function sorted(values) {
   return [...values].sort((left, right) => left.localeCompare(right, "en"));
 }
 
-test("reading, language, and extra explanations cover all 286 study questions", async () => {
+test("reading, language, and extra explanations cover all 450 study questions", async () => {
   const { data, reading, language, extra } = await loadExplanationModules();
   const questions = data.ENGLISH_QUESTIONS;
   const questionIds = questions.map((question) => question.id);
@@ -74,8 +74,8 @@ test("reading, language, and extra explanations cover all 286 study questions", 
   ];
   const coveredIds = new Set(explanationMaps.flatMap((map) => Object.keys(map)));
 
-  assert.equal(questions.length, 286);
-  assert.equal(questionIdSet.size, 286, "question ids must be unique");
+  assert.equal(questions.length, 450);
+  assert.equal(questionIdSet.size, 450, "question ids must be unique");
   assert.deepEqual(
     sorted([...coveredIds]),
     sorted(questionIds),
@@ -91,6 +91,38 @@ test("reading, language, and extra explanations cover all 286 study questions", 
         && readingExplanation.naturalTranslation?.trim().length >= 2
       : textExplanation?.trim().length >= 60;
     assert.ok(detailed, `${question.id} must have a substantive explanation`);
+  }
+});
+
+test("16 passage grammar ordering questions stay sentence-sized and span all four chapters", async () => {
+  const { data, language } = await loadExplanationModules();
+  const questions = data.ENGLISH_QUESTIONS.filter(
+    (question) => question.id.startsWith("passage-order-"),
+  );
+  const completeParagraphs = new Set(
+    data.ENGLISH_PASSAGES.flatMap((passage) =>
+      passage.paragraphs.map((paragraph) => paragraph.en),
+    ),
+  );
+
+  assert.equal(questions.length, 16);
+  assert.deepEqual(
+    [...new Set(questions.map((question) => question.unit))].sort(),
+    ["ch15", "ch16", "ch18", "ch19"],
+  );
+
+  for (const question of questions) {
+    assert.equal(question.format, "order");
+    assert.equal(question.group, "語順整序｜本文主要文法");
+    assert.ok(question.tokens.length >= 4);
+    assert.ok(
+      !completeParagraphs.has(question.answer),
+      `${question.id} must not turn a whole paragraph into an ordering item`,
+    );
+    assert.match(
+      language.ENGLISH_LANGUAGE_EXPLANATIONS[question.id] ?? "",
+      /【完成文】[\s\S]*【文法構造】[\s\S]*【組み立て方】/u,
+    );
   }
 });
 
@@ -226,6 +258,29 @@ test("all 148 vocabulary cards explain meaning, form, origin, and the answer", a
     assert.match(explanation, /【語源・覚え方】/u);
     assert.match(explanation, /【正解の理由】/u);
     assert.ok(explanation.length >= 140, `${questionId} explanation is too short`);
+  }
+});
+
+test("all 148 vocabulary cards also produce explained English-to-Japanese mock questions", async () => {
+  const { data, language } = await loadExplanationModules();
+  const reverseQuestions = data.ENGLISH_QUESTIONS.filter(
+    (question) => question.group === "語彙・熟語（英→日）",
+  );
+
+  assert.equal(reverseQuestions.length, 148);
+  for (const card of data.ENGLISH_VOCAB) {
+    const questionId = `reverse-question-${card.id}`;
+    const question = reverseQuestions.find((candidate) => candidate.id === questionId);
+    const explanation = language.ENGLISH_LANGUAGE_EXPLANATIONS[questionId] ?? "";
+    assert.ok(question, `${questionId} must exist for ${card.en}`);
+    assert.equal(question.grading, "japanese-semantic");
+    assert.equal(question.answer, card.ja);
+    assert.ok(question.prompt.includes(card.en));
+    assert.match(explanation, /【意味】/u);
+    assert.match(explanation, /【品詞・形】/u);
+    assert.match(explanation, /【語源・覚え方】/u);
+    assert.match(explanation, /【正解の理由】/u);
+    assert.match(explanation, /【採点】/u);
   }
 });
 
