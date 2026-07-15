@@ -1,7 +1,5 @@
-import { eq } from "drizzle-orm";
+import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "../../chatgpt-auth";
-import { getDb } from "../../../db";
-import { userStudySnapshots } from "../../../db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -29,21 +27,23 @@ async function authenticatedEmail() {
   return user?.email.trim().toLocaleLowerCase("en-US") ?? null;
 }
 
+async function snapshotObjectKey(email: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(email));
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `users/${hex}/study-snapshot-v1.json`;
+}
+
 export async function GET() {
   const email = await authenticatedEmail();
   if (!email) return Response.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
 
   try {
-    const rows = await getDb()
-      .select({ snapshotJson: userStudySnapshots.snapshotJson, updatedAt: userStudySnapshots.updatedAt })
-      .from(userStudySnapshots)
-      .where(eq(userStudySnapshots.userEmail, email))
-      .limit(1);
-    const row = rows[0];
-    if (!row) return Response.json({ snapshot: {}, updatedAt: null });
-
-    const snapshot = normalizeSnapshot(JSON.parse(row.snapshotJson)) ?? {};
-    return Response.json({ snapshot, updatedAt: row.updatedAt });
+    const object = await env.STUDY_SNAPSHOTS.get(await snapshotObjectKey(email));
+    if (!object) return Response.json({ snapshot: {}, updatedAt: null });
+    const stored = JSON.parse(await object.text()) as { snapshot?: unknown; updatedAt?: unknown };
+    const snapshot = normalizeSnapshot(stored.snapshot) ?? {};
+    const updatedAt = typeof stored.updatedAt === "number" ? stored.updatedAt : null;
+    return Response.json({ snapshot, updatedAt });
   } catch (error) {
     const message = error instanceof Error ? error.message : "SYNC_READ_FAILED";
     return Response.json({ error: message }, { status: 500 });
@@ -64,14 +64,11 @@ export async function PUT(request: Request) {
     if (!snapshot) return Response.json({ error: "INVALID_SNAPSHOT" }, { status: 400 });
 
     const updatedAt = Date.now();
-    const snapshotJson = JSON.stringify(snapshot);
-    await getDb()
-      .insert(userStudySnapshots)
-      .values({ userEmail: email, snapshotJson, updatedAt })
-      .onConflictDoUpdate({
-        target: userStudySnapshots.userEmail,
-        set: { snapshotJson, updatedAt },
-      });
+    await env.STUDY_SNAPSHOTS.put(
+      await snapshotObjectKey(email),
+      JSON.stringify({ snapshot, updatedAt }),
+      { httpMetadata: { contentType: "application/json" } },
+    );
 
     return Response.json({ snapshot, updatedAt });
   } catch (error) {

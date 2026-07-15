@@ -232,10 +232,10 @@ test("supports translation grading, explanations, genre filters, and the course-
 });
 
 test("syncs all subject progress through an authenticated account API", async () => {
-  const [syncUi, syncRoute, schema, layout] = await Promise.all([
+  const [syncUi, syncRoute, hosting, layout] = await Promise.all([
     readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/study-sync/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
   ]);
 
@@ -255,9 +255,10 @@ test("syncs all subject progress through an authenticated account API", async ()
   assert.match(syncRoute, /getChatGPTUser/);
   assert.match(syncRoute, /SIGN_IN_REQUIRED/);
   assert.match(syncRoute, /normalizeSnapshot/);
-  assert.match(syncRoute, /userStudySnapshots/);
-  assert.match(schema, /sqliteTable\("user_study_snapshots"/);
-  assert.match(schema, /userEmail:[\s\S]*?primaryKey\(\)/);
+  assert.match(syncRoute, /env\.STUDY_SNAPSHOTS\.get/);
+  assert.match(syncRoute, /env\.STUDY_SNAPSHOTS\.put/);
+  assert.match(syncRoute, /crypto\.subtle\.digest\("SHA-256"/);
+  assert.match(hosting, /"r2"\s*:\s*"STUDY_SNAPSHOTS"/);
 
   const [anonymousRead, anonymousWrite] = await Promise.all([
     render("/api/study-sync", { headers: { accept: "application/json" } }),
