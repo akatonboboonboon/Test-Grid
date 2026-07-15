@@ -1,17 +1,51 @@
 import assert from "node:assert/strict";
 import { access, readFile, stat } from "node:fs/promises";
+import { registerHooks } from "node:module";
 import test from "node:test";
+import ts from "typescript";
 
 const projectRoot = new URL("../", import.meta.url);
 
-async function render(path = "/") {
+// The production worker gets this virtual module from Cloudflare. Supplying an
+// empty binding keeps server-render smoke tests local without faking any data.
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === "cloudflare:workers") {
+      return {
+        shortCircuit: true,
+        url: "data:text/javascript,export const env = {};",
+      };
+    }
+    return nextResolve(specifier, context);
+  },
+});
+
+let englishDataModulePromise;
+
+function loadEnglishDataModule() {
+  englishDataModulePromise ??= readFile(new URL("../app/english-data.ts", import.meta.url), "utf8")
+    .then((source) => ts.transpileModule(source, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText)
+    .then((javascript) => import(`data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`));
+  return englishDataModulePromise;
+}
+
+async function render(path = "/", init = {}) {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
+  const requestHeaders = new Headers(init.headers);
+  if (!requestHeaders.has("accept")) requestHeaders.set("accept", "text/html");
+  requestHeaders.set("host", "localhost");
 
   return worker.fetch(
     new Request(`http://localhost${path}`, {
-      headers: { accept: "text/html", host: "localhost" },
+      ...init,
+      headers: requestHeaders,
     }),
     {
       ASSETS: {
@@ -80,6 +114,163 @@ test("server-renders the English exam lab", async () => {
   assert.match(html, /Chapter 15|Ch\.15/);
   assert.match(html, /Chapter 19|Ch\.19/);
   assert.match(html, /MEMORY BOOK/);
+});
+
+test("keeps the study workspaces usable on phone-sized viewports", async () => {
+  const response = await render("/subjects/subject-2");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  const viewportMeta = html.match(/<meta[^>]*name="viewport"[^>]*>/i)?.[0] ?? "";
+  assert.ok(viewportMeta, "the rendered page should declare a viewport");
+  assert.match(viewportMeta, /width=device-width/i);
+  assert.match(viewportMeta, /initial-scale=1/i);
+
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const mobileStart = css.indexOf("/* Mobile hardening");
+  assert.notEqual(mobileStart, -1, "mobile hardening rules should remain grouped and auditable");
+  const mobileCss = css.slice(mobileStart);
+
+  assert.match(mobileCss, /@media\s*\(max-width:\s*680px\)/);
+  assert.match(mobileCss, /@media\s*\(max-width:\s*430px\)/);
+  assert.match(mobileCss, /html,\s*body\s*\{[\s\S]*?overflow-x:\s*clip;/);
+  assert.match(mobileCss, /\.topbar\s*\{[\s\S]*?height:\s*auto;[\s\S]*?min-height:\s*64px;/);
+  assert.match(mobileCss, /\.app-frame\s+:is\(input,\s*select,\s*textarea\)\s*\{[\s\S]*?font-size:\s*16px;[\s\S]*?max-width:\s*100%;/);
+  assert.match(mobileCss, /:where\(\.app-frame\)\s+button,[\s\S]*?min-height:\s*44px;/);
+  assert.match(mobileCss, /touch-action:\s*manipulation;/);
+  assert.match(mobileCss, /\.subject-dialog\s*\{[\s\S]*?max-height:\s*100dvh;/);
+  assert.match(mobileCss, /\.editor-panel\s*\{[\s\S]*?min-height:\s*100dvh;/);
+  assert.match(mobileCss, /\.english-order-line button,[\s\S]*?\.english-order-bank button\s*\{[\s\S]*?max-width:\s*100%;[\s\S]*?min-height:\s*44px;/);
+});
+
+test("separates long-passage memorization from answer practice", async () => {
+  const englishPage = await readFile(new URL("../app/subjects/subject-2/page.tsx", import.meta.url), "utf8");
+
+  assert.match(englishPage, /type ReadingStudyMode\s*=\s*"memory"\s*\|\s*"practice"/);
+  assert.match(englishPage, /useState<ReadingStudyMode>\("memory"\)/);
+  assert.match(englishPage, /暗記モード/);
+  assert.match(englishPage, /実戦モード/);
+  assert.match(englishPage, /question\.passageId\s*===\s*selectedPassageId/);
+  assert.match(englishPage, /function submitReadingAnswer/);
+  assert.match(englishPage, /onSubmit=\{submitReadingAnswer\}/);
+  assert.match(englishPage, /readingFeedback/);
+  assert.match(englishPage, /getQuestionExplanation\(readingQuestion\)/);
+});
+
+test("saves, pauses, resumes, and deletes an in-progress mock exam", async () => {
+  const englishPage = await readFile(new URL("../app/subjects/subject-2/page.tsx", import.meta.url), "utf8");
+  const savedShape = englishPage.match(/type SavedTestSession\s*=\s*\{([\s\S]*?)\n\};/)?.[1] ?? "";
+
+  assert.match(englishPage, /test-grid:english-mock-test:v1/);
+  for (const field of [
+    "questionIds",
+    "selectedGroups",
+    "testIndex",
+    "typedAnswer",
+    "selectedChoice",
+    "orderRemaining",
+    "orderSelected",
+    "feedback",
+    "results",
+    "elapsedSeconds",
+  ]) {
+    assert.match(savedShape, new RegExp(`\\b${field}\\??:`), `saved mock exam should retain ${field}`);
+  }
+
+  assert.match(englishPage, /function restoreTestSession/);
+  assert.match(englishPage, /function saveTestSession/);
+  assert.match(englishPage, /function resumeSavedTest/);
+  assert.match(englishPage, /function deleteSavedTest/);
+  assert.match(englishPage, /localStorage\.getItem\(TEST_SESSION_KEY\)/);
+  assert.match(englishPage, /localStorage\.setItem\(TEST_SESSION_KEY/);
+  assert.match(englishPage, /localStorage\.removeItem\(TEST_SESSION_KEY\)/);
+  assert.match(englishPage, /中断して保存/);
+  assert.match(englishPage, /続きから再開/);
+  assert.match(englishPage, /保存データを削除/);
+});
+
+test("supports translation grading, explanations, genre filters, and the course-only corpus", async () => {
+  const [englishPage, corpus] = await Promise.all([
+    readFile(new URL("../app/subjects/subject-2/page.tsx", import.meta.url), "utf8"),
+    loadEnglishDataModule(),
+  ]);
+
+  const { ENGLISH_PASSAGES, ENGLISH_QUESTIONS, ENGLISH_UNITS, ENGLISH_VOCAB } = corpus;
+  for (const [label, items] of [
+    ["units", ENGLISH_UNITS],
+    ["vocabulary", ENGLISH_VOCAB],
+    ["questions", ENGLISH_QUESTIONS],
+  ]) {
+    assert.equal(
+      items.some((item) => (item.id ?? item.unit) === "exam-sample" || item.unit === "exam-sample"),
+      false,
+      `${label} should exclude questions and material copied from the sample PDF`,
+    );
+  }
+
+  const translationQuestions = ENGLISH_QUESTIONS.filter((question) => question.format === "translation");
+  const passageParagraphCount = ENGLISH_PASSAGES.reduce((total, passage) => total + passage.paragraphs.length, 0);
+  assert.equal(translationQuestions.length, passageParagraphCount, "every passage paragraph should be available as translation practice");
+  assert.ok(translationQuestions.every((question) => question.passageId && question.answer));
+
+  assert.match(englishPage, /if \(question\.format === "translation"\)/);
+  assert.match(englishPage, /normalizeJapanese/);
+  assert.match(englishPage, /bigramSimilarity/);
+  assert.match(englishPage, /japaneseKeywords/);
+  assert.match(englishPage, /和訳入力/);
+  assert.match(englishPage, /function getQuestionExplanation/);
+  assert.match(englishPage, /getQuestionExplanation\(currentQuestion\)/);
+  assert.match(englishPage, /意味は合っていた → 正解にする/);
+  assert.doesNotMatch(englishPage, /currentQuestion\.explanation\s*&&/);
+
+  assert.match(englishPage, /出題ジャンル（複数選択）/);
+  assert.match(englishPage, /type="checkbox"/);
+  assert.match(englishPage, /toggleTestGroup/);
+  assert.match(englishPage, /selectedTestGroups\.includes\(questionGenre\(question\)\)/);
+  assert.match(englishPage, /question\.group\.split\("｜", 1\)/);
+  assert.match(englishPage, /すべて選択/);
+});
+
+test("syncs all subject progress through an authenticated account API", async () => {
+  const [syncUi, syncRoute, schema, layout] = await Promise.all([
+    readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/study-sync/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(layout, /getChatGPTUser/);
+  assert.match(layout, /<AccountSync/);
+  assert.match(syncUi, /const SYNC_ENDPOINT\s*=\s*"\/api\/study-sync"/);
+  assert.match(syncUi, /window\.localStorage\.length/);
+  assert.match(syncUi, /STORAGE_KEY_PATTERN/);
+  assert.match(syncUi, /fetch\(SYNC_ENDPOINT,\s*\{\s*cache:\s*"no-store"/);
+  assert.match(syncUi, /method:\s*"PUT"/);
+  assert.match(syncUi, /別のスマホでも続きから/);
+  assert.match(syncUi, /アカウント作成・ログイン/);
+  assert.match(syncUi, /今すぐ同期/);
+
+  assert.match(syncRoute, /export async function GET\(\)/);
+  assert.match(syncRoute, /export async function PUT\(request:\s*Request\)/);
+  assert.match(syncRoute, /getChatGPTUser/);
+  assert.match(syncRoute, /SIGN_IN_REQUIRED/);
+  assert.match(syncRoute, /normalizeSnapshot/);
+  assert.match(syncRoute, /userStudySnapshots/);
+  assert.match(schema, /sqliteTable\("user_study_snapshots"/);
+  assert.match(schema, /userEmail:[\s\S]*?primaryKey\(\)/);
+
+  const [anonymousRead, anonymousWrite] = await Promise.all([
+    render("/api/study-sync", { headers: { accept: "application/json" } }),
+    render("/api/study-sync", {
+      method: "PUT",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify({ snapshot: {} }),
+    }),
+  ]);
+  assert.equal(anonymousRead.status, 401);
+  assert.equal(anonymousWrite.status, 401);
+  assert.deepEqual(await anonymousRead.json(), { error: "SIGN_IN_REQUIRED" });
+  assert.deepEqual(await anonymousWrite.json(), { error: "SIGN_IN_REQUIRED" });
 });
 
 test("server-renders a generic subject workspace and the old cards URL", async () => {

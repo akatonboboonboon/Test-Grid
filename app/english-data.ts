@@ -16,7 +16,7 @@ export type EnglishQuestion = {
   id: string;
   unit: string;
   group: string;
-  format: "input" | "choice" | "order";
+  format: "input" | "choice" | "order" | "translation";
   prompt: string;
   answer: string;
   accepted?: string[];
@@ -35,7 +35,6 @@ export type EnglishPassage = {
 };
 
 export const ENGLISH_UNITS: EnglishUnit[] = [
-  { id: "exam-sample", title: "試験PDF対策", shortTitle: "試験形式" },
   { id: "ch15", title: "Chapter 15｜新しい生命体を作り出す企業", shortTitle: "Ch.15 新しい生命体を作り出す企業" },
   { id: "ch16", title: "Chapter 16｜スパコンで天気予報①", shortTitle: "Ch.16 スパコンで天気予報①" },
   { id: "ch18", title: "Chapter 18｜高齢化社会に強力な助っ人", shortTitle: "Ch.18 高齢化社会に強力な助っ人" },
@@ -216,13 +215,15 @@ const RAW_VOCAB: RawVocab[] = [
   ["ch19", "graduate school", "大学院"],
 ];
 
-export const ENGLISH_VOCAB: EnglishVocabCard[] = RAW_VOCAB.map(([unit, en, ja, note], index) => ({
-  id: `ev-${String(index + 1).padStart(3, "0")}`,
-  unit,
-  en,
-  ja,
-  note,
-}));
+export const ENGLISH_VOCAB: EnglishVocabCard[] = RAW_VOCAB
+  .map(([unit, en, ja, note], index) => ({
+    id: `ev-${String(index + 1).padStart(3, "0")}`,
+    unit,
+    en,
+    ja,
+    note,
+  }))
+  .filter((card) => card.unit !== "exam-sample");
 
 export const ENGLISH_PASSAGES: EnglishPassage[] = [
   {
@@ -933,8 +934,22 @@ const BUILT_ORDER_QUESTIONS: EnglishQuestion[] = ORDER_QUESTIONS.map(
   }),
 );
 
+const PASSAGE_TRANSLATION_QUESTIONS: EnglishQuestion[] = ENGLISH_PASSAGES.flatMap((passage) =>
+  passage.paragraphs.map((paragraph, index) => ({
+    id: `${passage.id}-translation-${index + 1}`,
+    unit: passage.unit,
+    group: "長文和訳",
+    format: "translation" as const,
+    prompt: `次の英文を自然な日本語に訳す：${paragraph.en}`,
+    answer: paragraph.ja,
+    explanation: `主語・動作・修飾関係を押さえた模範訳です。表現が異なっても、本文の重要な情報が合っていれば正解として扱います。`,
+    passageId: passage.id,
+  })),
+);
+
 export const ENGLISH_QUESTIONS: EnglishQuestion[] = [
   ...CORE_QUESTIONS,
   ...BUILT_ORDER_QUESTIONS,
   ...VOCAB_QUESTIONS,
-];
+  ...PASSAGE_TRANSLATION_QUESTIONS,
+].filter((question) => question.unit !== "exam-sample");

@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import AccountSync from "./account-sync";
+import { chatGPTSignInPath, chatGPTSignOutPath, getChatGPTUser } from "./chatgpt-auth";
 import "./globals.css";
+
+export const dynamic = "force-dynamic";
 
 const title = "TEST//GRID — 9教科の定期テスト対策ハブ";
 const description = "9教科を科目別に整理し、暗記カード・一問一答・ネットワーク専用ドリルで繰り返せる定期テスト対策サイト。";
@@ -29,10 +33,18 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const user = await getChatGPTUser();
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        <AccountSync
+          user={user ? { displayName: user.displayName, email: user.email } : null}
+          signInPath={chatGPTSignInPath("/")}
+          signOutPath={chatGPTSignOutPath("/")}
+        />
+        {children}
+      </body>
     </html>
   );
 }
