@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { ENGLISH_VOCAB } from "./english-data";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
 import {
   DEFAULT_SUBJECTS,
@@ -45,6 +46,13 @@ function readMetrics(subjects: StudySubject[]) {
       return [subject.id, {
         cards: cards.length,
         mastered: cards.filter((card) => progress[card.id] === "mastered").length,
+      } satisfies SubjectMetric];
+    }
+    if (subject.id === "subject-2") {
+      const progress = storageRead<Record<string, unknown>>("test-grid:english-memory:v1", {});
+      return [subject.id, {
+        cards: ENGLISH_VOCAB.length,
+        mastered: ENGLISH_VOCAB.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
     }
     const cards = normalizeStudyCards(
@@ -168,7 +176,7 @@ export default function StudyHub() {
         </Link>
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {configuredCount} / 9 NAMED</span>
-          <Link className="outline-button header-link" href="/subjects/network">ネットワークを開く</Link>
+          <Link className="outline-button header-link hub-memory-header-link" href="/subjects/network/cards">暗記帳を開く</Link>
         </div>
       </header>
 
@@ -177,7 +185,7 @@ export default function StudyHub() {
           <div>
             <p className="eyebrow"><span>REGULAR EXAM / 9 SUBJECTS</span><span>LOCAL STUDY DESK</span></p>
             <h1 id="hub-title">9教科を、<br /><em>ひとつずつ潰す。</em></h1>
-            <p>ネットワークの専用ドリルはそのまま。残り8教科は科目名と問題・答えを登録すれば、暗記カードと一問一答ですぐ回せます。</p>
+            <p>英語は試験PDF形式の専用演習、ネットワークは層の暗算・即答・暗記帳を収録。ほかの科目も教材を追加しながら、ここでまとめて回せます。</p>
           </div>
           <Link className="hub-primary-link" href="/subjects/network">
             <span>READY NOW</span>
@@ -185,6 +193,15 @@ export default function StudyHub() {
             <b aria-hidden="true">→</b>
           </Link>
         </section>
+
+        <Link className="hub-memory-launch" href="/subjects/network/cards">
+          <span>
+            <small>NETWORK / MEMORY NOTEBOOK</small>
+            <strong>暗記帳はここです。</strong>
+            <em>96語の層・正式名称・働きをカードで確認</em>
+          </span>
+          <b aria-hidden="true">開く →</b>
+        </Link>
 
         <section className="hub-summary" aria-label="全体の学習状況">
           <div><span>SUBJECTS NAMED</span><strong>{configuredCount}<small>/9</small></strong></div>
@@ -226,8 +243,8 @@ export default function StudyHub() {
                   <div className="subject-actions">
                     {subject.module === "network" ? (
                       <>
-                        <Link className="subject-primary" href="/subjects/network">専用ドリル</Link>
-                        <Link className="subject-secondary" href="/subjects/network/cards">暗記カード</Link>
+                        <Link className="subject-primary subject-memory-link" href="/subjects/network/cards">暗記帳を開く</Link>
+                        <Link className="subject-secondary" href="/subjects/network">暗算・層即答</Link>
                       </>
                     ) : subject.configured ? (
                       <Link className="subject-primary" href={`/subjects/${subject.id}`}>勉強を始める</Link>

@@ -1,9 +1,12 @@
+import { PROTOCOL_DESCRIPTIONS } from "./protocol-descriptions";
+
 export type Layer = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export type ProtocolCard = {
   id: string;
   label: string;
   fullName?: string;
+  description?: string;
   layer: Layer;
   layers?: Layer[];
   source: 1 | 2 | "custom";
@@ -21,7 +24,7 @@ export const PROTOCOL_FORMAL_NAMES: Record<string, string> = {
   "Zigbee": "Zigbee（低消費電力・近距離メッシュ無線通信規格。略語ではない）",
   "IEEE 802.1X": "Institute of Electrical and Electronics Engineers 802.1X — Port-Based Network Access Control",
   "EAP": "Extensible Authentication Protocol",
-  "EAPoL": "Extensible Authentication Protocol over LAN",
+  "EAPoL": "Extensible Authentication Protocol over LANs (EAPOL)",
   "RADIUS": "Remote Authentication Dial-In User Service",
   "EAP-TLS": "Extensible Authentication Protocol – Transport Layer Security",
   "PEAP": "Protected Extensible Authentication Protocol",
@@ -35,7 +38,7 @@ export const PROTOCOL_FORMAL_NAMES: Record<string, string> = {
   "AES": "Advanced Encryption Standard",
   "AES256": "Advanced Encryption Standard（256-bit Key）",
   "ARP": "Address Resolution Protocol",
-  "GARP": "Gratuitous ARP（Gratuitous Address Resolution Protocol）",
+  "GARP": "Gratuitous ARP",
   "PPP": "Point-to-Point Protocol",
   "PAP": "Password Authentication Protocol",
   "CHAP": "Challenge-Handshake Authentication Protocol",
@@ -122,6 +125,7 @@ function makeCards(labels: string[], layer: Layer, source: 1 | 2): ProtocolCard[
     id: cardId(label, layer),
     label,
     fullName: PROTOCOL_FORMAL_NAMES[label],
+    description: PROTOCOL_DESCRIPTIONS[label],
     layer,
     source,
     enabled: true,
@@ -133,6 +137,7 @@ export const DEFAULT_CARDS: ProtocolCard[] = [
     id: "l1-ethernet",
     label: "イーサネット",
     fullName: PROTOCOL_FORMAL_NAMES["イーサネット"],
+    description: PROTOCOL_DESCRIPTIONS["イーサネット"],
     layer: 1,
     layers: [1, 2],
     source: 1,
@@ -291,6 +296,9 @@ export function normalizeCards(value: unknown): ProtocolCard[] {
     const fullName = typeof candidate.fullName === "string" && candidate.fullName.trim()
       ? candidate.fullName.trim()
       : undefined;
+    const description = typeof candidate.description === "string" && candidate.description.trim()
+      ? candidate.description.trim()
+      : undefined;
     const layers = Array.isArray(candidate.layers)
       ? [...new Set(candidate.layers.filter(isLayer))]
       : undefined;
@@ -298,6 +306,7 @@ export function normalizeCards(value: unknown): ProtocolCard[] {
       id: candidate.id,
       label,
       fullName,
+      description,
       layer: candidate.layer,
       layers: layers?.length ? layers : undefined,
       source,
@@ -314,6 +323,7 @@ export function normalizeCards(value: unknown): ProtocolCard[] {
       ...fallback,
       ...saved,
       fullName: saved.fullName ?? (saved.label === fallback.label ? fallback.fullName : undefined),
+      description: saved.description ?? (saved.label === fallback.label ? fallback.description : undefined),
       layers: saved.layers ?? (saved.layer === fallback.layer ? fallback.layers : undefined),
       note: saved.note ?? fallback.note,
       source: fallback.source,

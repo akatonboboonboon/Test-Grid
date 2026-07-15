@@ -55,6 +55,7 @@ export default function CardsPage() {
   const currentCard = deck[index];
   const currentLayerLabel = currentCard ? cardLayerLabel(currentCard) : "";
   const currentFullName = currentCard?.fullName?.trim() || "正式名称未登録";
+  const currentDescription = currentCard?.description?.trim() || "このカードの働きはまだ登録されていません。";
   const masteredCount = useMemo(
     () => cards.filter((card) => progress[card.id] === "mastered").length,
     [cards, progress],
@@ -217,6 +218,22 @@ export default function CardsPage() {
             </div>
 
             <div className="memory-side">
+              <aside className={`memory-explanation ${flipped ? "is-visible" : ""}`} aria-live="polite">
+                <span>{flipped ? "WHAT IT DOES" : "FLIP TO LEARN"}</span>
+                {flipped ? (
+                  <>
+                    <h2>{currentCard.label}の働き</h2>
+                    <p>{currentDescription}</p>
+                    {currentCard.note && <small>{currentCard.note}</small>}
+                  </>
+                ) : (
+                  <>
+                    <h2>カードを裏返す</h2>
+                    <p>層と正式名称に加えて、このプロトコルが何をするものかをここで確認できます。</p>
+                  </>
+                )}
+              </aside>
+
               <div className="memory-nav">
                 <button type="button" onClick={() => move(-1)} aria-label="前のカード">← <span>PREV</span></button>
                 <button type="button" onClick={() => move(1)} aria-label="次のカード"><span>NEXT</span> →</button>

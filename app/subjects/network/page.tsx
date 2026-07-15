@@ -218,15 +218,15 @@ export default function Home() {
   );
 
   const { expectedSums, runningTotals } = useMemo(() => {
-    let totals = new Set([0]);
-    const running = sequence.map((card) => {
+    const expandTotals = (items: ProtocolCard[]) => items.reduce((totals, card) => {
       const next = new Set<number>();
-      totals.forEach((total) => {
-        cardLayers(card).forEach((layer) => next.add(total + layer));
-      });
-      totals = next;
-      return [...totals].sort((left, right) => left - right);
-    });
+      totals.forEach((total) => cardLayers(card).forEach((layer) => next.add(total + layer)));
+      return next;
+    }, new Set<number>([0]));
+    const running = sequence.map((_, itemIndex) => (
+      [...expandTotals(sequence.slice(0, itemIndex + 1))].sort((left, right) => left - right)
+    ));
+    const totals = expandTotals(sequence);
     return {
       expectedSums: [...totals].sort((left, right) => left - right),
       runningTotals: running,
@@ -314,7 +314,7 @@ export default function Home() {
     if (phase !== "identify" || feedback || !currentCard) return;
     identifyLockedRef.current = false;
     const deadline = performance.now() + identifyLimit;
-    setIdentifyRemaining(identifyLimit);
+    const startFrame = window.requestAnimationFrame(() => setIdentifyRemaining(identifyLimit));
     const updateClock = () => {
       setIdentifyRemaining(Math.max(0, deadline - performance.now()));
     };
@@ -324,6 +324,7 @@ export default function Home() {
       finishIdentify(null);
     }, identifyLimit);
     return () => {
+      window.cancelAnimationFrame(startFrame);
       window.clearInterval(interval);
       window.clearTimeout(timeout);
     };
@@ -454,7 +455,7 @@ export default function Home() {
         </Link>
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {cards.filter((card) => card.enabled).length} CARDS</span>
-          <Link className="outline-button header-link" href="/subjects/network/cards">暗記カード</Link>
+          <Link className="outline-button header-link memory-open-button" href="/subjects/network/cards">暗記帳を開く</Link>
           <button className="outline-button" type="button" onClick={() => setEditorOpen(true)} disabled={!["idle", "result"].includes(phase)}>
             カードを編集
           </button>
@@ -466,6 +467,9 @@ export default function Home() {
           <p className="eyebrow"><span>NETWORK LAYER TRAINING</span><span>PHOTO SET / 01—02</span></p>
           <h1 id="page-title">①〜⑦の用語を、<br /><em>瞬時に足す。</em></h1>
           <p className="lede">丸数字をそのままOSI層番号へ対応。写真内の99個の層別記載を同名ごとにまとめた96枚で、テスト仕様の速さまで叩き込みます。</p>
+          <Link className="network-memory-callout" href="/subjects/network/cards">
+            <span>暗記帳</span><strong>層・正式名称・働きを覚える</strong><b aria-hidden="true">開く →</b>
+          </Link>
         </section>
 
         <section className="practice-panel" aria-label="練習エリア">

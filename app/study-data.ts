@@ -46,7 +46,7 @@ export const SUBJECT_ACCENTS = [
 ] as const;
 
 const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "memo">> = [
-  { id: "subject-2", name: "英語", module: "generic", memo: "教材写真の追加待ち" },
+  { id: "subject-2", name: "英語", module: "generic", memo: "試験PDF形式＋Ch.15・16・18・19を収録" },
   { id: "network", name: "ネットワーク", module: "network", memo: "①〜⑦の全用語とOSI層を仕上げる" },
   { id: "subject-3", name: "機械力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
   { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "教材写真の追加待ち" },

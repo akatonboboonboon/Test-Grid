@@ -35,6 +35,7 @@ test("server-renders the nine-subject study hub", async () => {
   assert.match(html, /9教科を/);
   assert.match(html, /科目別の勉強机/);
   assert.match(html, /ネットワークから始める/);
+  assert.match(html, /暗記帳はここです/);
   assert.match(html, /英語/);
   assert.match(html, /機械力学/);
   assert.match(html, /材料力学/);
@@ -64,12 +65,26 @@ test("server-renders the memorization card page", async () => {
   assert.match(html, /暗記カード \| ネットワーク \| TEST\/\/GRID/);
   assert.match(html, /まず覚える/);
   assert.match(html, /タップして層と正式名称を確認/);
+  assert.match(html, /WHAT IT DOES|FLIP TO LEARN/);
   assert.match(html, /未暗記だけ復習/);
+});
+
+test("server-renders the English exam lab", async () => {
+  const response = await render("/subjects/subject-2");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /ENGLISH EXAM LAB/);
+  assert.match(html, /暗記帳を開く/);
+  assert.match(html, /模擬テスト/);
+  assert.match(html, /長文読解/);
+  assert.match(html, /Chapter 15|Ch\.15/);
+  assert.match(html, /Chapter 19|Ch\.19/);
+  assert.match(html, /MEMORY BOOK/);
 });
 
 test("server-renders a generic subject workspace and the old cards URL", async () => {
   const [subjectResponse, legacyCardsResponse] = await Promise.all([
-    render("/subjects/subject-2"),
+    render("/subjects/subject-3"),
     render("/cards"),
   ]);
   assert.equal(subjectResponse.status, 200);
@@ -83,13 +98,16 @@ test("server-renders a generic subject workspace and the old cards URL", async (
 });
 
 test("ships the study hub without starter artifacts", async () => {
-  const [hubPage, networkPage, cardsPage, subjectPage, studyData, protocols, layout, css, packageJson, ogStats] = await Promise.all([
+  const [hubPage, networkPage, cardsPage, subjectPage, englishPage, englishData, studyData, protocols, protocolDescriptions, layout, css, packageJson, ogStats] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/subjects/network/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/subjects/network/cards/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/subjects/[subjectId]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/subjects/subject-2/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/english-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/study-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/protocols.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/protocol-descriptions.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
@@ -104,6 +122,7 @@ test("ships the study hub without starter artifacts", async () => {
   }
   assert.match(protocols, /layers\?: Layer\[\]/);
   assert.match(protocols, /fullName\?: string/);
+  assert.match(protocols, /description\?: string/);
   assert.match(protocols, /PROTOCOL_FORMAL_NAMES/);
   assert.match(protocols, /"SFTP": "SSH File Transfer Protocol"/);
   assert.match(protocols, /"RADIUS": "Remote Authentication Dial-In User Service"/);
@@ -135,6 +154,20 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(cardsPage, /memory-card/);
   assert.match(cardsPage, /currentCard\?\.fullName/);
   assert.match(cardsPage, /memory-full-name/);
+  assert.match(cardsPage, /memory-explanation/);
+  assert.match(cardsPage, /currentDescription/);
+  for (const label of ["ARP", "TCP", "TLS1.3", "HTTP\/3", "DNS", "RTP"]) {
+    assert.ok(protocolDescriptions.includes(`"${label}"`), `${label} should have a role explanation`);
+  }
+  assert.match(englishPage, /test-grid:english-memory:v1/);
+  assert.match(englishPage, /ENGLISH_UNITS\.map/);
+  assert.match(englishPage, /questionPassage/);
+  assert.match(englishData, /Chapter 15/);
+  assert.match(englishData, /Chapter 19/);
+  assert.match(englishData, /passage-wheelchair/);
+  assert.match(englishData, /passage-dna/);
+  assert.match(englishData, /VOCAB_QUESTIONS/);
+  assert.match(englishData, /ORDER_QUESTIONS/);
   assert.match(subjectPage, /parseBulk/);
   assert.match(subjectPage, /一問一答/);
   assert.match(layout, /generateMetadata/);
