@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ENGLISH_VOCAB } from "./english-data";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
+import { STATISTICS_FORMULAS } from "./statistics-data";
 import {
   DEFAULT_SUBJECTS,
   SUBJECT_ACCENTS,
@@ -53,6 +54,13 @@ function readMetrics(subjects: StudySubject[]) {
       return [subject.id, {
         cards: ENGLISH_VOCAB.length,
         mastered: ENGLISH_VOCAB.filter((card) => progress[card.id] === "mastered").length,
+      } satisfies SubjectMetric];
+    }
+    if (subject.id === "subject-7") {
+      const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-7"), {});
+      return [subject.id, {
+        cards: STATISTICS_FORMULAS.length,
+        mastered: STATISTICS_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
     }
     const cards = normalizeStudyCards(
@@ -185,7 +193,7 @@ export default function StudyHub() {
           <div>
             <p className="eyebrow"><span>REGULAR EXAM / 9 SUBJECTS</span><span>LOCAL STUDY DESK</span></p>
             <h1 id="hub-title">9教科を、<br /><em>ひとつずつ潰す。</em></h1>
-            <p>英語は試験PDF形式の専用演習、ネットワークは層の暗算・即答・暗記帳を収録。ほかの科目も教材を追加しながら、ここでまとめて回せます。</p>
+            <p>英語はZIP教材の専用演習、ネットワークは層の暗算・即答・暗記帳、確率統計は公式・計算・模試を収録。ほかの科目も教材を追加しながら、ここでまとめて回せます。</p>
           </div>
           <Link className="hub-primary-link" href="/subjects/network">
             <span>READY NOW</span>
@@ -220,7 +228,7 @@ export default function StudyHub() {
             {subjects.map((subject) => {
               const metric = metrics[subject.id] ?? { cards: 0, mastered: 0 };
               const completion = metric.cards ? Math.round((metric.mastered / metric.cards) * 100) : 0;
-              const hasMaterial = subject.module === "network" || metric.cards > 0;
+              const hasMaterial = subject.module === "network" || subject.id === "subject-7" || metric.cards > 0;
               const style = { "--subject-accent": subject.accent } as CSSProperties;
               return (
                 <article className={`subject-tile ${subject.configured ? "is-configured" : "is-empty"}`} style={style} key={subject.id}>
@@ -262,7 +270,7 @@ export default function StudyHub() {
         </section>
       </main>
 
-      <footer><span>TEST//GRID</span><p>9 SUBJECTS · LOCAL SAVE · NO LOGIN</p><span>HUB 01</span></footer>
+      <footer><span>TEST//GRID</span><p>9 SUBJECTS · AUTO SAVE · ACCOUNT SYNC</p><span>HUB 01</span></footer>
 
       {editing && (
         <div className="subject-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="subject-dialog-title">

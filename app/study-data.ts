@@ -46,13 +46,13 @@ export const SUBJECT_ACCENTS = [
 ] as const;
 
 const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "memo">> = [
-  { id: "subject-2", name: "英語", module: "generic", memo: "試験PDF形式＋Ch.15・16・18・19を収録" },
+  { id: "subject-2", name: "英語", module: "generic", memo: "ZIP教材のCh.15・16・18・19を収録・過去問は形式だけ反映" },
   { id: "network", name: "ネットワーク", module: "network", memo: "①〜⑦の全用語とOSI層を仕上げる" },
   { id: "subject-3", name: "機械力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
   { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "教材写真の追加待ち" },
   { id: "subject-5", name: "材料力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
   { id: "subject-6", name: "スマート制御", module: "generic", memo: "現在資料なし" },
-  { id: "subject-7", name: "確率統計", module: "generic", memo: "教材写真の追加待ち" },
+  { id: "subject-7", name: "確率統計", module: "generic", memo: "ZIPノート9枚の範囲を公式・計算・模試で収録" },
   { id: "subject-8", name: "応用数学", module: "generic", memo: "教材写真の追加待ち" },
   { id: "subject-9", name: "デジタル回路", module: "generic", memo: "教材写真の追加待ち" },
 ];
@@ -90,14 +90,17 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
     const accent = typeof saved.accent === "string" && SUBJECT_ACCENTS.includes(saved.accent as typeof SUBJECT_ACCENTS[number])
       ? saved.accent
       : fallback.accent;
+    const savedMemo = typeof saved.memo === "string" ? saved.memo.trim() : "";
+    const wasOldStatisticsPlaceholder = fallback.id === "subject-7" && savedMemo === "教材写真の追加待ち";
+    const wasOldEnglishDescription = fallback.id === "subject-2" && savedMemo === "試験PDF形式＋Ch.15・16・18・19を収録";
     return {
       ...fallback,
       name,
       accent,
       configured: fallback.configured || saved.configured === true,
       testDate: typeof saved.testDate === "string" ? saved.testDate.slice(0, 10) : "",
-      memo: typeof saved.memo === "string" && saved.memo.trim()
-        ? saved.memo.trim().slice(0, 120)
+      memo: savedMemo && !wasOldStatisticsPlaceholder && !wasOldEnglishDescription
+        ? savedMemo.slice(0, 120)
         : fallback.memo,
     };
   });

@@ -21,6 +21,7 @@ registerHooks({
 });
 
 let englishDataModulePromise;
+let statisticsDataModulePromise;
 
 function loadEnglishDataModule() {
   englishDataModulePromise ??= readFile(new URL("../app/english-data.ts", import.meta.url), "utf8")
@@ -32,6 +33,18 @@ function loadEnglishDataModule() {
     }).outputText)
     .then((javascript) => import(`data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`));
   return englishDataModulePromise;
+}
+
+function loadStatisticsDataModule() {
+  statisticsDataModulePromise ??= readFile(new URL("../app/statistics-data.ts", import.meta.url), "utf8")
+    .then((source) => ts.transpileModule(source, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText)
+    .then((javascript) => import(`data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`));
+  return statisticsDataModulePromise;
 }
 
 async function render(path = "/", init = {}) {
@@ -114,6 +127,20 @@ test("server-renders the English exam lab", async () => {
   assert.match(html, /Chapter 15|Ch\.15/);
   assert.match(html, /Chapter 19|Ch\.19/);
   assert.match(html, /MEMORY BOOK/);
+});
+
+test("server-renders the probability and statistics exam lab", async () => {
+  const response = await render("/subjects/subject-7");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /確率統計・定期テスト演習/);
+  assert.match(html, /PROBABILITY &amp; STATISTICS/);
+  assert.match(html, /今回の試験範囲/);
+  assert.match(html, /公式カード/);
+  assert.match(html, /計算演習/);
+  assert.match(html, /模擬テスト/);
+  assert.match(html, /出題形式/);
+  assert.match(html, /確率統計ZIPの教材だけ/);
 });
 
 test("keeps the study workspaces usable on phone-sized viewports", async () => {
@@ -229,6 +256,51 @@ test("supports translation grading, explanations, genre filters, and the course-
   assert.match(englishPage, /selectedTestGroups\.includes\(questionGenre\(question\)\)/);
   assert.match(englishPage, /question\.group\.split\("｜", 1\)/);
   assert.match(englishPage, /すべて選択/);
+});
+
+test("uses English past exams only as a format guide", async () => {
+  const englishPage = await readFile(new URL("../app/subjects/subject-2/page.tsx", import.meta.url), "utf8");
+  for (const label of ["共通語群・複数空所", "イラスト○×・語形変化", "英文挿入", "複数正解・T/F", "長文の連続小問"]) {
+    assert.match(englishPage, new RegExp(label));
+  }
+  assert.match(englishPage, /過去問は出題形式の分析専用/);
+  assert.match(englishPage, /Chapter 15・16・18・19の教材だけ/);
+});
+
+test("keeps statistics course data separate from the sample tests and saves mock exams", async () => {
+  const [statisticsPage, statisticsData, syncUi] = await Promise.all([
+    readFile(new URL("../app/subjects/subject-7/page.tsx", import.meta.url), "utf8"),
+    loadStatisticsDataModule(),
+    readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),
+  ]);
+
+  const { STATISTICS_TOPICS, STATISTICS_FORMULAS, STATISTICS_QUESTIONS, STATISTICS_EXAM_FORMATS } = statisticsData;
+  assert.equal(STATISTICS_TOPICS.length, 6);
+  assert.ok(STATISTICS_FORMULAS.length >= 28, "the course should provide a substantial formula deck");
+  assert.ok(STATISTICS_QUESTIONS.length >= 40, "the course should provide a substantial drill bank");
+  assert.equal(STATISTICS_EXAM_FORMATS.length, 4);
+  assert.ok(STATISTICS_QUESTIONS.every((question) => question.source === "course-range"));
+
+  const courseCorpus = JSON.stringify({ STATISTICS_TOPICS, STATISTICS_FORMULAS, STATISTICS_QUESTIONS });
+  for (const excluded of ["中央値", "平均偏差", "変動係数", "幾何平均", "調和平均", "エントロピー", "偏相関", "Spearman", "Kendall"]) {
+    assert.equal(courseCorpus.includes(excluded), false, `${excluded} comes only from the sample tests and must remain out of scope`);
+  }
+
+  assert.match(statisticsPage, /test-grid:subject-7:progress:v1/);
+  assert.match(statisticsPage, /test-grid:subject-7:mock-test:v1/);
+  assert.match(statisticsPage, /function parseNumericResponse/);
+  assert.match(statisticsPage, /normalized\.includes\("%"\)/);
+  assert.match(statisticsPage, /const fraction = normalized\.match/);
+  assert.match(statisticsPage, /question\.tolerance/);
+  assert.match(statisticsPage, /function pauseTest/);
+  assert.match(statisticsPage, /function resumeSavedTest/);
+  assert.match(statisticsPage, /function deleteSavedTest/);
+  assert.match(statisticsPage, /中断して保存/);
+  assert.match(statisticsPage, /続きから再開/);
+  assert.match(statisticsPage, /保存データを削除/);
+  assert.match(statisticsPage, /途中式/);
+  assert.match(statisticsPage, /内容は合っていた → 正解にする/);
+  assert.match(syncUi, /key\.endsWith\("mock-test:v1"\)/);
 });
 
 test("syncs all subject progress through an authenticated account API", async () => {

@@ -945,13 +945,19 @@ export default function EnglishSubjectPage() {
 
           {mode === "guide" && (
             <section className="english-guide-workspace" aria-labelledby="english-guide-title">
-              <div className="english-panel-heading"><div><span>FORMAT GUIDE</span><h2 id="english-guide-title">出題形式ガイド</h2></div><p>試験で手が止まらないように、形式ごとの解き方を先に固定します。</p></div>
+              <div className="english-panel-heading"><div><span>FORMAT GUIDE</span><h2 id="english-guide-title">出題形式ガイド</h2></div><p>試験で手が止まらないように、過去問から確認できた形式ごとの解き方を先に固定します。</p></div>
               <div className="english-guide-grid">
                 <article><span>01 / INPUT</span><h3>穴埋め・疑問詞</h3><p>日本語と前後の文型を確認し、必要な1語または語句を入力。大文字小文字と句読点は採点時に無視します。</p><strong>例：How long / in which / recognize</strong></article>
                 <article><span>02 / CHOICE</span><h3>内容理解・4択</h3><p>選択肢を先に読み、本文の該当箇所と同じ意味のものを選択。本文にない強い表現へ飛びつかない。</p><strong>主語・動作・対象を照合</strong></article>
                 <article><span>03 / ORDER</span><h3>語順整序</h3><p>最初に主語と動詞を決め、熟語をひとかたまりにして配置。残った前置詞句を最後に接続します。</p><strong>主語 → 動詞 → 目的語 → 修飾</strong></article>
                 <article><span>04 / READING</span><h3>長文読解・要約</h3><p>各段落の主語と動詞を取り、指示語と受動態を確認。最後に要約文へ本文中の語を戻します。</p><strong>和訳は確認時だけ表示</strong></article>
+                <article><span>05 / WORD BANK</span><h3>共通語群・複数空所</h3><p>空所の前後から必要な品詞を決めて候補を減らし、すべて入れたあとに文意を再確認。同じ語を1回だけ使う指定にも注意します。</p><strong>品詞 → 文意 → 使用済み語の確認</strong></article>
+                <article><span>06 / VISUAL</span><h3>イラスト○×・語形変化</h3><p>物の位置、動作が進行中か完了済みかを絵から読み取ります。○×は各表現を別々に判定し、動詞は時制と受動態まで合わせます。</p><strong>位置関係・進行／完了・能動／受動</strong></article>
+                <article><span>07 / INSERT</span><h3>英文挿入</h3><p>挿入文の代名詞、接続語、時を表す語に印を付け、直前と直後の両方につながる位置を選びます。</p><strong>指示語の参照先と話題の流れを照合</strong></article>
+                <article><span>08 / MULTI &amp; T/F</span><h3>複数正解・T/F</h3><p>正解を1つ見つけても止めず、全選択肢を本文の根拠と照合します。NOT問題は「本文と合わないもの」を選ぶことを先に確認。</p><strong>各選択肢に根拠文を1つ対応させる</strong></article>
+                <article><span>09 / PASSAGE SET</span><h3>長文の連続小問</h3><p>先に小問を眺めて探す情報を決め、本文は段落ごとの要点を取りながら一度通読。語句・和訳・日本語記述・内容一致を同じ根拠箇所から続けて処理します。</p><strong>設問確認 → 通読 → 根拠箇所 → 連続解答</strong></article>
               </div>
+              <div className="english-guide-tip"><span>PAST EXAM NOTE</span><p><b>送付された過去問は出題形式の分析専用です。</b>過去問の本文・単語・固有テーマは今回のテスト範囲に含めず、Chapter 15・16・18・19の教材だけで練習問題を構成します。</p></div>
               <div className="english-guide-tip"><span>INTERVIEW TIP</span><p><b>Yes / No質問</b>は Yes・No から答え、<b>Wh疑問文</b>は聞かれている情報を直接返す。what / where / why / how long を見分ける。</p></div>
             </section>
           )}
