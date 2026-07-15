@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import AccountSync from "./account-sync";
 import { chatGPTSignInPath, chatGPTSignOutPath, getChatGPTUser } from "./chatgpt-auth";
+import "./vendor/katex/katex.min.css";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";

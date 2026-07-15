@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import StatisticsExpectedExams from "../../statistics-expected-exams";
+import { DisplayMath, RichMathText } from "../../statistics-math";
 import {
   STATISTICS_EXAM_FORMATS,
   STATISTICS_FORMULAS,
@@ -11,7 +13,7 @@ import {
   type StatisticsTopicId,
 } from "../../statistics-data";
 
-type Mode = "scope" | "cards" | "practice" | "test" | "guide";
+type Mode = "scope" | "cards" | "practice" | "test" | "expected" | "guide";
 type CardState = "learning" | "mastered";
 type CardProgress = Record<string, CardState>;
 type Feedback = { response: string; correct: boolean };
@@ -286,7 +288,7 @@ function AnswerForm({
                 checked={selectedChoice === option}
                 onChange={(event) => onSelectedChoice(event.target.value)}
               />
-              <span><b>{String.fromCharCode(65 + index)}</b>{option}</span>
+              <span><b>{String.fromCharCode(65 + index)}</b><RichMathText text={option} /></span>
             </label>
           ))}
         </fieldset>
@@ -312,14 +314,14 @@ function SolutionFeedback({
   return (
     <div className={`generic-test-answer english-test-feedback statistics-feedback ${feedback.correct ? "is-correct" : "is-wrong"}`} aria-live="polite">
       <strong>{feedback.correct ? "正解" : "不正解"}</strong>
-      <p><span>あなたの解答</span>{feedback.response}</p>
-      <p><span>正解</span>{question.answer}</p>
-      {question.formula && <p><span>使う公式</span>{question.formula}</p>}
+      <p><span>あなたの解答</span><RichMathText text={feedback.response} /></p>
+      <p><span>正解</span><RichMathText text={question.answer} /></p>
+      {question.formula && <div className="statistics-solution-formula"><span>使う公式</span><DisplayMath tex={question.formula} /></div>}
       <div className="statistics-solution-steps">
         <span>途中式</span>
-        <ol>{question.steps.map((step, index) => <li key={`${question.id}-step-${index}`}>{step}</li>)}</ol>
+        <ol>{question.steps.map((step, index) => <li key={question.id + "-step-" + index}><RichMathText text={step} /></li>)}</ol>
       </div>
-      <p><span>解説</span>{question.explanation}</p>
+      <p><span>解説</span><RichMathText text={question.explanation} /></p>
       {onOverride && !feedback.correct && question.format === "text" && (
         <button className="english-translation-override statistics-answer-override" type="button" onClick={onOverride}>内容は合っていた → 正解にする</button>
       )}
@@ -635,7 +637,7 @@ export default function StatisticsSubjectPage() {
           <div className="english-hero-copy statistics-hero-copy">
             <p><span>SUBJECT 07</span><span>COURSE-RANGE ONLY</span></p>
             <h1 id="statistics-title">確率統計</h1>
-            <small>公式を覚え、計算手順を反復し、試験形式に合わせたランダム模試で仕上げます。</small>
+            <small>公式を数式の形で覚え、演習を反復し、50分・100点満点の想定試験で仕上げます。</small>
           </div>
           <button className="english-hero-memory-button statistics-hero-card-button" type="button" onClick={() => changeMode("cards")}>
             <span>FORMULAS FIRST</span>
@@ -648,7 +650,7 @@ export default function StatisticsSubjectPage() {
           <div><span>TOPICS</span><strong>{STATISTICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{STATISTICS_FORMULAS.length}</strong><small>枚</small></div>
           <div><span>QUESTIONS</span><strong>{STATISTICS_QUESTIONS.length}</strong><small>問</small></div>
-          <p>確率統計ZIPの教材だけを試験範囲として収録。テスト①PDF・テスト②写真は形式見本であり、本文や数値は出題しません。公式は {totalMastered}枚暗記済み。</p>
+          <p>確率統計ZIPと「確率統計1〜4.pdf」を試験範囲として収録。テスト①PDF・テスト②写真は形式見本だけに使用しています。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
         <section ref={workspaceRef} id="statistics-workspace" className="english-workspace statistics-workspace">
@@ -656,19 +658,20 @@ export default function StatisticsSubjectPage() {
             <button type="button" role="tab" aria-selected={mode === "scope"} className={mode === "scope" ? "active" : ""} onClick={() => changeMode("scope")}>① 範囲</button>
             <button type="button" role="tab" aria-selected={mode === "cards"} className={mode === "cards" ? "active english-tab-memory" : "english-tab-memory"} onClick={() => changeMode("cards")}>② 公式カード</button>
             <button type="button" role="tab" aria-selected={mode === "practice"} className={mode === "practice" ? "active" : ""} onClick={() => changeMode("practice")}>③ 計算演習</button>
-            <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>④ 模擬テスト</button>
-            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑤ 出題形式</button>
+            <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>④ ランダム模試</button>
+            <button type="button" role="tab" aria-selected={mode === "expected"} className={mode === "expected" ? "active" : ""} onClick={() => changeMode("expected")}>⑤ 想定試験</button>
+            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑥ 出題形式</button>
           </div>
 
           {mode === "scope" && (
             <section className="english-guide-workspace statistics-scope-workspace" aria-labelledby="statistics-scope-title">
               <div className="english-panel-heading statistics-panel-heading">
                 <div><span>COURSE RANGE</span><h2 id="statistics-scope-title">今回の試験範囲</h2></div>
-                <p>ZIP内の教材写真から整理した6単元です。過去問のPDF・写真は、形式を把握する目的だけに使っています。</p>
+                <p>ZIP内の教材写真と確率統計1〜4.pdfから整理した6単元です。過去問テストのPDF・写真は形式把握だけに使っています。</p>
               </div>
               <div className="english-guide-tip statistics-source-policy">
                 <span>SOURCE POLICY</span>
-                <p><b>出題する：</b>確率統計ZIPの内容　／　<b>出題しない：</b>確率統計テスト①.pdf・確率統計テスト②.jpgにしかない本文、数値、設問<br /><small>過去問だけにある中央値・平均偏差・変動係数・幾何平均・調和平均・エントロピー・偏相関・順位相関なども除外済みです。</small></p>
+                <p><b>出題する：</b>確率統計ZIP＋確率統計1〜4.pdfの演習　／　<b>出題しない：</b>指定されたモンティ・ホール問題、テスト①.pdf・テスト②.jpgにしかない本文・数値・設問<br /><small>過去問だけにある中央値・平均偏差・変動係数・幾何平均・調和平均・エントロピー・偏相関・順位相関なども除外済みです。</small></p>
               </div>
               <div className="english-guide-grid statistics-topic-grid">
                 {STATISTICS_TOPICS.map((topic) => {
@@ -708,12 +711,14 @@ export default function StatisticsSubjectPage() {
                   <div className="generic-deck-meta english-deck-meta statistics-deck-meta"><span>CARD {cardIndex + 1} / {cardDeck.length}</span><span>{topicLabel(currentCard.topic)} · {progress[currentCard.id] === "mastered" ? "覚えた" : progress[currentCard.id] === "learning" ? "もう一度" : "未判定"}</span></div>
                   <button type="button" className={`generic-flip-card english-flip-card statistics-flip-card ${cardFlipped ? "is-flipped" : ""}`} onClick={() => setCardFlipped((flipped) => !flipped)} aria-label={cardFlipped ? "問題面に戻る" : "公式を見る"}>
                     <span>{cardFlipped ? currentCard.title : "QUESTION"}</span>
-                    <strong>{cardFlipped ? currentCard.formula : currentCard.prompt}</strong>
+                    {cardFlipped
+                      ? <DisplayMath tex={currentCard.formula} ariaLabel={currentCard.title + "の公式"} />
+                      : <strong><RichMathText text={currentCard.prompt} /></strong>}
                     <small>{cardFlipped ? currentCard.cue : "頭の中で公式を書いてからタップ"}</small>
                   </button>
                   {cardFlipped && (
                     <div className="english-guide-tip statistics-card-explanation">
-                      <span>WHY / HOW</span><p>{currentCard.explanation}{currentCard.example ? <><br /><b>例：</b>{currentCard.example}</> : null}</p>
+                      <span>WHY / HOW</span><p><RichMathText text={currentCard.explanation} />{currentCard.example ? <><br /><b>例：</b><RichMathText text={currentCard.example} /></> : null}</p>
                     </div>
                   )}
                   <div className="generic-card-controls english-card-controls statistics-card-controls">
@@ -742,8 +747,8 @@ export default function StatisticsSubjectPage() {
               {currentPracticeQuestion ? (
                 <div className="english-test-active statistics-practice-active">
                   <div className="generic-deck-meta english-test-meta statistics-question-meta"><span>QUESTION {practiceIndex + 1} / {practiceDeck.length}</span><span>{topicLabel(currentPracticeQuestion.topic)} · {currentPracticeQuestion.genre} · 難度{currentPracticeQuestion.difficulty} · {formatLabel(currentPracticeQuestion)}</span></div>
-                  {currentPracticeQuestion.context && <div className="english-guide-tip statistics-question-context"><span>GIVEN</span><p>{currentPracticeQuestion.context}</p></div>}
-                  <div className="generic-test-question english-test-question statistics-test-question"><span>問題</span><h2>{currentPracticeQuestion.prompt}</h2></div>
+                  {currentPracticeQuestion.context && <div className="english-guide-tip statistics-question-context"><span>GIVEN</span><p><RichMathText text={currentPracticeQuestion.context} /></p></div>}
+                  <div className="generic-test-question english-test-question statistics-test-question"><span>問題</span><h2><RichMathText text={currentPracticeQuestion.prompt} /></h2></div>
                   <AnswerForm idPrefix="practice" question={currentPracticeQuestion} typedAnswer={practiceTypedAnswer} selectedChoice={practiceSelectedChoice} feedback={practiceFeedback} onTypedAnswer={setPracticeTypedAnswer} onSelectedChoice={setPracticeSelectedChoice} onSubmit={submitPracticeAnswer} />
                   {practiceFeedback && <SolutionFeedback question={currentPracticeQuestion} feedback={practiceFeedback} onOverride={acceptPracticeText} onNext={nextPracticeQuestion} nextLabel={practiceIndex === practiceDeck.length - 1 ? "一周してもう一度 →" : "次の問題へ →"} />}
                 </div>
@@ -779,8 +784,8 @@ export default function StatisticsSubjectPage() {
                 <div className="english-test-active statistics-test-active">
                   <div className="generic-deck-meta english-test-meta statistics-question-meta"><span>QUESTION {testIndex + 1} / {testQuestions.length}</span><span>{topicLabel(currentTestQuestion.topic)} · {currentTestQuestion.genre} · {formatLabel(currentTestQuestion)}</span></div>
                   <div className="english-result-actions english-test-session-actions statistics-test-session-actions"><span>経過 {formatElapsedTime(testElapsedSeconds)}・現在位置と入力内容を自動保存中</span><button type="button" onClick={pauseTest}>中断して保存</button></div>
-                  {currentTestQuestion.context && <div className="english-guide-tip statistics-question-context"><span>GIVEN</span><p>{currentTestQuestion.context}</p></div>}
-                  <div className="generic-test-question english-test-question statistics-test-question"><span>問題</span><h2>{currentTestQuestion.prompt}</h2></div>
+                  {currentTestQuestion.context && <div className="english-guide-tip statistics-question-context"><span>GIVEN</span><p><RichMathText text={currentTestQuestion.context} /></p></div>}
+                  <div className="generic-test-question english-test-question statistics-test-question"><span>問題</span><h2><RichMathText text={currentTestQuestion.prompt} /></h2></div>
                   <AnswerForm idPrefix="test" question={currentTestQuestion} typedAnswer={testTypedAnswer} selectedChoice={testSelectedChoice} feedback={testFeedback} onTypedAnswer={setTestTypedAnswer} onSelectedChoice={setTestSelectedChoice} onSubmit={submitTestAnswer} />
                   {testFeedback && <SolutionFeedback question={currentTestQuestion} feedback={testFeedback} onOverride={acceptTestText} onNext={nextTestQuestion} nextLabel={testIndex === testQuestions.length - 1 ? "結果を見る" : "次の問題へ →"} />}
                 </div>
@@ -793,10 +798,10 @@ export default function StatisticsSubjectPage() {
                     {testResults.map((result, index) => (
                       <article key={`${result.question.id}-${index}`} className={result.correct ? "is-correct" : "is-wrong"}>
                         <span>{result.correct ? "○" : "×"} Q{index + 1}</span>
-                        <strong>{result.question.prompt}</strong>
-                        <p>あなた：{result.response || "未回答"}</p>
-                        {!result.correct && <p>正解：{result.question.answer}</p>}
-                        <p>解説：{result.question.explanation}</p>
+                        <strong><RichMathText text={result.question.prompt} /></strong>
+                        <p>あなた：<RichMathText text={result.response || "未回答"} /></p>
+                        {!result.correct && <p>正解：<RichMathText text={result.question.answer} /></p>}
+                        <p>解説：<RichMathText text={result.question.explanation} /></p>
                       </article>
                     ))}
                   </div>
@@ -805,6 +810,8 @@ export default function StatisticsSubjectPage() {
               )}
             </section>
           )}
+
+          {mode === "expected" && <StatisticsExpectedExams />}
 
           {mode === "guide" && (
             <section className="english-guide-workspace statistics-guide-workspace" aria-labelledby="statistics-guide-title">
@@ -828,7 +835,7 @@ export default function StatisticsSubjectPage() {
         <p className="sr-announcement" aria-live="polite">{announcement}</p>
       </main>
 
-      <footer className="english-footer statistics-footer"><span>TEST//GRID</span><p>PROBABILITY &amp; STATISTICS · COURSE RANGE · LOCAL SAVE</p><span>SUBJECT 07</span></footer>
+      <footer className="english-footer statistics-footer"><span>TEST//GRID</span><p>PROBABILITY &amp; STATISTICS · 50 MIN · PASS 60</p><span>SUBJECT 07</span></footer>
     </div>
   );
 }

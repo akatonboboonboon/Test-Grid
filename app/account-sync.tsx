@@ -54,7 +54,7 @@ function mergeRawValue(key: string, remoteValue: string, localValue: string) {
   if (key.includes(":progress:") || key.includes("-memory-") || key.includes(":english-memory:")) {
     return mergeProgress(remoteValue, localValue);
   }
-  if (key.endsWith("mock-test:v1")) {
+  if (key.endsWith("mock-test:v1") || key.endsWith("expected-exam:v1")) {
     const remoteSavedAt = Number(parsedObject(remoteValue)?.savedAt ?? 0);
     const localSavedAt = Number(parsedObject(localValue)?.savedAt ?? 0);
     return remoteSavedAt > localSavedAt ? remoteValue : localValue;

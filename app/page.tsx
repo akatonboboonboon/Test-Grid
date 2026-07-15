@@ -193,7 +193,7 @@ export default function StudyHub() {
           <div>
             <p className="eyebrow"><span>REGULAR EXAM / 9 SUBJECTS</span><span>LOCAL STUDY DESK</span></p>
             <h1 id="hub-title">9教科を、<br /><em>ひとつずつ潰す。</em></h1>
-            <p>英語はZIP教材の専用演習、ネットワークは層の暗算・即答・暗記帳、確率統計は公式・計算・模試を収録。ほかの科目も教材を追加しながら、ここでまとめて回せます。</p>
+            <p>英語はZIP教材の専用演習、ネットワークは層の暗算・即答・暗記帳、確率統計は数式カード・計算演習・50分想定試験を収録。ほかの科目も教材を追加しながら、ここでまとめて回せます。</p>
           </div>
           <Link className="hub-primary-link" href="/subjects/network">
             <span>READY NOW</span>

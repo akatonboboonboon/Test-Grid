@@ -47,6 +47,30 @@ function loadStatisticsDataModule() {
   return statisticsDataModulePromise;
 }
 
+void loadStatisticsDataModule;
+
+function loadCombinedStatisticsDataModule() {
+  return Promise.all([
+    readFile(new URL("../app/statistics-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/statistics-pdf12-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/statistics-pdf34-data.ts", import.meta.url), "utf8"),
+  ]).then(([mainSource, pdf12Source, pdf34Source]) => {
+    const compile = (source) => ts.transpileModule(source, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText;
+    const toDataUrl = (javascript) => "data:text/javascript;base64," + Buffer.from(javascript).toString("base64");
+    const pdf12Url = toDataUrl(compile(pdf12Source));
+    const pdf34Url = toDataUrl(compile(pdf34Source));
+    const mainJavascript = compile(mainSource)
+      .replaceAll('"./statistics-pdf12-data"', JSON.stringify(pdf12Url))
+      .replaceAll('"./statistics-pdf34-data"', JSON.stringify(pdf34Url));
+    return import(toDataUrl(mainJavascript));
+  });
+}
+
 async function render(path = "/", init = {}) {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
@@ -138,9 +162,10 @@ test("server-renders the probability and statistics exam lab", async () => {
   assert.match(html, /今回の試験範囲/);
   assert.match(html, /公式カード/);
   assert.match(html, /計算演習/);
-  assert.match(html, /模擬テスト/);
+  assert.match(html, /ランダム模試/);
+  assert.match(html, /想定試験/);
   assert.match(html, /出題形式/);
-  assert.match(html, /確率統計ZIPの教材だけ/);
+  assert.match(html, /確率統計ZIPと「確率統計1〜4\.pdf」/);
 });
 
 test("keeps the study workspaces usable on phone-sized viewports", async () => {
@@ -270,18 +295,25 @@ test("uses English past exams only as a format guide", async () => {
 test("keeps statistics course data separate from the sample tests and saves mock exams", async () => {
   const [statisticsPage, statisticsData, syncUi] = await Promise.all([
     readFile(new URL("../app/subjects/subject-7/page.tsx", import.meta.url), "utf8"),
-    loadStatisticsDataModule(),
+    loadCombinedStatisticsDataModule(),
     readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),
   ]);
 
   const { STATISTICS_TOPICS, STATISTICS_FORMULAS, STATISTICS_QUESTIONS, STATISTICS_EXAM_FORMATS } = statisticsData;
   assert.equal(STATISTICS_TOPICS.length, 6);
-  assert.ok(STATISTICS_FORMULAS.length >= 28, "the course should provide a substantial formula deck");
-  assert.ok(STATISTICS_QUESTIONS.length >= 40, "the course should provide a substantial drill bank");
+  assert.ok(STATISTICS_FORMULAS.length >= 33, "the course should provide a substantial formula deck");
+  assert.ok(STATISTICS_QUESTIONS.length >= 90, "the course should include the four in-range exercise PDFs");
   assert.equal(STATISTICS_EXAM_FORMATS.length, 4);
   assert.ok(STATISTICS_QUESTIONS.every((question) => question.source === "course-range"));
 
   const courseCorpus = JSON.stringify({ STATISTICS_TOPICS, STATISTICS_FORMULAS, STATISTICS_QUESTIONS });
+  assert.equal(courseCorpus.includes("モンティ"), false, "the explicitly excluded puzzle must never enter course data");
+  assert.equal(courseCorpus.toLowerCase().includes("monty"), false, "the explicitly excluded puzzle must never enter course data");
+  for (const prefix of ["stats-ex1-", "stats-ex2-", "stats-ex3-", "stats-ex4-"]) {
+    assert.ok(STATISTICS_QUESTIONS.some((question) => question.id.startsWith(prefix)), prefix + " exercises should be present");
+  }
+  assert.equal(new Set(STATISTICS_QUESTIONS.map((question) => question.id)).size, STATISTICS_QUESTIONS.length, "statistics IDs must remain unique");
+  assert.ok(STATISTICS_FORMULAS.every((card) => !card.formula.includes("Σxi") && !card.formula.includes(" / ")), "formula cards should use TeX rather than slash-style pseudo-math");
   for (const excluded of ["中央値", "平均偏差", "変動係数", "幾何平均", "調和平均", "エントロピー", "偏相関", "Spearman", "Kendall"]) {
     assert.equal(courseCorpus.includes(excluded), false, `${excluded} comes only from the sample tests and must remain out of scope`);
   }
@@ -300,7 +332,34 @@ test("keeps statistics course data separate from the sample tests and saves mock
   assert.match(statisticsPage, /保存データを削除/);
   assert.match(statisticsPage, /途中式/);
   assert.match(statisticsPage, /内容は合っていた → 正解にする/);
+  assert.match(statisticsPage, /確率統計1〜4\.pdf/);
+  assert.match(statisticsPage, /モンティ・ホール問題/);
+  assert.match(statisticsPage, /<StatisticsExpectedExams/);
   assert.match(syncUi, /key\.endsWith\("mock-test:v1"\)/);
+  assert.match(syncUi, /key\.endsWith\("expected-exam:v1"\)/);
+});
+
+test("provides twelve saved 50-minute predicted exams with TeX answers and a 60-point pass line", async () => {
+  const [expectedExams, statisticsPage, mathRenderer] = await Promise.all([
+    readFile(new URL("../app/statistics-expected-exams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/subjects/subject-7/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/statistics-math.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal((expectedExams.match(/id:\s*"expected-\d{2}"/g) ?? []).length, 12);
+  assert.match(expectedExams, /const EXAM_SECONDS\s*=\s*50\s*\*\s*60/);
+  assert.match(expectedExams, /const PASS_SCORE\s*=\s*60/);
+  assert.match(expectedExams, /test-grid:subject-7:expected-exam:v1/);
+  assert.match(expectedExams, /中断して保存/);
+  assert.match(expectedExams, /続きから再開/);
+  assert.match(expectedExams, /MODEL ANSWERS/);
+  assert.match(expectedExams, /解答・途中式・解説/);
+  assert.match(expectedExams, /赤点です（合格ライン60点）/);
+  assert.match(statisticsPage, /DisplayMath/);
+  assert.match(statisticsPage, /RichMathText/);
+  assert.match(mathRenderer, /renderToString/);
+  assert.match(mathRenderer, /output:\s*"htmlAndMathml"/);
+  assert.match(mathRenderer, /throwOnError:\s*false/);
 });
 
 test("syncs all subject progress through an authenticated account API", async () => {
