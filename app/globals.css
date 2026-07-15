@@ -3939,6 +3939,211 @@ footer p {
   margin: 18px 0 0 auto;
 }
 
+.english-deep-explanation {
+  background: #f7f3e9;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  margin-top: 22px;
+  min-width: 0;
+  padding: clamp(16px, 3vw, 28px);
+}
+
+.english-deep-explanation.is-compact {
+  margin-top: 12px;
+  padding: 16px;
+}
+
+.english-deep-explanation-heading {
+  border-bottom: 2px solid var(--ink);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+}
+
+.english-deep-explanation-heading span,
+.english-evidence-card header span,
+.english-option-analysis header span,
+.english-reading-tip > span,
+.english-vocab-insight header span {
+  color: rgba(11, 14, 19, 0.54);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.english-deep-explanation-heading h3 {
+  font-size: clamp(17px, 2.7vw, 23px);
+  line-height: 1.2;
+  margin: 0;
+  text-align: right;
+}
+
+.english-explanation-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.english-explanation-sections section {
+  border-left: 4px solid var(--english-blue);
+  padding: 3px 0 3px 14px;
+}
+
+.english-explanation-sections h4,
+.english-option-analysis h4 {
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
+.english-explanation-sections p,
+.english-evidence-card p,
+.english-option-analysis p,
+.english-reading-tip p,
+.english-vocab-insight p {
+  color: rgba(11, 14, 19, 0.78) !important;
+  font-size: 13px !important;
+  line-height: 1.85;
+  margin: 0 !important;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.english-evidence-card,
+.english-option-analysis,
+.english-reading-tip {
+  border-top: 1px solid rgba(11, 14, 19, 0.3);
+  margin-top: 20px;
+  padding-top: 18px;
+}
+
+.english-evidence-card header,
+.english-option-analysis header,
+.english-vocab-insight header {
+  align-items: baseline;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.english-evidence-card blockquote {
+  background: #111820;
+  border-left: 5px solid var(--english-blue);
+  color: #f8f4e9;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(15px, 2.3vw, 19px);
+  line-height: 1.65;
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+  padding: 16px 18px;
+}
+
+.english-evidence-card > div {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  padding: 7px 0;
+}
+
+.english-evidence-card > div > span {
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.english-option-analysis > div {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+}
+
+.english-option-analysis article {
+  border: 1px solid rgba(11, 14, 19, 0.28);
+  min-width: 0;
+  padding: 13px;
+}
+
+.english-option-analysis article.is-correct {
+  background: rgba(182, 235, 93, 0.19);
+  border-color: #4e8124;
+}
+
+.english-option-analysis article.is-wrong {
+  background: rgba(255, 112, 82, 0.08);
+}
+
+.english-option-analysis article > span {
+  color: #9d2d1e;
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+  margin-bottom: 7px;
+}
+
+.english-option-analysis article.is-correct > span {
+  color: #34731c;
+}
+
+.english-reading-tip {
+  align-items: start;
+  background: rgba(103, 217, 232, 0.16);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 92px minmax(0, 1fr);
+  padding: 14px;
+}
+
+.english-vocab-insight {
+  background: #f7f3e9;
+  border: 1px solid var(--ink);
+  margin-top: 12px;
+  padding: clamp(15px, 3vw, 24px);
+}
+
+.english-vocab-insight header strong {
+  font-family: var(--mono);
+  font-size: clamp(16px, 3vw, 22px);
+}
+
+.english-result-explanation {
+  grid-column: 1 / -1;
+  margin-top: 7px;
+}
+
+.english-result-explanation summary {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 12px 4px;
+}
+
+.english-result-explanation summary:focus-visible {
+  outline: 3px solid var(--english-blue);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .english-deep-explanation-heading,
+  .english-evidence-card header,
+  .english-option-analysis header,
+  .english-vocab-insight header {
+    align-items: start;
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .english-deep-explanation-heading h3 {
+    text-align: left;
+  }
+
+  .english-reading-tip {
+    grid-template-columns: 1fr;
+  }
+}
+
 .english-test-result > h2 {
   color: var(--english-red);
   font-family: var(--mono);
@@ -3957,7 +4162,7 @@ footer p {
   margin-top: 28px;
 }
 
-.english-result-list article {
+.english-result-list > article {
   border-bottom: 1px solid var(--line-dark);
   display: grid;
   gap: 6px;
@@ -3965,18 +4170,18 @@ footer p {
   padding: 15px 4px;
 }
 
-.english-result-list article > span {
+.english-result-list > article > span {
   color: #9d2d1e;
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 900;
 }
 
-.english-result-list article.is-correct > span {
+.english-result-list > article.is-correct > span {
   color: #34731c;
 }
 
-.english-result-list article p {
+.english-result-list > article > p {
   color: rgba(11, 14, 19, 0.58);
   font-size: 10px;
   grid-column: 2;
@@ -4230,7 +4435,7 @@ footer p {
     grid-column: 1;
   }
 
-  .english-result-list article {
+  .english-result-list > article {
     grid-template-columns: 62px 1fr;
   }
 
@@ -5396,12 +5601,12 @@ footer p {
     line-height: 1.78;
   }
 
-  .english-result-list article {
+  .english-result-list > article {
     gap: 6px 10px;
     grid-template-columns: 54px minmax(0, 1fr);
   }
 
-  .english-result-list article p {
+  .english-result-list > article > p {
     overflow-wrap: anywhere;
   }
 }

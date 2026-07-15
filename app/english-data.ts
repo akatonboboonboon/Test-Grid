@@ -834,7 +834,7 @@ const CORE_QUESTIONS: EnglishQuestion[] = [
   ...[
     ["And ( ___ ) long did you test the ThinkChair for?", "how"],
     ["As a wheelchair user, ( ___ ) did you think about the ThinkChair?", "what"],
-    ["( ___ ) did you experience these problems? — Mostly at the beginning.", "where"],
+    ["( ___ ) did you experience these problems? — Mostly at the beginning.", "when"],
     ["But you said it was quite good. ( ___ )? — Because it showed the shortest route.", "why"],
   ].map(([prompt, answer], index) => ({
     id: `ch18-interview-${index + 1}`,

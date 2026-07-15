@@ -1,0 +1,155 @@
+.figure {
+  background: #f5f1e8;
+  border: 1px solid var(--ink, #0b0e13);
+  color: var(--ink, #0b0e13);
+  margin: 24px 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.cropScroller,
+.fullScroller {
+  -webkit-overflow-scrolling: touch;
+  background: #d8d4ca;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.cropScroller:focus-visible {
+  outline: 3px solid var(--english-blue, #67d9e8);
+  outline-offset: -3px;
+}
+
+.cropViewport {
+  aspect-ratio: 8 / 5;
+  background: #e4e0d7;
+  overflow: hidden;
+  position: relative;
+  width: max(100%, 560px);
+}
+
+.cropPage {
+  aspect-ratio: 16 / 9;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-66%, -72%);
+  width: 285%;
+}
+
+.sourcePhoto {
+  height: 177.7778%;
+  left: 50%;
+  max-width: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  transform-origin: center;
+  user-select: none;
+  width: auto;
+}
+
+.caption {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px 20px;
+}
+
+.eyebrow {
+  color: rgba(11, 14, 19, 0.56);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.caption strong {
+  font-size: clamp(19px, 3vw, 27px);
+  line-height: 1.2;
+}
+
+.caption p,
+.sourceNote {
+  line-height: 1.75;
+  margin: 0;
+}
+
+.sourceDetails {
+  border-top: 1px solid var(--ink, #0b0e13);
+  padding: 0 20px 20px;
+}
+
+.sourceDetails summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  list-style-position: outside;
+  min-height: 48px;
+  padding: 15px 2px 13px;
+}
+
+.sourceDetails summary:focus-visible,
+.sourceLink:focus-visible {
+  outline: 3px solid var(--english-blue, #67d9e8);
+  outline-offset: 3px;
+}
+
+.fullScroller {
+  border: 1px solid rgba(11, 14, 19, 0.38);
+}
+
+.fullPage {
+  aspect-ratio: 16 / 9;
+  background: #e4e0d7;
+  overflow: hidden;
+  position: relative;
+  width: max(100%, 720px);
+}
+
+.sourceNote {
+  color: rgba(11, 14, 19, 0.68);
+  font-size: 11px;
+  margin-top: 12px;
+}
+
+.sourceLink {
+  color: inherit;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 900;
+  margin-top: 8px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .caption {
+    padding: 15px 16px 17px;
+  }
+
+  .sourceDetails {
+    padding: 0 16px 16px;
+  }
+
+  .cropScroller::after {
+    background: rgba(11, 14, 19, 0.78);
+    color: #fff;
+    content: "横にスクロール →";
+    display: block;
+    font-family: var(--mono, ui-monospace, monospace);
+    font-size: 9px;
+    font-weight: 900;
+    padding: 7px 12px;
+    position: sticky;
+    right: 0;
+    text-align: right;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cropScroller,
+  .fullScroller {
+    scroll-behavior: auto;
+  }
+}

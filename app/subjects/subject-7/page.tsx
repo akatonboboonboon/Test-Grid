@@ -637,7 +637,7 @@ export default function StatisticsSubjectPage() {
           <div className="english-hero-copy statistics-hero-copy">
             <p><span>SUBJECT 07</span><span>COURSE-RANGE ONLY</span></p>
             <h1 id="statistics-title">確率統計</h1>
-            <small>公式を数式の形で覚え、演習を反復し、50分・100点満点の想定試験で仕上げます。</small>
+            <small>公式を数式の形で覚え、演習を反復し、全範囲を毎回扱うA4・50分・100点満点の想定試験で仕上げます。</small>
           </div>
           <button className="english-hero-memory-button statistics-hero-card-button" type="button" onClick={() => changeMode("cards")}>
             <span>FORMULAS FIRST</span>
@@ -650,7 +650,7 @@ export default function StatisticsSubjectPage() {
           <div><span>TOPICS</span><strong>{STATISTICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{STATISTICS_FORMULAS.length}</strong><small>枚</small></div>
           <div><span>QUESTIONS</span><strong>{STATISTICS_QUESTIONS.length}</strong><small>問</small></div>
-          <p>確率統計ZIPと「確率統計1〜4.pdf」を試験範囲として収録。テスト①PDF・テスト②写真は形式見本だけに使用しています。公式は {totalMastered}枚暗記済み。</p>
+          <p>確率統計ZIPと「確率統計1〜4.pdf」を試験範囲として収録。テスト①PDF・テスト②写真は問題用紙の形式見本だけに使用し、想定試験12回はすべて全6単元を含みます。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
         <section ref={workspaceRef} id="statistics-workspace" className="english-workspace statistics-workspace">

@@ -206,7 +206,7 @@ test("separates long-passage memorization from answer practice", async () => {
   assert.match(englishPage, /function submitReadingAnswer/);
   assert.match(englishPage, /onSubmit=\{submitReadingAnswer\}/);
   assert.match(englishPage, /readingFeedback/);
-  assert.match(englishPage, /getQuestionExplanation\(readingQuestion\)/);
+  assert.match(englishPage, /<EnglishQuestionExplanation question=\{readingQuestion\}/);
 });
 
 test("saves, pauses, resumes, and deletes an in-progress mock exam", async () => {
@@ -270,8 +270,8 @@ test("supports translation grading, explanations, genre filters, and the course-
   assert.match(englishPage, /bigramSimilarity/);
   assert.match(englishPage, /japaneseKeywords/);
   assert.match(englishPage, /和訳入力/);
-  assert.match(englishPage, /function getQuestionExplanation/);
-  assert.match(englishPage, /getQuestionExplanation\(currentQuestion\)/);
+  assert.match(englishPage, /import \{ EnglishQuestionExplanation, EnglishVocabInsight \}/);
+  assert.match(englishPage, /<EnglishQuestionExplanation question=\{currentQuestion\}/);
   assert.match(englishPage, /意味は合っていた → 正解にする/);
   assert.doesNotMatch(englishPage, /currentQuestion\.explanation\s*&&/);
 
@@ -339,9 +339,10 @@ test("keeps statistics course data separate from the sample tests and saves mock
   assert.match(syncUi, /key\.endsWith\("expected-exam:v1"\)/);
 });
 
-test("provides twelve saved 50-minute predicted exams with TeX answers and a 60-point pass line", async () => {
-  const [expectedExams, statisticsPage, mathRenderer] = await Promise.all([
+test("provides twelve balanced A4 predicted exams with 11 major questions and 100 verified points", async () => {
+  const [expectedExams, expectedExamStyles, statisticsPage, mathRenderer] = await Promise.all([
     readFile(new URL("../app/statistics-expected-exams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/statistics-expected-exams.module.css", import.meta.url), "utf8"),
     readFile(new URL("../app/subjects/subject-7/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/statistics-math.tsx", import.meta.url), "utf8"),
   ]);
@@ -349,12 +350,40 @@ test("provides twelve saved 50-minute predicted exams with TeX answers and a 60-
   assert.equal((expectedExams.match(/id:\s*"expected-\d{2}"/g) ?? []).length, 12);
   assert.match(expectedExams, /const EXAM_SECONDS\s*=\s*50\s*\*\s*60/);
   assert.match(expectedExams, /const PASS_SCORE\s*=\s*60/);
+  assert.match(expectedExams, /const TOTAL_POINTS\s*=\s*100/);
+  assert.match(expectedExams, /const EXPECTED_MAJOR_COUNT\s*=\s*11/);
+  assert.match(expectedExams, /const EXPECTED_SUBQUESTION_COUNT\s*=\s*26/);
+  assert.match(expectedExams, /function validateExpectedPaper/);
+  assert.match(expectedExams, /paper\.totalPoints\s*!==\s*TOTAL_POINTS/);
+
+  const questionTemplates = [...expectedExams.matchAll(/makeQuestion\(definition,\s*(\d+),\s*(\d+),\s*(\d+),/g)];
+  assert.equal(questionTemplates.length, 26, "each numerical variant should use the same 26 subquestion templates");
+  assert.equal(questionTemplates.reduce((sum, match) => sum + Number(match[3]), 0), 100, "template points must total exactly 100");
+  const questionsByMajor = new Map();
+  for (const match of questionTemplates) questionsByMajor.set(Number(match[1]), (questionsByMajor.get(Number(match[1])) ?? 0) + 1);
+  assert.deepEqual([...questionsByMajor.values()], [3, 4, 2, 2, 3, 3, 2, 3, 2, 1, 1]);
+
+  for (const label of ["記述統計", "相関・回帰・予測", "場合の数", "条件付き確率・Bayes", "離散型確率変数", "連続型確率変数", "正規分布・標準化", "チェビシェフの不等式", "独立と排反の説明"]) {
+    assert.match(expectedExams, new RegExp(label));
+  }
+  assert.doesNotMatch(expectedExams, /counts:\s*\{/);
+  assert.doesNotMatch(expectedExams, /buildExpectedQuestions/);
   assert.match(expectedExams, /test-grid:subject-7:expected-exam:v1/);
   assert.match(expectedExams, /中断して保存/);
   assert.match(expectedExams, /続きから再開/);
+  assert.match(expectedExams, /createPortal/);
+  assert.match(expectedExams, /window\.print\(\)/);
+  assert.match(expectedExams, /A4問題用紙/);
+  assert.match(expectedExams, /大問11題・小問26問/);
   assert.match(expectedExams, /MODEL ANSWERS/);
   assert.match(expectedExams, /解答・途中式・解説/);
   assert.match(expectedExams, /赤点です（合格ライン60点）/);
+  assert.match(expectedExamStyles, /@page\s*\{/);
+  assert.match(expectedExamStyles, /size:\s*A4 portrait/);
+  assert.match(expectedExamStyles, /column-count:\s*2/);
+  assert.match(expectedExamStyles, /break-before:\s*page/);
+  assert.match(expectedExamStyles, /contain:\s*inline-size/);
+  assert.match(expectedExamStyles, /min-height:\s*297mm/);
   assert.match(statisticsPage, /DisplayMath/);
   assert.match(statisticsPage, /RichMathText/);
   assert.match(mathRenderer, /renderToString/);

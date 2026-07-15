@@ -10,6 +10,8 @@ import {
   type EnglishQuestion,
   type EnglishVocabCard,
 } from "../../english-data";
+import { EnglishQuestionExplanation, EnglishVocabInsight } from "../../english-explanation-panel";
+import EnglishWeatherFigure from "../../english-weather-figure";
 
 type Mode = "cards" | "test" | "reading" | "guide";
 type TestPhase = "setup" | "active" | "result";
@@ -134,23 +136,6 @@ function isCorrectAnswer(question: EnglishQuestion, response: string) {
   const normalized = normalizeAnswer(response);
   return [question.answer, ...(question.accepted ?? [])]
     .some((answer) => normalizeAnswer(answer) === normalized);
-}
-
-function getQuestionExplanation(question: EnglishQuestion) {
-  if (question.explanation) return question.explanation;
-  if (question.format === "translation") {
-    return "本文の主語・動作・対象と、数値や否定など意味を変える要素が訳に入っているか確認します。表現が違っても意味が合えば正解です。";
-  }
-  if (question.format === "order") {
-    return `主語と動詞を先に決め、語句のまとまりをつなぐと「${question.answer}」の語順になります。`;
-  }
-  if (question.group.includes("語彙") || question.group.includes("英→日")) {
-    return `教材での対応表現は「${question.answer}」です。前後の語と一緒に声に出して定着させましょう。`;
-  }
-  if (question.format === "choice") {
-    return `本文または文法上の手掛かりと照合すると「${question.answer}」が当てはまります。`;
-  }
-  return `空欄の前後と文型を確認すると、答えは「${question.answer}」です。`;
 }
 
 function restoreTestSession(): SavedTestSession | null {
@@ -748,7 +733,7 @@ export default function EnglishSubjectPage() {
           <div className="english-hero-copy">
             <p><span>SUBJECT 01</span><span>EXAM-STYLE PRACTICE</span></p>
             <h1 id="english-title">英語</h1>
-            <small>語順整序・穴埋め・選択問題・長文読解を、試験プリントと同じ考え方で反復します。</small>
+            <small>全286問を、語源・活用・文法・本文根拠・誤答理由まで分解して反復します。</small>
           </div>
           <button className="english-hero-memory-button" type="button" onClick={openCards}>
             <span>VOCABULARY FIRST</span>
@@ -761,7 +746,7 @@ export default function EnglishSubjectPage() {
           <div><span>VOCAB</span><strong>{ENGLISH_VOCAB.length}</strong><small>語</small></div>
           <div><span>QUESTIONS</span><strong>{ENGLISH_QUESTIONS.length}</strong><small>問</small></div>
           <div><span>PASSAGES</span><strong>{ENGLISH_PASSAGES.length}</strong><small>本</small></div>
-          <p>ZIP教材のChapter 15・16・18・19を収録。PDF見本の本文・単語は出題しません。覚えた {masteredTotal}語／復習 {learningTotal}語。</p>
+          <p>ZIP教材のChapter 15・16・18・19を収録。全問に詳しい解説を付け、Chapter 16の資料図も表示します。PDF見本の本文・単語は出題しません。覚えた {masteredTotal}語／復習 {learningTotal}語。</p>
         </section>
 
         <section ref={workspaceRef} id="english-workspace" className="english-workspace">
@@ -792,6 +777,7 @@ export default function EnglishSubjectPage() {
                     <strong>{cardFlipped ? currentCard.en : currentCard.ja}</strong>
                     {cardFlipped && currentCard.note ? <small>{currentCard.note}</small> : <small>{cardFlipped ? "覚えていたか判定してください" : "英語を声に出してから、タップして確認"}</small>}
                   </button>
+                  {cardFlipped && <EnglishVocabInsight card={currentCard} />}
                   <div className="generic-card-controls english-card-controls">
                     <button type="button" onClick={() => moveCard(-1)} aria-label="前のカード">← 前へ</button>
                     <button type="button" className="again" disabled={!cardFlipped} onClick={() => markCard("learning")}>1　未暗記</button>
@@ -847,6 +833,7 @@ export default function EnglishSubjectPage() {
                       <div>{questionPassage.paragraphs.map((paragraph, index) => <p key={`${questionPassage.id}-test-${index}`}><b>{index + 1}</b>{paragraph.en}</p>)}</div>
                     </details>
                   )}
+                  {currentQuestion.id.startsWith("ch16-homepage-") && <EnglishWeatherFigure />}
                   <div className="generic-test-question english-test-question"><span>問題</span><h2>{currentQuestion.prompt}</h2></div>
                   <form className="english-answer-form" onSubmit={submitTestAnswer}>
                     {currentQuestion.format === "input" && <label className="english-input-answer"><span>解答を入力</span><input autoComplete="off" value={typedAnswer} disabled={Boolean(feedback)} onChange={(event) => setTypedAnswer(event.target.value)} placeholder="英語で入力" /></label>}
@@ -861,7 +848,7 @@ export default function EnglishSubjectPage() {
                       <strong>{feedback.correct ? "正解" : "不正解"}</strong>
                       <p><span>あなたの解答</span>{feedback.response}</p>
                       <p><span>正解</span>{currentQuestion.answer}</p>
-                      <p><span>解説</span>{getQuestionExplanation(currentQuestion)}</p>
+                      <EnglishQuestionExplanation question={currentQuestion} />
                       {currentQuestion.format === "translation" && !feedback.correct && <button className="english-translation-override" type="button" onClick={acceptTestTranslation}>意味は合っていた → 正解にする</button>}
                       <button type="button" onClick={nextTestQuestion}>{testIndex === testQuestions.length - 1 ? "結果を見る" : "次の問題へ →"}</button>
                     </div>
@@ -872,7 +859,7 @@ export default function EnglishSubjectPage() {
               {testPhase === "result" && (
                 <div className="english-test-result">
                   <span>MOCK EXAM RESULT</span><h2>{testScore} / {testResults.length}</h2><p>正答率 {testResults.length ? Math.round((testScore / testResults.length) * 100) : 0}%</p>
-                  <div className="english-result-list">{testResults.map((result, index) => <article key={`${result.question.id}-${index}`} className={result.correct ? "is-correct" : "is-wrong"}><span>{result.correct ? "○" : "×"} Q{index + 1}</span><strong>{result.question.prompt}</strong><p>あなた：{result.response || "未回答"}</p>{!result.correct && <p>正解：{result.question.answer}</p>}<p>解説：{getQuestionExplanation(result.question)}</p></article>)}</div>
+                  <div className="english-result-list">{testResults.map((result, index) => <article key={`${result.question.id}-${index}`} className={result.correct ? "is-correct" : "is-wrong"}><span>{result.correct ? "○" : "×"} Q{index + 1}</span><strong>{result.question.prompt}</strong><p>あなた：{result.response || "未回答"}</p>{!result.correct && <p>正解：{result.question.answer}</p>}<details className="english-result-explanation"><summary>詳しい解説を開く</summary><EnglishQuestionExplanation question={result.question} compact /></details></article>)}</div>
                   <div className="english-result-actions"><button type="button" onClick={startTest}>同じ設定でもう一度</button><button type="button" onClick={() => setTestPhase("setup")}>設定を変える</button></div>
                 </div>
               )}
@@ -918,7 +905,7 @@ export default function EnglishSubjectPage() {
                   {selectedPassageQuestions.length > 0 && readingFinished && (
                     <div className="english-test-result">
                       <span>READING RESULT</span><h2>{readingScore} / {readingResults.length}</h2><p>正答率 {readingResults.length ? Math.round((readingScore / readingResults.length) * 100) : 0}%</p>
-                      <div className="english-result-list">{readingResults.map((result, index) => <article key={`${result.question.id}-reading-result-${index}`} className={result.correct ? "is-correct" : "is-wrong"}><span>{result.correct ? "○" : "×"} Q{index + 1}</span><strong>{result.question.prompt}</strong><p>正解：{result.question.answer}</p><p>解説：{getQuestionExplanation(result.question)}</p></article>)}</div>
+                      <div className="english-result-list">{readingResults.map((result, index) => <article key={`${result.question.id}-reading-result-${index}`} className={result.correct ? "is-correct" : "is-wrong"}><span>{result.correct ? "○" : "×"} Q{index + 1}</span><strong>{result.question.prompt}</strong><p>正解：{result.question.answer}</p><details className="english-result-explanation"><summary>詳しい解説を開く</summary><EnglishQuestionExplanation question={result.question} compact /></details></article>)}</div>
                       <div className="english-result-actions"><button type="button" onClick={() => resetReadingPractice()}>この長文をもう一度解く</button></div>
                     </div>
                   )}
@@ -927,6 +914,7 @@ export default function EnglishSubjectPage() {
                     <div className="english-test-active english-reading-question-area">
                       <div className="generic-progress english-card-progress"><div><span>関連問題 {readingQuestionIndex + 1} / {selectedPassageQuestions.length}</span><strong>{readingScore}問正解</strong></div><progress value={readingQuestionIndex + 1} max={selectedPassageQuestions.length} aria-label={`関連問題の進捗 ${readingQuestionIndex + 1}/${selectedPassageQuestions.length}`} /></div>
                       <div className="generic-deck-meta english-test-meta"><span>QUESTION {readingQuestionIndex + 1}</span><span>{readingQuestion.group} · {formatLabel(readingQuestion.format)}</span></div>
+                      {readingQuestion.id.startsWith("ch16-homepage-") && <EnglishWeatherFigure />}
                       <div className="generic-test-question english-test-question"><span>問題</span><h2>{readingQuestion.prompt}</h2></div>
                       <form className="english-answer-form" onSubmit={submitReadingAnswer}>
                         {readingQuestion.format === "input" && <label className="english-input-answer"><span>解答を入力</span><input autoComplete="off" value={readingTypedAnswer} disabled={Boolean(readingFeedback)} onChange={(event) => setReadingTypedAnswer(event.target.value)} placeholder="英語で入力" /></label>}
@@ -935,7 +923,7 @@ export default function EnglishSubjectPage() {
                         {readingQuestion.format === "order" && <div className="english-order-answer"><span>チップを正しい順に並べる</span><div className="english-order-line" aria-label="作成中の英文">{readingOrderSelected.length ? readingOrderSelected.map((token) => <button key={token.id} type="button" disabled={Boolean(readingFeedback)} onClick={() => removeReadingOrderToken(token)}>{token.text}</button>) : <small>下の語句を順番に選択</small>}</div><div className="english-order-bank">{readingOrderRemaining.map((token) => <button key={token.id} type="button" disabled={Boolean(readingFeedback)} onClick={() => chooseReadingOrderToken(token)}>{token.text}</button>)}</div>{!readingFeedback && <button className="english-order-reset" type="button" onClick={() => prepareReadingQuestion(readingQuestion)}>並べ直す</button>}</div>}
                         {!readingFeedback && <button className="english-submit-answer" type="submit" disabled={!canSubmitReading}>採点する →</button>}
                       </form>
-                      {readingFeedback && <div className={`generic-test-answer english-test-feedback ${readingFeedback.correct ? "is-correct" : "is-wrong"}`} aria-live="polite"><strong>{readingFeedback.correct ? "正解" : "不正解"}</strong><p><span>あなたの解答</span>{readingFeedback.response}</p><p><span>正解</span>{readingQuestion.answer}</p><p><span>解説</span>{getQuestionExplanation(readingQuestion)}</p>{readingQuestion.format === "translation" && !readingFeedback.correct && <button className="english-translation-override" type="button" onClick={acceptReadingTranslation}>意味は合っていた → 正解にする</button>}<button type="button" onClick={nextReadingQuestion}>{readingQuestionIndex === selectedPassageQuestions.length - 1 ? "結果を見る" : "次の問題へ →"}</button></div>}
+                      {readingFeedback && <div className={`generic-test-answer english-test-feedback ${readingFeedback.correct ? "is-correct" : "is-wrong"}`} aria-live="polite"><strong>{readingFeedback.correct ? "正解" : "不正解"}</strong><p><span>あなたの解答</span>{readingFeedback.response}</p><p><span>正解</span>{readingQuestion.answer}</p><EnglishQuestionExplanation question={readingQuestion} />{readingQuestion.format === "translation" && !readingFeedback.correct && <button className="english-translation-override" type="button" onClick={acceptReadingTranslation}>意味は合っていた → 正解にする</button>}<button type="button" onClick={nextReadingQuestion}>{readingQuestionIndex === selectedPassageQuestions.length - 1 ? "結果を見る" : "次の問題へ →"}</button></div>}
                     </div>
                   )}
                 </div>

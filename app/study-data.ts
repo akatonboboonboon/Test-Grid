@@ -52,7 +52,7 @@ const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "m
   { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "教材写真の追加待ち" },
   { id: "subject-5", name: "材料力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
   { id: "subject-6", name: "スマート制御", module: "generic", memo: "現在資料なし" },
-  { id: "subject-7", name: "確率統計", module: "generic", memo: "ZIP＋演習PDF4冊の範囲・50分想定試験12回を収録" },
+  { id: "subject-7", name: "確率統計", module: "generic", memo: "全範囲を毎回扱うA4・50分想定試験を12回収録" },
   { id: "subject-8", name: "応用数学", module: "generic", memo: "教材写真の追加待ち" },
   { id: "subject-9", name: "デジタル回路", module: "generic", memo: "教材写真の追加待ち" },
 ];
