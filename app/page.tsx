@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ENGLISH_VOCAB } from "./english-data";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
+import { SMART_CONTROL_CARDS } from "./smart-control-data";
 import { STATISTICS_FORMULAS } from "./statistics-data";
 import {
   DEFAULT_SUBJECTS,
@@ -54,6 +55,13 @@ function readMetrics(subjects: StudySubject[]) {
       return [subject.id, {
         cards: ENGLISH_VOCAB.length,
         mastered: ENGLISH_VOCAB.filter((card) => progress[card.id] === "mastered").length,
+      } satisfies SubjectMetric];
+    }
+    if (subject.id === "subject-6") {
+      const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-6"), {});
+      return [subject.id, {
+        cards: SMART_CONTROL_CARDS.length,
+        mastered: SMART_CONTROL_CARDS.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
     }
     if (subject.id === "subject-7") {
@@ -228,7 +236,7 @@ export default function StudyHub() {
             {subjects.map((subject) => {
               const metric = metrics[subject.id] ?? { cards: 0, mastered: 0 };
               const completion = metric.cards ? Math.round((metric.mastered / metric.cards) * 100) : 0;
-              const hasMaterial = subject.module === "network" || subject.id === "subject-7" || metric.cards > 0;
+              const hasMaterial = subject.module === "network" || subject.id === "subject-6" || subject.id === "subject-7" || metric.cards > 0;
               const style = { "--subject-accent": subject.accent } as CSSProperties;
               return (
                 <article className={`subject-tile ${subject.configured ? "is-configured" : "is-empty"}`} style={style} key={subject.id}>

@@ -22,6 +22,7 @@ registerHooks({
 
 let englishDataModulePromise;
 let statisticsDataModulePromise;
+let smartControlDataModulePromise;
 
 function loadEnglishDataModule() {
   englishDataModulePromise ??= readFile(new URL("../app/english-data.ts", import.meta.url), "utf8")
@@ -47,6 +48,17 @@ function loadStatisticsDataModule() {
   return statisticsDataModulePromise;
 }
 
+function loadSmartControlDataModule() {
+  smartControlDataModulePromise ??= readFile(new URL("../app/smart-control-data.ts", import.meta.url), "utf8")
+    .then((source) => ts.transpileModule(source, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText)
+    .then((javascript) => import(`data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`));
+  return smartControlDataModulePromise;
+}
 void loadStatisticsDataModule;
 
 function loadCombinedStatisticsDataModule() {
@@ -179,6 +191,21 @@ test("server-renders the probability and statistics exam lab", async () => {
   assert.match(html, /確率統計ZIPと「確率統計1〜4\.pdf」/);
 });
 
+test("server-renders the smart control exam lab", async () => {
+  const response = await render("/subjects/subject-6");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /スマート制御・定期テスト演習/);
+  assert.match(html, /SMART CONTROL LAB/);
+  assert.match(html, /範囲ZIP/);
+  assert.match(html, /過去問2/);
+  assert.match(html, /過去問1・過去問3/);
+  assert.match(html, /暗記カード/);
+  assert.match(html, /ランダム模試/);
+  assert.match(html, /A4想定試験/);
+  assert.match(html, /複素積分・マクローリン展開・留数は対象外/);
+  assert.match(html, /未提供の教科書写真/);
+});
 test("keeps the study workspaces usable on phone-sized viewports", async () => {
   const response = await render("/subjects/subject-2");
   assert.equal(response.status, 200);
@@ -364,6 +391,71 @@ test("keeps statistics course data separate from the sample tests and saves mock
   assert.match(syncUi, /key\.endsWith\("expected-exam:v1"\)/);
 });
 
+test("keeps smart-control range data, formulas, saves, and A4 papers internally consistent", async () => {
+  const [data, page, examsUi, examsCss, syncUi] = await Promise.all([
+    loadSmartControlDataModule(),
+    readFile(new URL("../app/subjects/subject-6/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/smart-control-exams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/smart-control-exams.module.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),
+  ]);
+
+  const {
+    SMART_CONTROL_TOPICS,
+    SMART_CONTROL_CARDS,
+    SMART_CONTROL_QUESTIONS,
+    SMART_CONTROL_EXAMS,
+  } = data;
+  const topicIds = new Set(SMART_CONTROL_TOPICS.map((topic) => topic.id));
+
+  assert.equal(SMART_CONTROL_TOPICS.length, 5);
+  assert.ok(SMART_CONTROL_CARDS.length >= 30, "the formula deck should be substantial");
+  assert.ok(SMART_CONTROL_QUESTIONS.length >= 38, "the practice bank should cover every supplied range topic");
+  assert.equal(SMART_CONTROL_EXAMS.length, 6);
+  assert.equal(new Set(SMART_CONTROL_CARDS.map((card) => card.id)).size, SMART_CONTROL_CARDS.length);
+  assert.equal(new Set(SMART_CONTROL_QUESTIONS.map((question) => question.id)).size, SMART_CONTROL_QUESTIONS.length);
+  assert.ok(SMART_CONTROL_CARDS.every((card) => topicIds.has(card.topic)));
+  assert.ok(SMART_CONTROL_QUESTIONS.every((question) => topicIds.has(question.topic)));
+  assert.ok(SMART_CONTROL_QUESTIONS.every((question) => ["scope-zip", "past2-overlap"].includes(question.source)));
+  assert.ok(SMART_CONTROL_QUESTIONS.filter((question) => question.source === "past2-overlap").every(
+    (question) => ["response-stability", "block-diagram"].includes(question.topic),
+  ));
+  assert.ok(SMART_CONTROL_QUESTIONS.filter((question) => question.format === "choice").every(
+    (question) => question.options?.includes(question.answer),
+  ));
+  assert.ok(SMART_CONTROL_CARDS.some((card) => card.formula.includes("\\frac")));
+  assert.ok(SMART_CONTROL_QUESTIONS.some((question) => question.prompt.includes("\\(")));
+
+  const rangeCorpus = JSON.stringify({ SMART_CONTROL_CARDS, SMART_CONTROL_QUESTIONS, SMART_CONTROL_EXAMS });
+  for (const excluded of ["複素積分", "マクローリン", "留数"]) {
+    assert.equal(rangeCorpus.includes(excluded), false, `${excluded} belongs to the excluded complex-analysis page`);
+  }
+
+  const examQuestionIds = SMART_CONTROL_EXAMS.flatMap((exam) => exam.questions.map((question) => question.id));
+  assert.equal(new Set(examQuestionIds).size, examQuestionIds.length);
+  for (const exam of SMART_CONTROL_EXAMS) {
+    assert.equal(exam.questions.length, 4);
+    assert.equal(exam.questions.reduce((sum, question) => sum + question.points, 0), 100);
+    assert.ok(exam.questions.every((question) => question.prompt && question.answer && question.steps.length));
+  }
+
+  assert.match(page, /test-grid:subject-6:progress:v1/);
+  assert.match(page, /test-grid:subject-6:mock-test:v1/);
+  assert.match(page, /function pauseTest/);
+  assert.match(page, /function resumeSavedTest/);
+  assert.match(page, /中断して保存/);
+  assert.match(page, /続きから再開/);
+  assert.match(page, /<SmartControlExams/);
+  assert.match(examsUi, /test-grid:subject-6:expected-exam:v1/);
+  assert.match(examsUi, /setSavedExam\(snapshot\)/);
+  assert.match(examsUi, /function returnToSelector/);
+  assert.match(examsUi, /smart-control-printing/);
+  assert.match(examsCss, /@page\s*\{/);
+  assert.match(examsCss, /size:\s*A4 portrait/);
+  assert.match(examsCss, /body\.smart-control-printing/);
+  assert.match(syncUi, /key\.endsWith\("mock-test:v1"\)/);
+  assert.match(syncUi, /key\.endsWith\("expected-exam:v1"\)/);
+});
 test("provides twelve balanced A4 predicted exams with 11 major questions and 100 verified points", async () => {
   const [expectedExams, expectedExamStyles, statisticsPage, mathRenderer] = await Promise.all([
     readFile(new URL("../app/statistics-expected-exams.tsx", import.meta.url), "utf8"),

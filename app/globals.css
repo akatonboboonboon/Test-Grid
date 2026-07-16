@@ -4575,6 +4575,12 @@ footer p {
   --statistics-yellow: #ffd65c;
 }
 
+.smart-control-page {
+  --statistics-green: #ff8fc7;
+  --statistics-blue: #55dde0;
+  --statistics-yellow: #ffd65c;
+}
+
 .statistics-hero-card-button {
   background: var(--statistics-green);
 }

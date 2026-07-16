@@ -1,0 +1,318 @@
+.selector,
+.active {
+  display: grid;
+  gap: 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.grid article {
+  display: grid;
+  gap: 10px;
+  min-height: 245px;
+  padding: 22px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 6px 6px 0 var(--statistics-green);
+}
+
+.grid article > span,
+.grid article small {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+}
+
+.grid h3 {
+  margin: 6px 0 0;
+  font-size: 1.35rem;
+}
+
+.grid p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.grid button {
+  align-self: end;
+  min-height: 48px;
+  border: 2px solid var(--ink);
+  background: var(--statistics-green);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.toolbar {
+  position: sticky;
+  z-index: 5;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.toolbar > div {
+  display: grid;
+  margin-right: auto;
+}
+
+.toolbar span,
+.toolbar small {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.toolbar strong {
+  font-size: 1.4rem;
+}
+
+.toolbar button,
+.finishBar button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 2px solid var(--ink);
+  background: var(--statistics-green);
+  font-weight: 900;
+}
+
+.paper {
+  width: min(100%, 210mm);
+  min-height: 297mm;
+  margin-inline: auto;
+  padding: 16mm 15mm;
+  border: 1px solid #999;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 18px 45px rgb(0 0 0 / 18%);
+}
+
+.paper > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #111;
+}
+
+.paper > header div {
+  display: grid;
+  gap: 4px;
+}
+
+.paper > header span,
+.paperMeta,
+.instructions {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.paper > header strong {
+  font-size: 1.55rem;
+}
+
+.paper > header p {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.paperMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 9px 0;
+  border-bottom: 1px solid #999;
+}
+
+.paper h1 {
+  margin: 22px 0 8px;
+  font-size: 1.45rem;
+}
+
+.instructions {
+  margin: 0 0 24px;
+  line-height: 1.7;
+}
+
+.questions {
+  display: grid;
+  gap: 26px;
+}
+
+.questions > article {
+  break-inside: avoid;
+  border-top: 2px solid #111;
+  padding-top: 12px;
+}
+
+.questions article > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.questions article > p {
+  line-height: 1.9;
+}
+
+.questions label {
+  display: grid;
+  gap: 7px;
+  font-weight: 800;
+}
+
+.questions textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  border: 1px solid #999;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 27px, #ddd 28px);
+  color: #111;
+  font: inherit;
+  line-height: 28px;
+}
+
+.solution {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 2px solid #111;
+  background: #f1fff8;
+}
+
+.solution > span {
+  width: fit-content;
+  padding: 3px 7px;
+  background: #111;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.solution p,
+.solution ol {
+  margin: 0;
+  line-height: 1.75;
+}
+
+.solution details {
+  border-top: 1px solid #999;
+  padding-top: 8px;
+}
+
+.solution summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.solution pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.finishBar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar {
+    position: static;
+    flex-wrap: wrap;
+  }
+
+  .toolbar > div {
+    width: 100%;
+  }
+
+  .paper {
+    min-height: 0;
+    padding: 24px 18px;
+  }
+}
+
+@media (max-width: 620px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .paper > header {
+    display: grid;
+  }
+
+  .paper > header p {
+    white-space: normal;
+  }
+
+  .toolbar button,
+  .finishBar button {
+    width: 100%;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  :global(body.smart-control-printing) {
+    margin: 0;
+    background: #fff;
+  }
+
+  :global(body.smart-control-printing) * {
+    visibility: hidden !important;
+  }
+
+  :global(body.smart-control-printing) .paper,
+  :global(body.smart-control-printing) .paper * {
+    visibility: visible !important;
+  }
+
+  :global(body.smart-control-printing) .paper {
+    position: absolute;
+    inset: 0 auto auto 0;
+  }
+
+  .toolbar,
+  .finishBar {
+    display: none !important;
+  }
+
+  .active {
+    display: block;
+  }
+
+  .paper {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    padding: 14mm;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .questions textarea {
+    min-height: 36mm;
+  }
+
+  .solution {
+    display: none;
+  }
+}
