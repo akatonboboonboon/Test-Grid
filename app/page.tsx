@@ -8,8 +8,10 @@ import { SMART_CONTROL_CARDS } from "./smart-control-data";
 import { TEXTBOOK_RESPONSE_CARDS } from "./smart-control-textbook-data";
 import { STATISTICS_FORMULAS } from "./statistics-data";
 import { APPLIED_MATH_FORMULAS } from "./applied-math-data";
+import { THERMODYNAMICS_FORMULAS } from "./thermodynamics-data";
 import {
   DEFAULT_SUBJECTS,
+  EXAM_SCHEDULE,
   SUBJECT_ACCENTS,
   cardsStorageKey,
   loadSubjects,
@@ -43,6 +45,14 @@ function dateLabel(dateValue: string) {
   return `テスト日から${Math.abs(days)}日`;
 }
 
+function scheduleCountdownLabel(dateValue: string) {
+  const days = daysUntil(dateValue);
+  if (days === null) return "日程未設定";
+  if (days === 0) return "本日";
+  if (days > 0) return `あと${days}日`;
+  return `${Math.abs(days)}日前に終了`;
+}
+
 function readMetrics(subjects: StudySubject[]) {
   return Object.fromEntries(subjects.map((subject) => {
     if (subject.module === "network") {
@@ -61,6 +71,13 @@ function readMetrics(subjects: StudySubject[]) {
         mastered: ENGLISH_VOCAB.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
     }
+    if (subject.id === "subject-4") {
+      const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-4"), {});
+      return [subject.id, {
+        cards: THERMODYNAMICS_FORMULAS.length,
+        mastered: THERMODYNAMICS_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
+      } satisfies SubjectMetric];
+    }
     if (subject.id === "subject-6") {
       const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-6"), {});
       return [subject.id, {
@@ -74,7 +91,8 @@ function readMetrics(subjects: StudySubject[]) {
         cards: STATISTICS_FORMULAS.length,
         mastered: STATISTICS_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
-    }    if (subject.id === "subject-8") {
+    }
+    if (subject.id === "subject-8") {
       const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-8"), {});
       return [subject.id, {
         cards: APPLIED_MATH_FORMULAS.length,
@@ -211,7 +229,7 @@ export default function StudyHub() {
           <div>
             <p className="eyebrow"><span>REGULAR EXAM / 9 SUBJECTS</span><span>LOCAL STUDY DESK</span></p>
             <h1 id="hub-title">9教科を、<br /><em>ひとつずつ潰す。</em></h1>
-            <p>英語はZIP教材の専用演習、ネットワークは層の暗算・即答・暗記帳、確率統計はA4想定試験、応用数学は範囲16枚の公式カード・演習とA4 50分80点の全範囲予想試験6回を収録。ほかの科目もここでまとめて回せます。</p>
+            <p>英語はZIP教材の専用演習、ネットワークは層の暗算・即答・暗記帳、熱・流体力学は熱力学7枚・6単元の公式と全範囲想定試験、確率統計・応用数学もA4想定試験まで収録。ほかの科目もここでまとめて回せます。</p>
           </div>
           <Link className="hub-primary-link" href="/subjects/network">
             <span>READY NOW</span>
@@ -236,6 +254,37 @@ export default function StudyHub() {
           <p>データはこの端末に自動保存。科目名も教材もあとから変更できます。</p>
         </section>
 
+        <section className="hub-exam-schedule" aria-labelledby="exam-schedule-title">
+          <div className="hub-exam-schedule-head">
+            <div>
+              <span>EXAM SCHEDULE / 2026</span>
+              <h2 id="exam-schedule-title">定期試験の日程</h2>
+            </div>
+            <p>7月28日から8月3日まで。各日の科目と残り日数をまとめています。</p>
+          </div>
+          <ol className="hub-exam-schedule-list">
+            {EXAM_SCHEDULE.map((entry, index) => {
+              const remainingDays = daysUntil(entry.date);
+              const scheduledSubjects = entry.subjectIds.map((subjectId) => ({
+                id: subjectId,
+                name: subjects.find((subject) => subject.id === subjectId)?.name ?? subjectId,
+              }));
+              return (
+                <li
+                  className={`hub-exam-schedule-item${remainingDays === 0 ? " is-today" : remainingDays !== null && remainingDays < 0 ? " is-past" : ""}`}
+                  key={entry.date}
+                >
+                  <span className="hub-exam-schedule-order">DAY {String(index + 1).padStart(2, "0")}</span>
+                  <time dateTime={entry.date}>{entry.displayDate}</time>
+                  <div className="hub-exam-schedule-subjects">
+                    {scheduledSubjects.map((subject) => <span key={subject.id}>{subject.name}</span>)}
+                  </div>
+                  <strong>{scheduleCountdownLabel(entry.date)}</strong>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
         <section className="hub-subject-section" aria-labelledby="subject-list-title">
           <div className="hub-section-heading">
             <div><span>SUBJECT GRID</span><h2 id="subject-list-title">科目別の勉強机</h2></div>
@@ -246,7 +295,7 @@ export default function StudyHub() {
             {subjects.map((subject) => {
               const metric = metrics[subject.id] ?? { cards: 0, mastered: 0 };
               const completion = metric.cards ? Math.round((metric.mastered / metric.cards) * 100) : 0;
-              const hasMaterial = subject.module === "network" || subject.id === "subject-6" || subject.id === "subject-7" || subject.id === "subject-8" || metric.cards > 0;
+              const hasMaterial = subject.module === "network" || subject.id === "subject-4" || subject.id === "subject-6" || subject.id === "subject-7" || subject.id === "subject-8" || metric.cards > 0;
               const style = { "--subject-accent": subject.accent } as CSSProperties;
               return (
                 <article className={`subject-tile ${subject.configured ? "is-configured" : "is-empty"}`} style={style} key={subject.id}>

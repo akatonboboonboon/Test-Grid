@@ -249,6 +249,20 @@ test("server-renders the smart control exam lab", async () => {
   assert.doesNotMatch(html, /未提供の教科書写真/);
 });
 
+test("server-renders the thermodynamics exam lab", async () => {
+  const response = await render("/subjects/subject-4");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /熱・流体力学・定期テスト演習/);
+  assert.match(html, /THERMODYNAMICS/);
+  assert.match(html, /今回の試験範囲/);
+  assert.match(html, /公式カード/);
+  assert.match(html, /計算演習/);
+  assert.match(html, /ランダム模試/);
+  assert.match(html, /想定試験/);
+  assert.match(html, /出題形式/);
+  assert.match(html, /形式3の確認済み重複/);
+});
 test("server-renders the applied mathematics exam lab", async () => {
   const response = await render("/subjects/subject-8");
   assert.equal(response.status, 200);

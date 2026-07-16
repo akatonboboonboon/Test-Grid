@@ -45,11 +45,29 @@ export const SUBJECT_ACCENTS = [
   "#ff9f68",
 ] as const;
 
+export type ExamScheduleEntry = {
+  date: string;
+  displayDate: string;
+  subjectIds: SubjectId[];
+};
+
+export const EXAM_SCHEDULE: ExamScheduleEntry[] = [
+  { date: "2026-07-28", displayDate: "7/28（火）", subjectIds: ["subject-2", "network"] },
+  { date: "2026-07-29", displayDate: "7/29（水）", subjectIds: ["subject-3", "subject-4"] },
+  { date: "2026-07-30", displayDate: "7/30（木）", subjectIds: ["subject-5", "subject-6"] },
+  { date: "2026-07-31", displayDate: "7/31（金）", subjectIds: ["subject-7", "subject-8"] },
+  { date: "2026-08-03", displayDate: "8/3（月）", subjectIds: ["subject-9"] },
+];
+
+const DEFAULT_TEST_DATES = Object.fromEntries(
+  EXAM_SCHEDULE.flatMap((entry) => entry.subjectIds.map((subjectId) => [subjectId, entry.date])),
+) as Record<SubjectId, string>;
+
 const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "memo">> = [
   { id: "subject-2", name: "英語", module: "generic", memo: "ZIP教材のCh.15・16・18を収録・過去問は形式だけ反映" },
   { id: "network", name: "ネットワーク", module: "network", memo: "①〜⑦の全用語とOSI層を仕上げる" },
   { id: "subject-3", name: "機械力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
-  { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "教材写真の追加待ち" },
+  { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "熱力学7枚・6単元の公式カード、計算演習、全範囲予想試験を収録" },
   { id: "subject-5", name: "材料力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
   { id: "subject-6", name: "スマート制御", module: "generic", memo: "逆ラプラス・極・安定性・フィードバック・ブロック線図を収録" },
   { id: "subject-7", name: "確率統計", module: "generic", memo: "全範囲を毎回扱うA4・50分想定試験を12回収録" },
@@ -62,7 +80,7 @@ export const DEFAULT_SUBJECTS: StudySubject[] = SUBJECT_BLUEPRINTS.map((subject,
   order: index + 1,
   accent: SUBJECT_ACCENTS[index],
   configured: true,
-  testDate: "",
+  testDate: DEFAULT_TEST_DATES[subject.id],
 }));
 
 const SUBJECT_IDS = new Set(DEFAULT_SUBJECTS.map((subject) => subject.id));
@@ -94,6 +112,7 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
     const wasOldStatisticsPlaceholder = fallback.id === "subject-7" && savedMemo === "教材写真の追加待ち";
     const wasOldSmartControlPlaceholder = fallback.id === "subject-6" && savedMemo === "現在資料なし";
     const wasOldAppliedMathPlaceholder = fallback.id === "subject-8" && savedMemo === "教材写真の追加待ち";
+    const wasOldThermodynamicsPlaceholder = fallback.id === "subject-4" && savedMemo === "教材写真の追加待ち";
     const wasOldEnglishDescription = fallback.id === "subject-2" && [
       "試験PDF形式＋Ch.15・16・18・19を収録",
       "ZIP教材のCh.15・16・18・19を収録・過去問は形式だけ反映",
@@ -103,8 +122,10 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
       name,
       accent,
       configured: fallback.configured || saved.configured === true,
-      testDate: typeof saved.testDate === "string" ? saved.testDate.slice(0, 10) : "",
-      memo: savedMemo && !wasOldStatisticsPlaceholder && !wasOldSmartControlPlaceholder && !wasOldAppliedMathPlaceholder && !wasOldEnglishDescription
+      testDate: typeof saved.testDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(saved.testDate)
+        ? saved.testDate
+        : fallback.testDate,
+      memo: savedMemo && !wasOldStatisticsPlaceholder && !wasOldSmartControlPlaceholder && !wasOldAppliedMathPlaceholder && !wasOldThermodynamicsPlaceholder && !wasOldEnglishDescription
         ? savedMemo.slice(0, 120)
         : fallback.memo,
     };
