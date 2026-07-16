@@ -62,7 +62,7 @@ function sorted(values) {
   return [...values].sort((left, right) => left.localeCompare(right, "en"));
 }
 
-test("reading, language, and extra explanations cover all 450 study questions", async () => {
+test("reading, language, and extra explanations cover all 324 study questions", async () => {
   const { data, reading, language, extra } = await loadExplanationModules();
   const questions = data.ENGLISH_QUESTIONS;
   const questionIds = questions.map((question) => question.id);
@@ -74,8 +74,8 @@ test("reading, language, and extra explanations cover all 450 study questions", 
   ];
   const coveredIds = new Set(explanationMaps.flatMap((map) => Object.keys(map)));
 
-  assert.equal(questions.length, 450);
-  assert.equal(questionIdSet.size, 450, "question ids must be unique");
+  assert.equal(questions.length, 324);
+  assert.equal(questionIdSet.size, 324, "question ids must be unique");
   assert.deepEqual(
     sorted([...coveredIds]),
     sorted(questionIds),
@@ -94,7 +94,7 @@ test("reading, language, and extra explanations cover all 450 study questions", 
   }
 });
 
-test("16 passage grammar ordering questions stay sentence-sized and span all four chapters", async () => {
+test("12 passage grammar ordering questions stay sentence-sized and span all active chapters", async () => {
   const { data, language } = await loadExplanationModules();
   const questions = data.ENGLISH_QUESTIONS.filter(
     (question) => question.id.startsWith("passage-order-"),
@@ -105,10 +105,10 @@ test("16 passage grammar ordering questions stay sentence-sized and span all fou
     ),
   );
 
-  assert.equal(questions.length, 16);
+  assert.equal(questions.length, 12);
   assert.deepEqual(
     [...new Set(questions.map((question) => question.unit))].sort(),
-    ["ch15", "ch16", "ch18", "ch19"],
+    ["ch15", "ch16", "ch18"],
   );
 
   for (const question of questions) {
@@ -151,7 +151,7 @@ test("every choice question explains its correct choice and distractors", async 
     (question) => question.format === "choice",
   );
 
-  assert.equal(choiceQuestions.length, 47);
+  assert.equal(choiceQuestions.length, 33);
 
   for (const question of choiceQuestions) {
     assert.ok(question.options?.length >= 2, `${question.id} must expose its choices`);
@@ -193,7 +193,7 @@ test("all T/F questions carry a passage reference, translation, and binary analy
     (question) => question.group === "長文 True / False",
   );
 
-  assert.equal(trueFalseQuestions.length, 13);
+  assert.equal(trueFalseQuestions.length, 8);
 
   for (const question of trueFalseQuestions) {
     const explanation = reading.ENGLISH_READING_EXPLANATIONS[question.id];
@@ -210,7 +210,7 @@ test("all T/F questions carry a passage reference, translation, and binary analy
   }
 });
 
-test("all 36 passage translations have sentence-specific grammar evidence", async () => {
+test("all 26 passage translations have sentence-specific grammar evidence", async () => {
   const { data, reading } = await loadExplanationModules();
   const translationQuestions = data.ENGLISH_QUESTIONS.filter(
     (question) => question.group === "長文和訳",
@@ -219,7 +219,7 @@ test("all 36 passage translations have sentence-specific grammar evidence", asyn
   const rationales = new Set();
   const missingGrammarEvidence = [];
 
-  assert.equal(translationQuestions.length, 36);
+  assert.equal(translationQuestions.length, 26);
 
   for (const question of translationQuestions) {
     const explanation = reading.ENGLISH_READING_EXPLANATIONS[question.id];
@@ -233,18 +233,18 @@ test("all 36 passage translations have sentence-specific grammar evidence", asyn
     rationales.add(explanation.correctReason);
   }
 
-  assert.equal(rationales.size, 36, "each translated sentence needs its own rationale");
+  assert.equal(rationales.size, 26, "each translated sentence needs its own rationale");
   assert.deepEqual(missingGrammarEvidence, [], "every translation needs explicit grammar evidence");
 });
 
-test("all 148 vocabulary cards explain meaning, form, origin, and the answer", async () => {
+test("all 108 vocabulary cards explain meaning, form, origin, and the answer", async () => {
   const { data, language } = await loadExplanationModules();
   const vocabularyQuestions = data.ENGLISH_QUESTIONS.filter(
     (question) => question.group === "語彙・熟語（日→英）",
   );
 
-  assert.equal(data.ENGLISH_VOCAB.length, 148);
-  assert.equal(vocabularyQuestions.length, 148);
+  assert.equal(data.ENGLISH_VOCAB.length, 108);
+  assert.equal(vocabularyQuestions.length, 108);
 
   for (const card of data.ENGLISH_VOCAB) {
     const questionId = `question-${card.id}`;
@@ -261,13 +261,13 @@ test("all 148 vocabulary cards explain meaning, form, origin, and the answer", a
   }
 });
 
-test("all 148 vocabulary cards also produce explained English-to-Japanese mock questions", async () => {
+test("all 108 vocabulary cards also produce explained English-to-Japanese mock questions", async () => {
   const { data, language } = await loadExplanationModules();
   const reverseQuestions = data.ENGLISH_QUESTIONS.filter(
     (question) => question.group === "語彙・熟語（英→日）",
   );
 
-  assert.equal(reverseQuestions.length, 148);
+  assert.equal(reverseQuestions.length, 108);
   for (const card of data.ENGLISH_VOCAB) {
     const questionId = `reverse-question-${card.id}`;
     const question = reverseQuestions.find((candidate) => candidate.id === questionId);

@@ -577,10 +577,14 @@ const PASSAGE_TRANSLATION_SEEDS: Record<string, ExplanationSeed> = Object.fromEn
   ),
 );
 
-const ALL_EXPLANATION_SEEDS: Record<string, ExplanationSeed> = {
-  ...STATIC_EXPLANATION_SEEDS,
-  ...PASSAGE_TRANSLATION_SEEDS,
-};
+const ACTIVE_QUESTION_IDS = new Set(ENGLISH_QUESTIONS.map((question) => question.id));
+
+const ALL_EXPLANATION_SEEDS: Record<string, ExplanationSeed> = Object.fromEntries(
+  Object.entries({
+    ...STATIC_EXPLANATION_SEEDS,
+    ...PASSAGE_TRANSLATION_SEEDS,
+  }).filter(([questionId]) => ACTIVE_QUESTION_IDS.has(questionId)),
+);
 
 export const ENGLISH_READING_EXPLANATION_GROUPS = [
   "長文 True / False",

@@ -39,7 +39,6 @@ export const ENGLISH_UNITS: EnglishUnit[] = [
   { id: "ch15", title: "Chapter 15｜新しい生命体を作り出す企業", shortTitle: "Ch.15 新しい生命体を作り出す企業" },
   { id: "ch16", title: "Chapter 16｜スパコンで天気予報①", shortTitle: "Ch.16 スパコンで天気予報①" },
   { id: "ch18", title: "Chapter 18｜高齢化社会に強力な助っ人", shortTitle: "Ch.18 高齢化社会に強力な助っ人" },
-  { id: "ch19", title: "Chapter 19｜食品偽装を見破るソフト", shortTitle: "Ch.19 食品偽装を見破るソフト" },
 ];
 
 type RawVocab = [unit: string, en: string, ja: string, note?: string];
@@ -224,7 +223,7 @@ export const ENGLISH_VOCAB: EnglishVocabCard[] = RAW_VOCAB
     ja,
     note,
   }))
-  .filter((card) => card.unit !== "exam-sample");
+  .filter((card) => card.unit !== "exam-sample" && card.unit !== "ch19");
 
 export const ENGLISH_PASSAGES: EnglishPassage[] = [
   {
@@ -403,7 +402,7 @@ export const ENGLISH_PASSAGES: EnglishPassage[] = [
       },
     ],
   },
-];
+].filter((passage) => passage.unit !== "ch19");
 
 type RawOrder = [
   unit: string,
@@ -1122,4 +1121,4 @@ export const ENGLISH_QUESTIONS: EnglishQuestion[] = [
   ...VOCAB_QUESTIONS,
   ...REVERSE_VOCAB_QUESTIONS,
   ...PASSAGE_TRANSLATION_QUESTIONS,
-].filter((question) => question.unit !== "exam-sample");
+].filter((question) => question.unit !== "exam-sample" && question.unit !== "ch19");

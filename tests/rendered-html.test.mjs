@@ -156,7 +156,8 @@ test("server-renders the English exam lab", async () => {
   assert.match(html, /模擬テスト/);
   assert.match(html, /長文読解/);
   assert.match(html, /Chapter 15|Ch\.15/);
-  assert.match(html, /Chapter 19|Ch\.19/);
+  assert.match(html, /Chapter 18|Ch\.18/);
+  assert.doesNotMatch(html, /Chapter 19|Ch\.19/);
   assert.match(html, /MEMORY BOOK/);
   assert.match(html, /出題方向/);
   assert.match(html, /日 → 英/);
@@ -261,12 +262,18 @@ test("supports translation grading, explanations, genre filters, and the course-
   for (const [label, items] of [
     ["units", ENGLISH_UNITS],
     ["vocabulary", ENGLISH_VOCAB],
+    ["passages", ENGLISH_PASSAGES],
     ["questions", ENGLISH_QUESTIONS],
   ]) {
     assert.equal(
       items.some((item) => (item.id ?? item.unit) === "exam-sample" || item.unit === "exam-sample"),
       false,
       `${label} should exclude questions and material copied from the sample PDF`,
+    );
+    assert.equal(
+      items.some((item) => (item.id ?? item.unit) === "ch19" || item.unit === "ch19"),
+      false,
+      `${label} should exclude Chapter 19 from the active exam scope`,
     );
   }
 
@@ -306,7 +313,8 @@ test("uses English past exams only as a format guide", async () => {
     assert.match(englishPage, new RegExp(label));
   }
   assert.match(englishPage, /過去問は出題形式の分析専用/);
-  assert.match(englishPage, /Chapter 15・16・18・19の教材だけ/);
+  assert.match(englishPage, /Chapter 15・16・18の教材だけ/);
+  assert.doesNotMatch(englishPage, /Chapter 15・16・18・19/);
 });
 
 test("keeps statistics course data separate from the sample tests and saves mock exams", async () => {
@@ -532,11 +540,12 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(englishPage, /ENGLISH_UNITS\.map/);
   assert.match(englishPage, /questionPassage/);
   assert.match(englishData, /Chapter 15/);
-  assert.match(englishData, /Chapter 19/);
   assert.match(englishData, /passage-wheelchair/);
-  assert.match(englishData, /passage-dna/);
+  assert.match(englishData, /passage\.unit !== "ch19"/);
   assert.match(englishData, /VOCAB_QUESTIONS/);
   assert.match(englishData, /ORDER_QUESTIONS/);
+  assert.match(studyData, /ZIP教材のCh\.15・16・18を収録/);
+  assert.match(studyData, /ZIP教材のCh\.15・16・18・19を収録・過去問は形式だけ反映/);
   assert.match(subjectPage, /parseBulk/);
   assert.match(subjectPage, /一問一答/);
   assert.match(layout, /generateMetadata/);
