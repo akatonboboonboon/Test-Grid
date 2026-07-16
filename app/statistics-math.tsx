@@ -15,6 +15,23 @@ type RichMathTextProps = {
 };
 
 const INLINE_MATH_PATTERN = /\\\(([\s\S]*?)\\\)/g;
+const LONG_MATH_SEGMENT_LENGTH = 32;
+const LEADING_PROSE_TRIM_PATTERN = /^[\s。、，,.!?！？:：;；]+/u;
+
+type MathSegmentLayout = {
+  tex: string;
+  start: number;
+  end: number;
+  text: string;
+};
+
+export function shouldDisplayMathSegment({ tex, start, end, text }: MathSegmentLayout) {
+  const compactLength = tex.replace(/\s+/g, "").length;
+  const isLeading = text.slice(0, start).trim().length === 0;
+  const trailingText = text.slice(end).replace(LEADING_PROSE_TRIM_PATTERN, "").trim();
+
+    return compactLength >= LONG_MATH_SEGMENT_LENGTH || (isLeading && trailingText.length > 0);
+}
 
 function joinClassNames(base: string, className?: string) {
   return className ? `${base} ${className}` : base;
@@ -70,10 +87,29 @@ export function DisplayMath({ tex, ariaLabel = tex, fallback = tex, className }:
   );
 }
 
+function ResponsiveMathSegment({ tex, ariaLabel = tex, fallback = tex }: MathProps) {
+  const markup = typeset(tex, true);
+
+  if (!markup) {
+    return (
+      <span className="statistics-math statistics-rich-math-display-segment is-fallback" role="math" aria-label={ariaLabel}>
+        {fallback}
+      </span>
+    );
+  }
+
+  return (
+    <span className="statistics-math statistics-rich-math-display-segment" role="math" aria-label={ariaLabel}>
+      <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: markup }} />
+    </span>
+  );
+}
+
 export function RichMathText({ text, mathAriaLabels = [], className }: RichMathTextProps) {
   const parts: ReactNode[] = [];
   let cursor = 0;
   let mathIndex = 0;
+  let hasDisplayMath = false;
 
   for (const match of text.matchAll(INLINE_MATH_PATTERN)) {
     const start = match.index;
@@ -81,24 +117,40 @@ export function RichMathText({ text, mathAriaLabels = [], className }: RichMathT
 
     const source = match[0];
     const tex = match[1];
+    const end = start + source.length;
     if (tex.trim()) {
+      const displayMath = shouldDisplayMathSegment({ tex, start, end, text });
+      hasDisplayMath ||= displayMath;
       parts.push(
-        <InlineMath
-          key={`math-${start}-${mathIndex}`}
-          tex={tex}
-          ariaLabel={mathAriaLabels[mathIndex] ?? tex}
-          fallback={source}
-        />,
+        displayMath ? (
+          <ResponsiveMathSegment
+            key={`math-${start}-${mathIndex}`}
+            tex={tex}
+            ariaLabel={mathAriaLabels[mathIndex] ?? tex}
+            fallback={source}
+          />
+        ) : (
+          <InlineMath
+            key={`math-${start}-${mathIndex}`}
+            tex={tex}
+            ariaLabel={mathAriaLabels[mathIndex] ?? tex}
+            fallback={source}
+          />
+        ),
       );
       mathIndex += 1;
     } else {
       parts.push(source);
     }
 
-    cursor = start + source.length;
+    cursor = end;
   }
 
   if (cursor < text.length) parts.push(text.slice(cursor));
 
-  return <span className={joinClassNames("statistics-rich-math-text", className)}>{parts}</span>;
+  const baseClassName = hasDisplayMath
+    ? "statistics-rich-math-text has-display-math"
+    : "statistics-rich-math-text";
+
+  return <span className={joinClassNames(baseClassName, className)}>{parts}</span>;
 }

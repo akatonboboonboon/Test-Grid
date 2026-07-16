@@ -24,6 +24,7 @@ let englishDataModulePromise;
 let statisticsDataModulePromise;
 let smartControlDataModulePromise;
 let smartControlTextbookDataModulePromise;
+let statisticsMathModulePromise;
 
 function loadEnglishDataModule() {
   englishDataModulePromise ??= readFile(new URL("../app/english-data.ts", import.meta.url), "utf8")
@@ -71,6 +72,31 @@ function loadSmartControlTextbookDataModule() {
     .then((javascript) => import(`data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`));
   return smartControlTextbookDataModulePromise;
 }
+function loadStatisticsMathModule() {
+  statisticsMathModulePromise ??= readFile(new URL("../app/statistics-math.tsx", import.meta.url), "utf8")
+    .then((source) => ts.transpileModule(source, {
+      compilerOptions: {
+        jsx: ts.JsxEmit.ReactJSX,
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText)
+    .then((javascript) => {
+      const jsxRuntime = [
+        "export const Fragment = Symbol.for('statistics-math-test-fragment');",
+        "export function jsx(type, props, key) { return { type, key: key ?? null, props: props ?? {} }; }",
+        "export const jsxs = jsx;",
+      ].join("\n");
+      const jsxRuntimeUrl = `data:text/javascript;base64,${Buffer.from(jsxRuntime).toString("base64")}`;
+      const katexUrl = new URL("../app/vendor/katex/katex.mjs", import.meta.url).href;
+      const resolvedJavascript = javascript
+        .replaceAll('"react/jsx-runtime"', JSON.stringify(jsxRuntimeUrl))
+        .replaceAll('"./vendor/katex/katex.mjs"', JSON.stringify(katexUrl));
+      return import(`data:text/javascript;base64,${Buffer.from(resolvedJavascript).toString("base64")}`);
+    });
+  return statisticsMathModulePromise;
+}
+
 void loadStatisticsDataModule;
 
 function loadCombinedStatisticsDataModule() {
@@ -222,6 +248,21 @@ test("server-renders the smart control exam lab", async () => {
   assert.match(html, /教科書p\.65〜68/);
   assert.doesNotMatch(html, /未提供の教科書写真/);
 });
+
+test("server-renders the applied mathematics exam lab", async () => {
+  const response = await render("/subjects/subject-8");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /応用数学・定期テスト演習/);
+  assert.match(html, /APPLIED MATHEMATICS/);
+  assert.match(html, /今回の試験範囲/);
+  assert.match(html, /公式カード/);
+  assert.match(html, /計算演習/);
+  assert.match(html, /ランダム模試/);
+  assert.match(html, /想定試験/);
+  assert.match(html, /出題形式/);
+});
+
 test("keeps the study workspaces usable on phone-sized viewports", async () => {
   const response = await render("/subjects/subject-2");
   assert.equal(response.status, 200);
@@ -575,6 +616,110 @@ test("provides twelve balanced A4 predicted exams with 11 major questions and 10
   assert.match(mathRenderer, /throwOnError:\s*false/);
 });
 
+test("keeps short math inline and gives every long smart-control/statistics expression a responsive block", async () => {
+  const [mathRenderer, statistics, smartControl, textbook, css, expectedExamSource, katex] = await Promise.all([
+    loadStatisticsMathModule(),
+    loadCombinedStatisticsDataModule(),
+    loadSmartControlDataModule(),
+    loadSmartControlTextbookDataModule(),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/statistics-expected-exams.tsx", import.meta.url), "utf8"),
+    import(new URL("../app/vendor/katex/katex.mjs", import.meta.url)),
+  ]);
+
+  const shortText = "相関係数 \\(r\\) が正なら正の相関である。";
+  const longLeadingText = "\\(G(s)=K/(Ts+1)\\) の単位インパルス応答は？";
+  const longLaterText = "高さを小さい順に並べる。\\(0.1y_\\infty<0.5y_\\infty<0.9y_\\infty<0.95y_\\infty<y_\\infty<1.05y_\\infty\\)";
+
+  assert.equal(mathRenderer.shouldDisplayMathSegment({
+    tex: "r",
+    start: shortText.indexOf("\\("),
+    end: shortText.indexOf("\\)") + 2,
+    text: shortText,
+  }), false);
+  assert.equal(mathRenderer.shouldDisplayMathSegment({
+    tex: "G(s)=K/(Ts+1)",
+    start: 0,
+    end: longLeadingText.indexOf("\\)") + 2,
+    text: longLeadingText,
+  }), true);
+  assert.equal(mathRenderer.shouldDisplayMathSegment({
+    tex: "0.1y_\\infty<0.5y_\\infty<0.9y_\\infty<0.95y_\\infty<y_\\infty<1.05y_\\infty",
+    start: longLaterText.indexOf("\\("),
+    end: longLaterText.length,
+    text: longLaterText,
+  }), true);
+
+  const shortRendered = mathRenderer.RichMathText({ text: shortText });
+  assert.doesNotMatch(shortRendered.props.className, /has-display-math/);
+  assert.equal(shortRendered.props.children[1].type.name, "InlineMath");
+
+  const longRendered = mathRenderer.RichMathText({ text: longLeadingText });
+  assert.match(longRendered.props.className, /has-display-math/);
+  assert.equal(longRendered.props.children[0].type.name, "ResponsiveMathSegment");
+
+  const questionOwners = [
+    ...statistics.STATISTICS_QUESTIONS,
+    ...smartControl.SMART_CONTROL_QUESTIONS,
+    ...textbook.TEXTBOOK_RESPONSE_QUESTIONS,
+    ...smartControl.SMART_CONTROL_EXAMS.flatMap((exam) => exam.questions),
+  ];
+  assert.ok(questionOwners.length >= 180, "the audit must include every current smart-control/statistics question");
+
+  const formulaOwners = [
+    ...statistics.STATISTICS_FORMULAS,
+    ...statistics.STATISTICS_QUESTIONS,
+    ...smartControl.SMART_CONTROL_CARDS,
+    ...smartControl.SMART_CONTROL_QUESTIONS,
+    ...smartControl.SMART_CONTROL_EXAMS.flatMap((exam) => exam.questions),
+    ...textbook.TEXTBOOK_RESPONSE_CARDS,
+    ...textbook.TEXTBOOK_RESPONSE_QUESTIONS,
+  ];
+  const richTextFields = [];
+  for (const owner of formulaOwners) {
+    for (const field of ["prompt", "context", "answer", "explanation", "example"]) {
+      if (typeof owner[field] === "string") richTextFields.push(`${owner.id}.${field}: ${owner[field]}`);
+    }
+    for (const field of ["steps", "options"]) {
+      for (const [index, value] of (owner[field] ?? []).entries()) {
+        if (typeof value === "string") richTextFields.push(`${owner.id}.${field}[${index}]: ${value}`);
+      }
+    }
+  }
+
+  let displayFieldCount = 0;
+  let inlineFieldCount = 0;
+  for (const labeledText of richTextFields) {
+    const separator = labeledText.indexOf(": ");
+    const label = labeledText.slice(0, separator);
+    const text = labeledText.slice(separator + 2);
+    assert.equal((text.match(/\\\(/g) ?? []).length, (text.match(/\\\)/g) ?? []).length, `${label} has unbalanced math delimiters`);
+    const rendered = mathRenderer.RichMathText({ text });
+    assert.equal(rendered.type, "span", `${label} must render through RichMathText`);
+    if (/has-display-math/.test(rendered.props.className)) displayFieldCount += 1;
+    else if ((text.match(/\\\(/g) ?? []).length) inlineFieldCount += 1;
+  }
+  assert.ok(displayFieldCount >= 20, "long equations in the current corpus should use responsive display segments");
+  assert.ok(inlineFieldCount > displayFieldCount, "short equations should remain inline");
+
+  const formulas = formulaOwners.filter((owner) => typeof owner.formula === "string");
+  assert.ok(formulas.length >= 230, "the strict KaTeX audit must cover every current formula");
+  for (const owner of formulas) {
+    assert.doesNotThrow(() => katex.renderToString(owner.formula, {
+      displayMode: true,
+      output: "htmlAndMathml",
+      strict: "error",
+      throwOnError: true,
+      trust: false,
+    }), `${owner.id} contains invalid TeX`);
+  }
+
+  assert.equal((expectedExamSource.match(/\\\\\(/g) ?? []).length, (expectedExamSource.match(/\\\\\)/g) ?? []).length, "predicted-exam templates must keep balanced math delimiters");
+  assert.match(css, /\.statistics-rich-math-display-segment\s*\{/);
+  assert.match(css, /font-size:\s*clamp\(15px,\s*4\.8vw,\s*21px\)/);
+  assert.match(css, /overflow-x:\s*auto/);
+  assert.match(css, /overflow-wrap:\s*anywhere/);
+});
 test("syncs all subject progress through an authenticated account API", async () => {
   const [syncUi, syncRoute, hosting, layout] = await Promise.all([
     readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),

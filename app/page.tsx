@@ -7,6 +7,7 @@ import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
 import { SMART_CONTROL_CARDS } from "./smart-control-data";
 import { TEXTBOOK_RESPONSE_CARDS } from "./smart-control-textbook-data";
 import { STATISTICS_FORMULAS } from "./statistics-data";
+import { APPLIED_MATH_FORMULAS } from "./applied-math-data";
 import {
   DEFAULT_SUBJECTS,
   SUBJECT_ACCENTS,
@@ -72,6 +73,12 @@ function readMetrics(subjects: StudySubject[]) {
       return [subject.id, {
         cards: STATISTICS_FORMULAS.length,
         mastered: STATISTICS_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
+      } satisfies SubjectMetric];
+    }    if (subject.id === "subject-8") {
+      const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-8"), {});
+      return [subject.id, {
+        cards: APPLIED_MATH_FORMULAS.length,
+        mastered: APPLIED_MATH_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
     }
     const cards = normalizeStudyCards(
@@ -204,7 +211,7 @@ export default function StudyHub() {
           <div>
             <p className="eyebrow"><span>REGULAR EXAM / 9 SUBJECTS</span><span>LOCAL STUDY DESK</span></p>
             <h1 id="hub-title">9教科を、<br /><em>ひとつずつ潰す。</em></h1>
-            <p>英語はZIP教材の専用演習、ネットワークは層の暗算・即答・暗記帳、確率統計は数式カード・計算演習に加え、全範囲を毎回扱うA4想定試験12回を収録。ほかの科目も教材を追加しながら、ここでまとめて回せます。</p>
+            <p>英語はZIP教材の専用演習、ネットワークは層の暗算・即答・暗記帳、確率統計はA4想定試験、応用数学は範囲16枚の公式カード・演習とA4 50分80点の全範囲予想試験6回を収録。ほかの科目もここでまとめて回せます。</p>
           </div>
           <Link className="hub-primary-link" href="/subjects/network">
             <span>READY NOW</span>
@@ -239,7 +246,7 @@ export default function StudyHub() {
             {subjects.map((subject) => {
               const metric = metrics[subject.id] ?? { cards: 0, mastered: 0 };
               const completion = metric.cards ? Math.round((metric.mastered / metric.cards) * 100) : 0;
-              const hasMaterial = subject.module === "network" || subject.id === "subject-6" || subject.id === "subject-7" || metric.cards > 0;
+              const hasMaterial = subject.module === "network" || subject.id === "subject-6" || subject.id === "subject-7" || subject.id === "subject-8" || metric.cards > 0;
               const style = { "--subject-accent": subject.accent } as CSSProperties;
               return (
                 <article className={`subject-tile ${subject.configured ? "is-configured" : "is-empty"}`} style={style} key={subject.id}>

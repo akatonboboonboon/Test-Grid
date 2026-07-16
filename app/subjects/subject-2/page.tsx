@@ -12,9 +12,10 @@ import {
 } from "../../english-data";
 import { EnglishQuestionExplanation, EnglishVocabInsight } from "../../english-explanation-panel";
 import EnglishCh18Quiz from "../../english-ch18-quiz";
+import EnglishExpectedExams from "../../english-expected-exams";
 import EnglishWeatherFigure from "../../english-weather-figure";
 
-type Mode = "cards" | "quiz18" | "test" | "reading" | "guide";
+type Mode = "cards" | "expected" | "quiz18" | "test" | "reading" | "guide";
 type TestPhase = "setup" | "active" | "result";
 type ReadingStudyMode = "memory" | "practice";
 type CardDirection = "ja-en" | "en-ja";
@@ -801,11 +802,14 @@ export default function EnglishSubjectPage() {
         <section ref={workspaceRef} id="english-workspace" className="english-workspace">
           <div className="workspace-tabs english-tabs english-primary-tabs" role="tablist" aria-label="英語の学習モード">
             <button type="button" role="tab" aria-selected={mode === "cards"} className={mode === "cards" ? "active english-tab-memory" : "english-tab-memory"} onClick={() => changeMode("cards")}>① 暗記帳</button>
-            <button type="button" role="tab" aria-selected={mode === "quiz18"} className={mode === "quiz18" ? "active" : ""} onClick={openCh18Quiz}>② Ch.18 実物小テスト（18点）</button>
-            <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>③ 模擬テスト</button>
-            <button type="button" role="tab" aria-selected={mode === "reading"} className={mode === "reading" ? "active" : ""} onClick={() => changeMode("reading")}>④ 長文読解</button>
-            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑤ 出題形式</button>
+            <button type="button" role="tab" aria-selected={mode === "expected"} className={mode === "expected" ? "active english-tab-expected" : "english-tab-expected"} onClick={() => changeMode("expected")}>② 予想模試（6セット・50分）</button>
+            <button type="button" role="tab" aria-selected={mode === "quiz18"} className={mode === "quiz18" ? "active" : ""} onClick={openCh18Quiz}>③ Ch.18 実物小テスト（18点）</button>
+            <button type="button" role="tab" aria-label="ランダム出題の模擬テスト" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>④ ランダム模試</button>
+            <button type="button" role="tab" aria-selected={mode === "reading"} className={mode === "reading" ? "active" : ""} onClick={() => changeMode("reading")}>⑤ 長文読解</button>
+            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑥ 出題形式</button>
           </div>
+
+          {mode === "expected" && <EnglishExpectedExams />}
 
           {mode === "quiz18" && <EnglishCh18Quiz />}
 
