@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ENGLISH_VOCAB } from "./english-data";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
 import { SMART_CONTROL_CARDS } from "./smart-control-data";
+import { TEXTBOOK_RESPONSE_CARDS } from "./smart-control-textbook-data";
 import { STATISTICS_FORMULAS } from "./statistics-data";
 import {
   DEFAULT_SUBJECTS,
@@ -18,6 +19,8 @@ import {
   type StudySubject,
   type SubjectId,
 } from "./study-data";
+
+const SMART_CONTROL_ALL_CARDS = [...SMART_CONTROL_CARDS, ...TEXTBOOK_RESPONSE_CARDS];
 
 type SubjectMetric = { cards: number; mastered: number };
 type SubjectDraft = Pick<StudySubject, "id" | "name" | "testDate" | "memo" | "accent">;
@@ -60,8 +63,8 @@ function readMetrics(subjects: StudySubject[]) {
     if (subject.id === "subject-6") {
       const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-6"), {});
       return [subject.id, {
-        cards: SMART_CONTROL_CARDS.length,
-        mastered: SMART_CONTROL_CARDS.filter((card) => progress[card.id] === "mastered").length,
+        cards: SMART_CONTROL_ALL_CARDS.length,
+        mastered: SMART_CONTROL_ALL_CARDS.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
     }
     if (subject.id === "subject-7") {

@@ -42,7 +42,7 @@ export type SmartControlQuestion = {
   formula?: string;
   steps: string[];
   explanation: string;
-  source: "scope-zip" | "past2-overlap";
+  source: "scope-zip" | "past2-overlap" | "textbook-p65-68";
 };
 
 export type SmartControlExamQuestion = {
@@ -95,7 +95,7 @@ export const SMART_CONTROL_TOPICS: SmartControlTopic[] = [
     shortTitle: "応答・極・安定",
     description: "応答指標を読み取り、極を複素平面へ配置して収束・安定性を判定する。",
     color: "#ff9f68",
-    source: "範囲ZIP 010737〜010802＋過去問2の重複部分",
+    source: "範囲ZIP 010737〜010802＋教科書p.65〜68＋過去問2の重複部分",
   },
   {
     id: "feedback",
@@ -1238,7 +1238,4 @@ export const SMART_CONTROL_EXAMS: SmartControlExam[] = [
   },
 ];
 
-export const SMART_CONTROL_PENDING_SOURCES = [
-  "ノートに書かれた、今回まだ添付されていない教科書写真",
-  "未提供の教科書図・例題番号に依存する問題",
-] as const;
+export const SMART_CONTROL_PENDING_SOURCES = [] as const;

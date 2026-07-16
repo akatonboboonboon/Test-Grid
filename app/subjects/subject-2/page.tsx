@@ -11,9 +11,10 @@ import {
   type EnglishVocabCard,
 } from "../../english-data";
 import { EnglishQuestionExplanation, EnglishVocabInsight } from "../../english-explanation-panel";
+import EnglishCh18Quiz from "../../english-ch18-quiz";
 import EnglishWeatherFigure from "../../english-weather-figure";
 
-type Mode = "cards" | "test" | "reading" | "guide";
+type Mode = "cards" | "quiz18" | "test" | "reading" | "guide";
 type TestPhase = "setup" | "active" | "result";
 type ReadingStudyMode = "memory" | "practice";
 type CardDirection = "ja-en" | "en-ja";
@@ -416,6 +417,12 @@ export default function EnglishSubjectPage() {
     window.setTimeout(() => workspaceRef.current?.scrollIntoView({ block: "start" }), 0);
   }
 
+  function openCh18Quiz() {
+    setMode("quiz18");
+    setAnnouncement("Chapter 18の実物小テスト（18点）を開きました。");
+    window.setTimeout(() => workspaceRef.current?.scrollIntoView({ block: "start" }), 0);
+  }
+
   function changeMode(nextMode: Mode) {
     setMode(nextMode);
     if (nextMode === "test" && testPhase === "result") setTestPhase("setup");
@@ -759,6 +766,9 @@ export default function EnglishSubjectPage() {
           <button className="english-header-memory-button" type="button" onClick={openCards}>
             <span>最重要</span> 暗記帳を開く
           </button>
+          <button className="english-header-memory-button" type="button" onClick={openCh18Quiz}>
+            <span>実物18点</span> Ch.18小テスト
+          </button>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -789,12 +799,15 @@ export default function EnglishSubjectPage() {
         </section>
 
         <section ref={workspaceRef} id="english-workspace" className="english-workspace">
-          <div className="workspace-tabs english-tabs" role="tablist" aria-label="英語の学習モード">
+          <div className="workspace-tabs english-tabs english-primary-tabs" role="tablist" aria-label="英語の学習モード">
             <button type="button" role="tab" aria-selected={mode === "cards"} className={mode === "cards" ? "active english-tab-memory" : "english-tab-memory"} onClick={() => changeMode("cards")}>① 暗記帳</button>
-            <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>② 模擬テスト</button>
-            <button type="button" role="tab" aria-selected={mode === "reading"} className={mode === "reading" ? "active" : ""} onClick={() => changeMode("reading")}>③ 長文読解</button>
-            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>④ 出題形式</button>
+            <button type="button" role="tab" aria-selected={mode === "quiz18"} className={mode === "quiz18" ? "active" : ""} onClick={openCh18Quiz}>② Ch.18 実物小テスト（18点）</button>
+            <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>③ 模擬テスト</button>
+            <button type="button" role="tab" aria-selected={mode === "reading"} className={mode === "reading" ? "active" : ""} onClick={() => changeMode("reading")}>④ 長文読解</button>
+            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑤ 出題形式</button>
           </div>
+
+          {mode === "quiz18" && <EnglishCh18Quiz />}
 
           {mode === "cards" && (
             <section className="generic-card-workspace english-card-workspace" aria-labelledby="english-card-title">

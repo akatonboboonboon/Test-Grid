@@ -3,17 +3,19 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import SmartControlExams from "../../smart-control-exams";
-import { DisplayMath, RichMathText } from "../../statistics-math";
+import SmartControlResponseGraph from "../../smart-control-response-graph";
 import {
-  SMART_CONTROL_CARDS,
+  SMART_CONTROL_CARDS as BASE_SMART_CONTROL_CARDS,
   SMART_CONTROL_EXAM_FORMATS,
-  SMART_CONTROL_QUESTIONS,
+  SMART_CONTROL_QUESTIONS as BASE_SMART_CONTROL_QUESTIONS,
   SMART_CONTROL_TOPICS,
   type SmartControlQuestion,
   type SmartControlTopicId,
 } from "../../smart-control-data";
+import { TEXTBOOK_RESPONSE_CARDS, TEXTBOOK_RESPONSE_QUESTIONS } from "../../smart-control-textbook-data";
+import { DisplayMath, RichMathText } from "../../statistics-math";
 
-type Mode = "scope" | "cards" | "practice" | "test" | "expected" | "guide";
+type Mode = "scope" | "textbook" | "cards" | "practice" | "test" | "expected" | "guide";
 type CardState = "learning" | "mastered";
 type CardProgress = Record<string, CardState>;
 type Feedback = { response: string; correct: boolean };
@@ -32,6 +34,27 @@ type SavedTestSession = {
   elapsedSeconds: number;
   savedAt: number;
 };
+
+const SMART_CONTROL_CARDS = [...BASE_SMART_CONTROL_CARDS, ...TEXTBOOK_RESPONSE_CARDS];
+const SMART_CONTROL_QUESTIONS: SmartControlQuestion[] = [
+  ...BASE_SMART_CONTROL_QUESTIONS,
+  ...TEXTBOOK_RESPONSE_QUESTIONS,
+];
+const TEXTBOOK_GRAPH_QUESTIONS: SmartControlQuestion[] = TEXTBOOK_RESPONSE_QUESTIONS.filter(
+  (question) => question.genre.startsWith("図5."),
+);
+const TEXTBOOK_RED_TERMS = [
+  { term: "定常特性", definition: "十分に時間が経った後、応答が収束するか、どの値へ収束するかという性質。" },
+  { term: "過渡特性", definition: "初期状態から定常状態へ至るまでの応答波形・過程。速さ、行き過ぎ、振動の収まり方を見る。" },
+  { term: "定常値", definition: "応答が最終的に収束する値 \\(y_\\infty=\\lim_{t\\to\\infty}y(t)\\)。" },
+  { term: "立ち上がり時間", definition: "\\(0.1y_\\infty\\) から \\(0.9y_\\infty\\) に達するまでの時間 \\(t_r\\)。" },
+  { term: "速応性", definition: "入力に対してどれだけ速く応答するか。時間指標が短いほど速い。" },
+  { term: "遅れ時間", definition: "入力開始から \\(0.5y_\\infty\\) に初めて達するまでの時間 \\(t_d\\)。" },
+  { term: "オーバーシュート（行き過ぎ量）", definition: "定常値を最大で何％上回ったか。\\(O_s=\\frac{y_{\\max}-y_\\infty}{y_\\infty}\\times100\\%\\)。" },
+  { term: "行き過ぎ時間", definition: "応答が最大値 \\(y_{\\max}\\) に達する時刻 \\(t_p\\)。" },
+  { term: "減衰性", definition: "振動や行き過ぎが時間とともに小さくなり、定常値へ収束する性質。" },
+  { term: "整定時間", definition: "応答が \\(0.95y_\\infty\\)〜\\(1.05y_\\infty\\) に入り、その後は外へ出なくなる時刻 \\(t_s\\)。" },
+] as const;
 
 const PROGRESS_KEY = "test-grid:subject-6:progress:v1";
 const TEST_SESSION_KEY = "test-grid:subject-6:mock-test:v1";
@@ -295,11 +318,13 @@ export default function SmartControlSubjectPage() {
   const workspaceRef = useRef<HTMLElement>(null);
 
   const [cardTopics, setCardTopics] = useState<SmartControlTopicId[]>([...ALL_TOPIC_IDS]);
+  const [cardPool, setCardPool] = useState([...SMART_CONTROL_CARDS]);
   const [cardDeck, setCardDeck] = useState([...SMART_CONTROL_CARDS]);
   const [cardIndex, setCardIndex] = useState(0);
   const [cardFlipped, setCardFlipped] = useState(false);
 
   const [practiceTopics, setPracticeTopics] = useState<SmartControlTopicId[]>([...ALL_TOPIC_IDS]);
+  const [practicePool, setPracticePool] = useState([...SMART_CONTROL_QUESTIONS]);
   const [practiceDeck, setPracticeDeck] = useState([...SMART_CONTROL_QUESTIONS]);
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceTypedAnswer, setPracticeTypedAnswer] = useState("");
@@ -354,10 +379,7 @@ export default function SmartControlSubjectPage() {
     });
   }, [hydrated, questionCountDraft, testElapsedSeconds, testFeedback, testIndex, testPhase, testQuestions, testResults, testSelectedChoice, testTopics, testTypedAnswer]);
 
-  const filteredCards = useMemo(
-    () => SMART_CONTROL_CARDS.filter((card) => cardTopics.includes(card.topic)),
-    [cardTopics],
-  );
+  const filteredCards = cardPool;
   const currentCard = cardDeck[cardIndex];
   const cardMastered = filteredCards.filter((card) => progress[card.id] === "mastered").length;
   const cardLearning = filteredCards.filter((card) => progress[card.id] === "learning").length;
@@ -378,10 +400,22 @@ export default function SmartControlSubjectPage() {
   }
 
   function changeCardTopics(nextTopics: SmartControlTopicId[]) {
+    const nextPool = SMART_CONTROL_CARDS.filter((card) => nextTopics.includes(card.topic));
     setCardTopics(nextTopics);
-    setCardDeck(SMART_CONTROL_CARDS.filter((card) => nextTopics.includes(card.topic)));
+    setCardPool(nextPool);
+    setCardDeck(nextPool);
     setCardIndex(0);
     setCardFlipped(false);
+  }
+
+  function startTextbookCards() {
+    setCardTopics(["response-stability"]);
+    setCardPool([...TEXTBOOK_RESPONSE_CARDS]);
+    setCardDeck(randomize(TEXTBOOK_RESPONSE_CARDS));
+    setCardIndex(0);
+    setCardFlipped(false);
+    setAnnouncement(`教科書p.65〜68の赤字・図カード${TEXTBOOK_RESPONSE_CARDS.length}枚で復習します。`);
+    changeMode("cards");
   }
 
   function moveCard(delta: number) {
@@ -420,14 +454,26 @@ export default function SmartControlSubjectPage() {
   }
 
   function changePracticeTopics(nextTopics: SmartControlTopicId[]) {
+    const nextPool = SMART_CONTROL_QUESTIONS.filter((question) => nextTopics.includes(question.topic));
     setPracticeTopics(nextTopics);
-    setPracticeDeck(randomize(SMART_CONTROL_QUESTIONS.filter((question) => nextTopics.includes(question.topic))));
+    setPracticePool(nextPool);
+    setPracticeDeck(randomize(nextPool));
     setPracticeIndex(0);
     resetPracticeAnswer();
   }
 
+  function startTextbookPractice() {
+    setPracticeTopics(["response-stability"]);
+    setPracticePool([...TEXTBOOK_GRAPH_QUESTIONS]);
+    setPracticeDeck(randomize(TEXTBOOK_GRAPH_QUESTIONS));
+    setPracticeIndex(0);
+    resetPracticeAnswer();
+    setAnnouncement(`教科書p.65〜68の図表問題${TEXTBOOK_GRAPH_QUESTIONS.length}問を開始します。`);
+    changeMode("practice");
+  }
+
   function shufflePractice() {
-    setPracticeDeck(randomize(SMART_CONTROL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic))));
+    setPracticeDeck(randomize(practicePool));
     setPracticeIndex(0);
     resetPracticeAnswer();
   }
@@ -590,10 +636,10 @@ export default function SmartControlSubjectPage() {
             <h1 id="smart-control-title">SMART CONTROL LAB</h1>
             <small>伝達関数から逆ラプラス、極・安定性、フィードバック、ブロック線図まで。式を見て終わらず、途中式を自力で再現するためのスマート制御演習室です。</small>
           </div>
-          <button className="english-hero-memory-button statistics-hero-card-button" type="button" onClick={() => changeMode("cards")}>
-            <span>MEMORY FIRST</span>
-            <strong>暗記カードを開く</strong>
-            <small>{SMART_CONTROL_CARDS.length}枚を単元別に反復 →</small>
+          <button className="english-hero-memory-button statistics-hero-card-button" type="button" onClick={() => changeMode("textbook")}>
+            <span>NEW / TEXTBOOK RED</span>
+            <strong>教科書の赤字・図を暗記</strong>
+            <small>p.65〜68の試験対象を集中反復 →</small>
           </button>
         </section>
 
@@ -601,24 +647,25 @@ export default function SmartControlSubjectPage() {
           <div><span>TOPICS</span><strong>{SMART_CONTROL_TOPICS.length}</strong><small>単元</small></div>
           <div><span>CARDS</span><strong>{SMART_CONTROL_CARDS.length}</strong><small>枚</small></div>
           <div><span>QUESTIONS</span><strong>{SMART_CONTROL_QUESTIONS.length}</strong><small>問</small></div>
-          <p>範囲ZIPを本体に、過去問2のうち今回と重なる制御分野だけを収録。過去問1・3は出題形式の参考に限定しています。暗記済み {totalMastered}枚。</p>
+          <p>範囲ZIPと教科書p.65〜68を本体に、過去問2の重複分野だけを収録。赤文字と図5.1〜5.3の数値もカード・演習・模試へ追加済みです。暗記済み {totalMastered}枚。</p>
         </section>
 
         <section ref={workspaceRef} id="smart-control-workspace" className="english-workspace statistics-workspace">
-          <div className="workspace-tabs english-tabs statistics-tabs" role="tablist" aria-label="スマート制御の学習モード">
+          <div className="workspace-tabs english-tabs statistics-tabs smart-control-tabs" role="tablist" aria-label="スマート制御の学習モード">
             <button type="button" role="tab" aria-selected={mode === "scope"} className={mode === "scope" ? "active" : ""} onClick={() => changeMode("scope")}>① 範囲</button>
-            <button type="button" role="tab" aria-selected={mode === "cards"} className={mode === "cards" ? "active english-tab-memory" : "english-tab-memory"} onClick={() => changeMode("cards")}>② 暗記カード</button>
-            <button type="button" role="tab" aria-selected={mode === "practice"} className={mode === "practice" ? "active" : ""} onClick={() => changeMode("practice")}>③ 演習</button>
-            <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>④ ランダム模試</button>
-            <button type="button" role="tab" aria-selected={mode === "expected"} className={mode === "expected" ? "active" : ""} onClick={() => changeMode("expected")}>⑤ A4想定試験</button>
-            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑥ 出題形式</button>
+            <button type="button" role="tab" aria-selected={mode === "textbook"} className={mode === "textbook" ? "active english-tab-memory" : "english-tab-memory"} onClick={() => changeMode("textbook")}>② 教科書赤字・図</button>
+            <button type="button" role="tab" aria-selected={mode === "cards"} className={mode === "cards" ? "active" : ""} onClick={() => changeMode("cards")}>③ 暗記カード</button>
+            <button type="button" role="tab" aria-selected={mode === "practice"} className={mode === "practice" ? "active" : ""} onClick={() => changeMode("practice")}>④ 演習</button>
+            <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>⑤ ランダム模試</button>
+            <button type="button" role="tab" aria-selected={mode === "expected"} className={mode === "expected" ? "active" : ""} onClick={() => changeMode("expected")}>⑥ A4想定試験</button>
+            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑦ 出題形式</button>
           </div>
 
           {mode === "scope" && (
             <section className="english-guide-workspace statistics-scope-workspace" aria-labelledby="smart-scope-title">
               <div className="english-panel-heading statistics-panel-heading">
                 <div><span>COURSE RANGE</span><h2 id="smart-scope-title">今回の試験範囲</h2></div>
-                <p>資料の役割を混ぜないよう、範囲・重複範囲・形式参考・保留を分けています。</p>
+                <p>資料の役割を混ぜないよう、範囲・追加範囲・形式参考を分けています。</p>
               </div>
 
               <div className="english-guide-grid statistics-guide-grid">
@@ -638,9 +685,9 @@ export default function SmartControlSubjectPage() {
                   <strong>出題形式の参照のみ</strong>
                 </article>
                 <article>
-                  <span>PENDING</span><h3>未提供の教科書写真</h3>
-                  <p>ノートに参照がある教科書写真は、届くまで保留です。後で資料を受け取った時点で範囲へ追加できます。</p>
-                  <strong>今は推測して出題しない</strong>
+                  <span>IN RANGE / RED + GRAPH</span><h3>教科書p.65〜68</h3>
+                  <p>赤文字10語と図5.1〜5.3の数値・記号を収録。0.1、0.5、0.9、0.95、1.05と、t_r・t_d・t_p・t_s・O_sを位置と定義まで出題します。</p>
+                  <strong>赤字とグラフ数値はすべて試験範囲</strong>
                 </article>
               </div>
 
@@ -665,8 +712,40 @@ export default function SmartControlSubjectPage() {
                 })}
               </div>
               <div className="english-result-actions statistics-scope-actions">
-                <button type="button" onClick={() => changeMode("cards")}>暗記カードから始める</button>
+                <button type="button" onClick={() => changeMode("textbook")}>教科書の赤字・図を確認</button>
+                <button type="button" onClick={() => changeMode("cards")}>全範囲の暗記カード</button>
                 <button type="button" onClick={() => changeMode("practice")}>演習へ進む</button>
+              </div>
+            </section>
+          )}
+
+          {mode === "textbook" && (
+            <section className="english-guide-workspace statistics-guide-workspace smart-control-textbook-workspace" aria-labelledby="smart-textbook-title">
+              <div className="english-panel-heading statistics-panel-heading">
+                <div><span>TEXTBOOK P.65–68</span><h2 id="smart-textbook-title">赤文字・グラフ暗記</h2></div>
+                <p>赤文字は定義を即答し、図の数値は「どの高さ・どの時刻か」を位置ごと覚えます。</p>
+              </div>
+
+              <div className="english-guide-tip statistics-format-notice smart-control-textbook-intro">
+                <span>ALL IN RANGE</span>
+                <p><b>赤文字10語と図5.1〜5.3の数値はすべて出題対象。</b> 図は画像の丸暗記ではなく、10％・50％・90％・±5％帯と各時刻の意味を対応させて練習します。</p>
+              </div>
+
+              <SmartControlResponseGraph title="図5.1を再現：過渡応答の数値・時刻" />
+
+              <div className="english-guide-grid statistics-guide-grid smart-control-red-term-grid" aria-label="教科書の赤文字10語">
+                {TEXTBOOK_RED_TERMS.map((item, index) => (
+                  <article key={item.term}>
+                    <span>{String(index + 1).padStart(2, "0")} / RED TERM</span>
+                    <h3>{item.term}</h3>
+                    <p><RichMathText text={item.definition} /></p>
+                  </article>
+                ))}
+              </div>
+
+              <div className="english-result-actions statistics-scope-actions smart-control-textbook-actions">
+                <button type="button" onClick={startTextbookCards}>教科書カードだけ暗記する</button>
+                <button type="button" onClick={startTextbookPractice}>図表問題だけ演習する</button>
               </div>
             </section>
           )}
@@ -709,6 +788,7 @@ export default function SmartControlSubjectPage() {
                     <button type="button" onClick={() => moveCard(1)}>次へ →</button>
                   </div>
                   <div className="generic-deck-tools english-deck-tools statistics-deck-tools">
+                    <button type="button" onClick={startTextbookCards}>教科書赤字・図だけ</button>
                     <button type="button" onClick={shuffleCards}>シャッフル</button>
                     <button type="button" onClick={reviewUnmastered}>未暗記だけ復習</button>
                   </div>
@@ -728,6 +808,7 @@ export default function SmartControlSubjectPage() {
               <TopicFilter legend="演習に含める単元" selected={practiceTopics} onChange={changePracticeTopics} />
               <div className="english-result-actions statistics-practice-tools">
                 <span>{practiceDeck.length}問を出題対象に設定</span>
+                <button type="button" onClick={startTextbookPractice}>教科書の図表問題だけ</button>
                 <button type="button" disabled={!practiceDeck.length} onClick={shufflePractice}>問題順をシャッフル</button>
               </div>
 

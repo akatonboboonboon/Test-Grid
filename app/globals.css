@@ -3586,6 +3586,10 @@ footer p {
   margin-bottom: 1px;
 }
 
+.english-primary-tabs {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .english-tabs .english-tab-memory {
   border-color: var(--english-yellow);
   box-shadow: inset 0 -4px 0 var(--english-yellow);
@@ -4594,6 +4598,10 @@ footer p {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+.smart-control-tabs {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
 .statistics-tabs button {
   min-width: 0;
 }
@@ -5104,6 +5112,41 @@ footer p {
   overflow-wrap: anywhere;
 }
 
+.smart-control-textbook-workspace {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.smart-control-textbook-intro {
+  margin: 0;
+}
+
+.smart-control-red-term-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.smart-control-red-term-grid article {
+  min-width: 0;
+}
+
+.smart-control-red-term-grid article h3,
+.smart-control-red-term-grid article p {
+  overflow-wrap: anywhere;
+}
+
+.smart-control-red-term-grid article p {
+  line-height: 1.75;
+}
+
+.smart-control-textbook-actions {
+  flex-wrap: wrap;
+}
+
+.smart-control-textbook-actions button {
+  min-height: 48px;
+}
+
 @media (max-width: 980px) {
   .statistics-tabs,
   .statistics-topic-grid,
@@ -5407,6 +5450,15 @@ footer p {
 
   .statistics-tabs button:last-child {
     grid-column: auto;
+  }
+
+  .smart-control-red-term-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .smart-control-textbook-actions button {
+    flex: 1 1 100%;
+    width: 100%;
   }
 
   .statistics-topic-grid,

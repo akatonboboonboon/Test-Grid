@@ -59,6 +59,11 @@ function mergeRawValue(key: string, remoteValue: string, localValue: string) {
     const localSavedAt = Number(parsedObject(localValue)?.savedAt ?? 0);
     return remoteSavedAt > localSavedAt ? remoteValue : localValue;
   }
+  if (key.endsWith("ch18-quiz18:v1")) {
+    const remoteUpdatedAt = String(parsedObject(remoteValue)?.updatedAt ?? "");
+    const localUpdatedAt = String(parsedObject(localValue)?.updatedAt ?? "");
+    return remoteUpdatedAt > localUpdatedAt ? remoteValue : localValue;
+  }
   return localValue;
 }
 

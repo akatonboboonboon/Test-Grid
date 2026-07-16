@@ -1,0 +1,267 @@
+.root {
+  --graph-border: color-mix(in srgb, var(--statistics-green, #ff8fc7) 48%, transparent);
+  --graph-panel: color-mix(in srgb, var(--statistics-ink, #121821) 94%, transparent);
+  border: 1px solid var(--graph-border);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--statistics-green, #ff8fc7) 8%, transparent), transparent 38%),
+    var(--statistics-surface, #1a222e);
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--statistics-blue, #8fb5ff) 28%, transparent);
+  color: var(--statistics-paper, #fffaf0);
+  padding: clamp(1rem, 3vw, 1.75rem);
+}
+
+.headingRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--statistics-green, #ff8fc7);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.title {
+  margin: 0;
+  color: var(--statistics-paper, #fffaf0);
+  font-size: clamp(1.25rem, 3vw, 1.8rem);
+  line-height: 1.25;
+}
+
+.lead {
+  max-width: 56rem;
+  margin: 0.55rem 0 0;
+  color: var(--statistics-muted, #a9b2bd);
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+
+.revealButton {
+  flex: 0 0 auto;
+  min-height: 44px;
+  border: 1px solid var(--statistics-green, #ff8fc7);
+  border-radius: 0;
+  background: var(--statistics-green, #ff8fc7);
+  color: var(--statistics-ink, #121821);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 900;
+  padding: 0.7rem 1rem;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.revealButton:hover {
+  box-shadow: 4px 4px 0 var(--statistics-yellow, #ffd65c);
+  transform: translate(-2px, -2px);
+}
+
+.revealButton:focus-visible {
+  outline: 3px solid var(--statistics-yellow, #ffd65c);
+  outline-offset: 3px;
+}
+
+.revealButton[aria-pressed="true"] {
+  background: transparent;
+  color: var(--statistics-green, #ff8fc7);
+}
+
+.graphShell {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--statistics-paper, #fffaf0) 18%, transparent);
+  background: var(--statistics-ink, #121821);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.status {
+  min-height: 1.5em;
+  margin: 0.7rem 0;
+  color: var(--statistics-muted, #a9b2bd);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.tableWrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid color-mix(in srgb, var(--statistics-paper, #fffaf0) 16%, transparent);
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  background: var(--graph-panel);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.table caption {
+  padding: 0.7rem 0.85rem;
+  background: color-mix(in srgb, var(--statistics-blue, #8fb5ff) 10%, transparent);
+  color: var(--statistics-muted, #a9b2bd);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid color-mix(in srgb, var(--statistics-paper, #fffaf0) 12%, transparent);
+  padding: 0.72rem 0.8rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  background: color-mix(in srgb, var(--statistics-green, #ff8fc7) 10%, transparent);
+  color: var(--statistics-paper, #fffaf0);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.table tbody th {
+  width: 19%;
+  color: var(--statistics-green, #ff8fc7);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.table tbody td:nth-child(2) {
+  width: 22%;
+  white-space: nowrap;
+}
+
+.answerValue {
+  color: var(--statistics-yellow, #ffd65c);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-weight: 800;
+}
+
+.hiddenAnswer {
+  display: inline-block;
+  color: var(--statistics-muted, #a9b2bd);
+  font-size: 0.76rem;
+  font-style: italic;
+}
+
+.note {
+  margin: 0.8rem 0 0;
+  color: var(--statistics-muted, #a9b2bd);
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 680px) {
+  .root {
+    padding: 0.85rem;
+    box-shadow: 4px 4px 0 color-mix(in srgb, var(--statistics-blue, #8fb5ff) 28%, transparent);
+  }
+
+  .headingRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .revealButton {
+    align-self: stretch;
+    width: 100%;
+    font-size: 1rem;
+  }
+
+  .lead {
+    font-size: 0.85rem;
+  }
+
+  .tableWrap {
+    overflow: visible;
+    border: 0;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table th,
+  .table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table caption {
+    display: block;
+    width: auto;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .table tr {
+    margin-bottom: 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--statistics-paper, #fffaf0) 14%, transparent);
+    background: var(--graph-panel);
+  }
+
+  .table th,
+  .table td {
+    box-sizing: border-box;
+    border-bottom: 0;
+    padding: 0.55rem 0.7rem;
+    white-space: normal !important;
+  }
+
+  .table tbody th {
+    width: 100%;
+    border-bottom: 1px solid color-mix(in srgb, var(--statistics-paper, #fffaf0) 10%, transparent);
+    background: color-mix(in srgb, var(--statistics-green, #ff8fc7) 8%, transparent);
+  }
+
+  .table tbody td:nth-child(2) {
+    width: 100%;
+  }
+
+  .table tbody td:nth-child(2)::before {
+    content: "数値  ";
+    color: var(--statistics-muted, #a9b2bd);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revealButton {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root,
+  .graphShell,
+  .tableWrap,
+  .table tr {
+    border-color: currentColor;
+  }
+}

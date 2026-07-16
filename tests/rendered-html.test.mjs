@@ -23,6 +23,7 @@ registerHooks({
 let englishDataModulePromise;
 let statisticsDataModulePromise;
 let smartControlDataModulePromise;
+let smartControlTextbookDataModulePromise;
 
 function loadEnglishDataModule() {
   englishDataModulePromise ??= readFile(new URL("../app/english-data.ts", import.meta.url), "utf8")
@@ -58,6 +59,17 @@ function loadSmartControlDataModule() {
     }).outputText)
     .then((javascript) => import(`data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`));
   return smartControlDataModulePromise;
+}
+function loadSmartControlTextbookDataModule() {
+  smartControlTextbookDataModulePromise ??= readFile(new URL("../app/smart-control-textbook-data.ts", import.meta.url), "utf8")
+    .then((source) => ts.transpileModule(source, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText)
+    .then((javascript) => import(`data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`));
+  return smartControlTextbookDataModulePromise;
 }
 void loadStatisticsDataModule;
 
@@ -165,6 +177,8 @@ test("server-renders the English exam lab", async () => {
   const html = await response.text();
   assert.match(html, /ENGLISH EXAM LAB/);
   assert.match(html, /暗記帳を開く/);
+  assert.match(html, /Ch\.18 実物小テスト/);
+  assert.match(html, /実物18点/);
   assert.match(html, /模擬テスト/);
   assert.match(html, /長文読解/);
   assert.match(html, /Chapter 15|Ch\.15/);
@@ -204,7 +218,9 @@ test("server-renders the smart control exam lab", async () => {
   assert.match(html, /ランダム模試/);
   assert.match(html, /A4想定試験/);
   assert.match(html, /複素積分・マクローリン展開・留数は対象外/);
-  assert.match(html, /未提供の教科書写真/);
+  assert.match(html, /教科書赤字・図/);
+  assert.match(html, /教科書p\.65〜68/);
+  assert.doesNotMatch(html, /未提供の教科書写真/);
 });
 test("keeps the study workspaces usable on phone-sized viewports", async () => {
   const response = await render("/subjects/subject-2");
@@ -456,6 +472,57 @@ test("keeps smart-control range data, formulas, saves, and A4 papers internally 
   assert.match(syncUi, /key\.endsWith\("mock-test:v1"\)/);
   assert.match(syncUi, /key\.endsWith\("expected-exam:v1"\)/);
 });
+test("covers all red textbook terms and graph thresholds with dedicated drills", async () => {
+  const [textbookData, page, hub, graphUi, graphCss] = await Promise.all([
+    loadSmartControlTextbookDataModule(),
+    readFile(new URL("../app/subjects/subject-6/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/smart-control-response-graph.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/smart-control-response-graph.module.css", import.meta.url), "utf8"),
+  ]);
+
+  const { TEXTBOOK_RESPONSE_CARDS, TEXTBOOK_RESPONSE_QUESTIONS } = textbookData;
+  assert.ok(TEXTBOOK_RESPONSE_CARDS.length >= 14, "every red term and graph mark needs a memory card");
+  assert.ok(TEXTBOOK_RESPONSE_QUESTIONS.length >= 18, "the graph-reading bank should be substantial");
+  assert.equal(new Set(TEXTBOOK_RESPONSE_CARDS.map((card) => card.id)).size, TEXTBOOK_RESPONSE_CARDS.length);
+  assert.equal(new Set(TEXTBOOK_RESPONSE_QUESTIONS.map((question) => question.id)).size, TEXTBOOK_RESPONSE_QUESTIONS.length);
+  assert.ok(TEXTBOOK_RESPONSE_CARDS.every((card) => card.topic === "response-stability"));
+  assert.ok(TEXTBOOK_RESPONSE_QUESTIONS.every((question) => question.topic === "response-stability"));
+  assert.ok(TEXTBOOK_RESPONSE_QUESTIONS.every((question) => question.source === "textbook-p65-68"));
+  assert.ok(TEXTBOOK_RESPONSE_QUESTIONS.every((question) => question.steps.length >= 2));
+
+  const corpus = JSON.stringify({ TEXTBOOK_RESPONSE_CARDS, TEXTBOOK_RESPONSE_QUESTIONS });
+  for (const term of [
+    "定常特性", "過渡特性", "定常値", "立ち上がり時間", "速応性",
+    "遅れ時間", "オーバーシュート", "行き過ぎ量", "行き過ぎ時間", "減衰性", "整定時間",
+  ]) {
+    assert.match(corpus, new RegExp(term), `${term} must be covered`);
+  }
+  for (const mark of ["0.1", "0.5", "0.9", "0.95", "1.05", "t_r", "t_d", "t_p", "t_s", "O_s", "y_{\\\\max}"]) {
+    assert.ok(corpus.includes(mark), `${mark} must be practiced`);
+  }
+  assert.match(corpus, /100/);
+  assert.match(corpus, /5%/);
+
+  assert.match(page, /type Mode = .*"textbook"/);
+  assert.match(page, /TEXTBOOK_RESPONSE_CARDS/);
+  assert.match(page, /TEXTBOOK_RESPONSE_QUESTIONS/);
+  assert.match(page, /<SmartControlResponseGraph/);
+  assert.match(page, /教科書赤字・図/);
+  assert.match(page, /教科書カードだけ/);
+  assert.match(page, /図表問題だけ/);
+  assert.match(page, /smart-control-tabs/);
+  assert.match(hub, /SMART_CONTROL_ALL_CARDS/);
+
+  assert.match(graphUi, /<canvas/);
+  assert.doesNotMatch(graphUi, /<svg/i);
+  assert.match(graphUi, /ResizeObserver/);
+  assert.match(graphUi, /0\.95/);
+  assert.match(graphUi, /1\.05/);
+  assert.match(graphUi, /答え/);
+  assert.match(graphCss, /@media/);
+});
+
 test("provides twelve balanced A4 predicted exams with 11 major questions and 100 verified points", async () => {
   const [expectedExams, expectedExamStyles, statisticsPage, mathRenderer] = await Promise.all([
     readFile(new URL("../app/statistics-expected-exams.tsx", import.meta.url), "utf8"),
