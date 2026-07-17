@@ -186,6 +186,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "CROSS_SITE_WRITE_BLOCKED" }, { status: 403 });
   }
 
+  let phase = "request";
   try {
     const raw = await request.text();
     if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) {
@@ -197,6 +198,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "INVALID_HISTORY_BATCH" }, { status: 400 });
     }
 
+    phase = "quota";
     const createdAt = Date.now();
     const database = getD1();
     const clientAddress = anonymousClientAddress(request);
@@ -230,6 +232,7 @@ export async function POST(request: Request) {
       });
     }
 
+    phase = "generation";
     const questions: GeneratedPracticeQuestion[] = [];
     for (const candidate of candidates) {
       const generationRequest = parseGenerationRequest(candidate);
@@ -247,6 +250,7 @@ export async function POST(request: Request) {
       questions.push(question);
     }
 
+    phase = "insert";
     const statements = questions.map((question, index) => database.prepare(`
         INSERT OR IGNORE INTO generated_practice_history
           (id, subject_id, subject_name, template_id, format, category, title, payload, created_at)
@@ -263,6 +267,7 @@ export async function POST(request: Request) {
         createdAt + index,
       ));
     await database.batch(statements);
+    phase = "prune";
     await database.prepare(`
         DELETE FROM generated_practice_history
         WHERE id IN (
@@ -275,6 +280,6 @@ export async function POST(request: Request) {
 
     return Response.json({ saved: true, count: questions.length }, { status: 201 });
   } catch {
-    return historyUnavailable();
+    return Response.json({ error: "HISTORY_" + phase.toUpperCase() + "_FAILED" }, { status: 503 });
   }
 }
