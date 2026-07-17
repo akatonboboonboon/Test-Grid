@@ -239,8 +239,8 @@ function buildExpectedPaper(definition: ExpectedExamDefinition): ExpectedExamPap
       title: "記述統計",
       context: descriptiveContext,
       questions: [
-        makeQuestion(definition, 1, 1, 3, { topic: "descriptive", genre: "平均", difficulty: 1, format: "number", prompt: "平均 \\(\\bar{x}\\) を求めよ。", context: descriptiveContext, answer: formatDecimal(descriptiveCenter), numericAnswer: descriptiveCenter, formula: "\\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_i", steps: [`データは \\(${descriptiveCenter}\\) を中心に対称である。`, `したがって \\(\\bar{x}=${descriptiveCenter}\\)`], explanation: "全データの合計を個数6で割る。対称性を使ってもよい。" }),
-        makeQuestion(definition, 1, 2, 3, { topic: "descriptive", genre: "母分散", difficulty: 2, format: "number", prompt: "母分散 \\(\\sigma^2\\) を求めよ。小数第3位まで可。", context: descriptiveContext, answer: formatDecimal(descriptiveVariance, 5), numericAnswer: descriptiveVariance, tolerance: 0.001, formula: "\\sigma^2=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})^2", steps: [`偏差は \\(-${2 * descriptiveSpread},-${descriptiveSpread},0,0,${descriptiveSpread},${2 * descriptiveSpread}\\)`, `偏差平方和は \\(${10 * descriptiveSpread ** 2}\\)`, `\\(\\sigma^2=${10 * descriptiveSpread ** 2}/6=${formatDecimal(descriptiveVariance, 5)}\\)`], explanation: "母分散なので偏差平方和をデータ数6で割る。" }),
+        makeQuestion(definition, 1, 1, 3, { topic: "descriptive", genre: "平均", difficulty: 1, format: "number", prompt: "平均 \\(\\bar{x}\\) を求めよ。", context: descriptiveContext, answer: formatDecimal(descriptiveCenter), numericAnswer: descriptiveCenter, formula: "\\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_i", expandedFormula: `\\bar{x}=\\frac{${descriptiveData.join("+")}}{6}`, steps: [`データは \\(${descriptiveCenter}\\) を中心に対称である。`, `したがって \\(\\bar{x}=${descriptiveCenter}\\)`], explanation: "全データの合計を個数6で割る。対称性を使ってもよい。" }),
+        makeQuestion(definition, 1, 2, 3, { topic: "descriptive", genre: "母分散", difficulty: 2, format: "number", prompt: "母分散 \\(\\sigma^2\\) を求めよ。小数第3位まで可。", context: descriptiveContext, answer: formatDecimal(descriptiveVariance, 5), numericAnswer: descriptiveVariance, tolerance: 0.001, formula: "\\sigma^2=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})^2", expandedFormula: `\\sigma^2=\\frac{${descriptiveData.map((value) => `(${value}-${descriptiveCenter})^2`).join("+")}}{6}`, steps: [`偏差は \\(-${2 * descriptiveSpread},-${descriptiveSpread},0,0,${descriptiveSpread},${2 * descriptiveSpread}\\)`, `偏差平方和は \\(${10 * descriptiveSpread ** 2}\\)`, `\\(\\sigma^2=\\frac{${10 * descriptiveSpread ** 2}}{6}=${formatDecimal(descriptiveVariance, 5)}\\)`], explanation: "母分散なので偏差平方和をデータ数6で割る。" }),
         makeQuestion(definition, 1, 3, 3, { topic: "descriptive", genre: "母標準偏差", difficulty: 2, format: "number", prompt: "母標準偏差 \\(\\sigma\\) を求めよ。小数第3位まで可。", context: descriptiveContext, answer: formatDecimal(descriptiveDeviation, 5), numericAnswer: descriptiveDeviation, tolerance: 0.001, formula: "\\sigma=\\sqrt{\\sigma^2}", steps: [`\\(\\sigma=\\sqrt{${formatDecimal(descriptiveVariance, 5)}}=${formatDecimal(descriptiveDeviation, 5)}\\)`], explanation: "標準偏差は分散の正の平方根である。" }),
       ],
     },
@@ -249,7 +249,7 @@ function buildExpectedPaper(definition: ExpectedExamDefinition): ExpectedExamPap
       title: "相関・回帰・予測",
       context: relationContext,
       questions: [
-        makeQuestion(definition, 2, 1, 3, { topic: "relation", genre: "共分散", difficulty: 2, format: "number", prompt: "母共分散 \\(\\sigma_{XY}\\) を求めよ。小数第3位まで可。", context: relationContext, answer: formatDecimal(covariance, 5), numericAnswer: covariance, tolerance: 0.001, formula: "\\sigma_{XY}=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})(y_i-\\bar{y})", steps: [`\\(\\bar{x}=${formatDecimal(xAverage)},\\ \\bar{y}=${formatDecimal(yAverage)}\\)`, `偏差積和を5で割り、\\(\\sigma_{XY}=${formatDecimal(covariance, 5)}\\)`], explanation: "対応するXとYの偏差の積を平均する。" }),
+        makeQuestion(definition, 2, 1, 3, { topic: "relation", genre: "共分散", difficulty: 2, format: "number", prompt: "母共分散 \\(\\sigma_{XY}\\) を求めよ。小数第3位まで可。", context: relationContext, answer: formatDecimal(covariance, 5), numericAnswer: covariance, tolerance: 0.001, formula: "\\sigma_{XY}=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})(y_i-\\bar{y})", expandedFormula: `\\sigma_{XY}=\\frac{${xValues.map((x, index) => `(${x}-${formatDecimal(xAverage)})(${yValues[index]}-${formatDecimal(yAverage)})`).join("+")}}{5}`, steps: [`\\(\\bar{x}=${formatDecimal(xAverage)},\\ \\bar{y}=${formatDecimal(yAverage)}\\)`, `偏差積和を5で割り、\\(\\sigma_{XY}=${formatDecimal(covariance, 5)}\\)`], explanation: "対応するXとYの偏差の積を平均する。" }),
         makeQuestion(definition, 2, 2, 3, { topic: "relation", genre: "相関係数", difficulty: 2, format: "number", prompt: "ピアソンの相関係数 \\(r\\) を求めよ。小数第3位まで可。", context: relationContext, answer: formatDecimal(correlation, 5), numericAnswer: correlation, tolerance: 0.001, formula: "r=\\frac{\\sigma_{XY}}{\\sigma_X\\sigma_Y}", steps: [`\\(\\sigma_X^2=${formatDecimal(xVariance, 5)},\\ \\sigma_Y^2=${formatDecimal(yVariance, 5)}\\)`, `\\(r=${formatDecimal(correlation, 5)}\\)`], explanation: "共分散を両変数の標準偏差の積で標準化する。" }),
         makeQuestion(definition, 2, 3, 3, { topic: "relation", genre: "決定係数", difficulty: 2, format: "number", prompt: "決定係数 \\(R^2\\) を求めよ。小数第3位まで可。", context: relationContext, answer: formatDecimal(determination, 5), numericAnswer: determination, tolerance: 0.001, formula: "R^2=r^2", steps: [`\\(R^2=${formatDecimal(correlation, 5)}^2=${formatDecimal(determination, 5)}\\)`], explanation: "単回帰の決定係数は相関係数の二乗である。" }),
         makeQuestion(definition, 2, 4, 3, { topic: "relation", genre: "回帰予測", difficulty: 3, format: "number", prompt: `\\(Y\\) の \\(X\\) への回帰直線を用いて、\\(X=${predictionX}\\) のときの \\(Y\\) を予測せよ。小数第2位まで可。`, context: relationContext, answer: formatDecimal(predictionY, 5), numericAnswer: predictionY, tolerance: 0.01, formula: "b=\\frac{\\sigma_{XY}}{\\sigma_X^2},\\quad a=\\bar{y}-b\\bar{x},\\quad \\hat{y}=a+bx", steps: [`\\(b=${formatDecimal(regressionSlope, 5)},\\ a=${formatDecimal(regressionIntercept, 5)}\\)`, `回帰直線は \\(\\hat{y}=${formatDecimal(regressionIntercept, 5)}+${formatDecimal(regressionSlope, 5)}x\\)`, `\\(x=${predictionX}\\) より \\(\\hat{y}=${formatDecimal(predictionY, 5)}\\)`], explanation: "共分散とXの分散から傾きを求め、平均点を通るよう切片を定めて予測する。" }),
@@ -269,8 +269,8 @@ function buildExpectedPaper(definition: ExpectedExamDefinition): ExpectedExamPap
       title: "確率の基本",
       context: basicProbabilityContext,
       questions: [
-        makeQuestion(definition, 4, 1, 4, { topic: "counting", genre: "組合せ確率", difficulty: 2, format: "number", prompt: `${cardTotal}枚から同時に3枚を選ぶとき、3枚の番号がすべて同じになる確率を求めよ。`, context: basicProbabilityContext, answer: probabilityAnswer(sameNumberProbability), numericAnswer: sameNumberProbability, tolerance: 0.0001, formula: "P(A)=\\frac{|A|}{|\\Omega|}", steps: [`全事象は \\({}_{${cardTotal}}C_3=${combination(cardTotal, 3)}\\) 通り`, `同じ番号を選ぶ方法は \\(${cardNumbers}\\times{}_{${cardColors}}C_3=${sameNumberWays}\\) 通り`, `\\(${sameNumberWays}/${combination(cardTotal, 3)}=${formatDecimal(sameNumberProbability, 5)}\\)`], explanation: "番号を1つ選び、その番号をもつ異なる色3枚を組合せで選ぶ。" }),
-        makeQuestion(definition, 4, 2, 4, { topic: "counting", genre: "余事象", difficulty: 2, format: "number", prompt: `コインを${coinTosses}回投げるとき、少なくとも1回表が出る確率を求めよ。`, context: basicProbabilityContext, answer: probabilityAnswer(1 - 1 / 2 ** coinTosses), numericAnswer: 1 - 1 / 2 ** coinTosses, tolerance: 0.00001, formula: "P(A^c)=1-P(A)", steps: [`1回も表が出ない確率は \\((1/2)^{${coinTosses}}=1/${2 ** coinTosses}\\)`, `\\(1-1/${2 ** coinTosses}=${formatDecimal(1 - 1 / 2 ** coinTosses, 5)}\\)`], explanation: "「少なくとも1回」は「すべて裏」の余事象を使う。" }),
+        makeQuestion(definition, 4, 1, 4, { topic: "counting", genre: "組合せ確率", difficulty: 2, format: "number", prompt: `${cardTotal}枚から同時に3枚を選ぶとき、3枚の番号がすべて同じになる確率を求めよ。`, context: basicProbabilityContext, answer: probabilityAnswer(sameNumberProbability), numericAnswer: sameNumberProbability, tolerance: 0.0001, formula: "P(A)=\\frac{|A|}{|\\Omega|}", steps: [`全事象は \\({}_{${cardTotal}}C_3=${combination(cardTotal, 3)}\\) 通り`, `同じ番号を選ぶ方法は \\(${cardNumbers}\\times{}_{${cardColors}}C_3=${sameNumberWays}\\) 通り`, `\\(P(A)=\\frac{${sameNumberWays}}{${combination(cardTotal, 3)}}=${formatDecimal(sameNumberProbability, 5)}\\)`], explanation: "番号を1つ選び、その番号をもつ異なる色3枚を組合せで選ぶ。" }),
+        makeQuestion(definition, 4, 2, 4, { topic: "counting", genre: "余事象", difficulty: 2, format: "number", prompt: `コインを${coinTosses}回投げるとき、少なくとも1回表が出る確率を求めよ。`, context: basicProbabilityContext, answer: probabilityAnswer(1 - 1 / 2 ** coinTosses), numericAnswer: 1 - 1 / 2 ** coinTosses, tolerance: 0.00001, formula: "P(A^c)=1-P(A)", steps: [`1回も表が出ない確率は \\(\\left(\\frac{1}{2}\\right)^{${coinTosses}}=\\frac{1}{${2 ** coinTosses}}\\)`, `\\(1-\\frac{1}{${2 ** coinTosses}}=${formatDecimal(1 - 1 / 2 ** coinTosses, 5)}\\)`], explanation: "「少なくとも1回」は「すべて裏」の余事象を使う。" }),
       ],
     },
     {
@@ -280,7 +280,7 @@ function buildExpectedPaper(definition: ExpectedExamDefinition): ExpectedExamPap
       questions: [
         makeQuestion(definition, 5, 1, 4, { topic: "conditional", genre: "乗法定理", difficulty: 1, format: "number", prompt: "無作為に選んだ製品が工場A製かつ不良品である確率を求めよ。", context: bayesContext, answer: probabilityAnswer(machineAJoint), numericAnswer: machineAJoint, tolerance: 0.00001, formula: "P(A\\cap D)=P(A)P(D\\mid A)", steps: [`\\(${formatDecimal(machineAPrior, 2)}\\times${formatDecimal(machineADefect, 2)}=${formatDecimal(machineAJoint, 5)}\\)`], explanation: "Aを通る経路の確率を掛け合わせる。" }),
         makeQuestion(definition, 5, 2, 4, { topic: "conditional", genre: "全確率", difficulty: 2, format: "number", prompt: "無作為に選んだ製品が不良品である確率を求めよ。", context: bayesContext, answer: probabilityAnswer(defectTotal), numericAnswer: defectTotal, tolerance: 0.00001, formula: "P(D)=P(A)P(D\\mid A)+P(B)P(D\\mid B)", steps: [`A経路は \\(${formatDecimal(machineAJoint, 5)}\\)`, `B経路は \\(${formatDecimal((1 - machineAPrior) * machineBDefect, 5)}\\)`, `合計 \\(${formatDecimal(defectTotal, 5)}\\)`], explanation: "不良になる互いに排反な経路をすべて加える。" }),
-        makeQuestion(definition, 5, 3, 4, { topic: "conditional", genre: "Bayes", difficulty: 3, format: "number", prompt: "不良品であると分かったとき、それが工場A製である条件付き確率を求めよ。小数第3位まで可。", context: bayesContext, answer: probabilityAnswer(machinePosterior), numericAnswer: machinePosterior, tolerance: 0.001, formula: "P(A\\mid D)=\\frac{P(A)P(D\\mid A)}{P(D)}", steps: [`分子は \\(${formatDecimal(machineAJoint, 5)}\\)`, `分母は \\(${formatDecimal(defectTotal, 5)}\\)`, `\\(${formatDecimal(machineAJoint, 5)}/${formatDecimal(defectTotal, 5)}=${formatDecimal(machinePosterior, 5)}\\)`], explanation: "目的のA経路を、不良になる全経路で割る。" }),
+        makeQuestion(definition, 5, 3, 4, { topic: "conditional", genre: "Bayes", difficulty: 3, format: "number", prompt: "不良品であると分かったとき、それが工場A製である条件付き確率を求めよ。小数第3位まで可。", context: bayesContext, answer: probabilityAnswer(machinePosterior), numericAnswer: machinePosterior, tolerance: 0.001, formula: "P(A\\mid D)=\\frac{P(A)P(D\\mid A)}{P(D)}", steps: [`分子は \\(${formatDecimal(machineAJoint, 5)}\\)`, `分母は \\(${formatDecimal(defectTotal, 5)}\\)`, `\\(P(A\\mid D)=\\frac{${formatDecimal(machineAJoint, 5)}}{${formatDecimal(defectTotal, 5)}}=${formatDecimal(machinePosterior, 5)}\\)`], explanation: "目的のA経路を、不良になる全経路で割る。" }),
       ],
     },
     {
@@ -288,8 +288,8 @@ function buildExpectedPaper(definition: ExpectedExamDefinition): ExpectedExamPap
       title: "離散型確率変数",
       context: discreteContext,
       questions: [
-        makeQuestion(definition, 6, 1, 3, { topic: "random-variable", genre: "確率分布", difficulty: 1, format: "number", prompt: "定数 \\(k\\) を求めよ。", context: discreteContext, answer: formatDecimal(probability2, 2), numericAnswer: probability2, formula: "\\sum_i p_i=1", steps: [`\\(k=1-${formatDecimal(probability0, 2)}-${formatDecimal(probability1, 2)}=${formatDecimal(probability2, 2)}\\)`], explanation: "確率の総和は1である。" }),
-        makeQuestion(definition, 6, 2, 4, { topic: "random-variable", genre: "期待値", difficulty: 2, format: "number", prompt: "期待値 \\(E[X]\\) を求めよ。", context: discreteContext, answer: formatDecimal(discreteMean, 4), numericAnswer: discreteMean, tolerance: 0.00001, formula: "E[X]=\\sum_i x_ip_i", steps: [`\\(0\\times${formatDecimal(probability0, 2)}+1\\times${formatDecimal(probability1, 2)}+2\\times${formatDecimal(probability2, 2)}\\)`, `\\(=${formatDecimal(discreteMean, 4)}\\)`], explanation: "各値とその確率の積を加える。" }),
+        makeQuestion(definition, 6, 1, 3, { topic: "random-variable", genre: "確率分布", difficulty: 1, format: "number", prompt: "定数 \\(k\\) を求めよ。", context: discreteContext, answer: formatDecimal(probability2, 2), numericAnswer: probability2, formula: "\\sum_i p_i=1", expandedFormula: `p_0+p_1+p_2=${formatDecimal(probability0, 2)}+${formatDecimal(probability1, 2)}+${formatDecimal(probability2, 2)}=1`, steps: [`\\(k=1-${formatDecimal(probability0, 2)}-${formatDecimal(probability1, 2)}=${formatDecimal(probability2, 2)}\\)`], explanation: "確率の総和は1である。" }),
+        makeQuestion(definition, 6, 2, 4, { topic: "random-variable", genre: "期待値", difficulty: 2, format: "number", prompt: "期待値 \\(E[X]\\) を求めよ。", context: discreteContext, answer: formatDecimal(discreteMean, 4), numericAnswer: discreteMean, tolerance: 0.00001, formula: "E[X]=\\sum_i x_ip_i", expandedFormula: `E[X]=0\\times${formatDecimal(probability0, 2)}+1\\times${formatDecimal(probability1, 2)}+2\\times${formatDecimal(probability2, 2)}`, steps: [`\\(0\\times${formatDecimal(probability0, 2)}+1\\times${formatDecimal(probability1, 2)}+2\\times${formatDecimal(probability2, 2)}\\)`, `\\(=${formatDecimal(discreteMean, 4)}\\)`], explanation: "各値とその確率の積を加える。" }),
         makeQuestion(definition, 6, 3, 5, { topic: "random-variable", genre: "分散", difficulty: 2, format: "number", prompt: "分散 \\(V(X)\\) を求めよ。小数第4位まで可。", context: discreteContext, answer: formatDecimal(discreteVariance, 5), numericAnswer: discreteVariance, tolerance: 0.0001, formula: "V(X)=E[X^2]-E[X]^2", steps: [`\\(E[X^2]=${formatDecimal(discreteSecondMoment, 4)}\\)`, `\\(V(X)=${formatDecimal(discreteSecondMoment, 4)}-${formatDecimal(discreteMean, 4)}^2\\)`, `\\(=${formatDecimal(discreteVariance, 5)}\\)`], explanation: "二乗の期待値から期待値の二乗を引く。" }),
       ],
     },
@@ -317,7 +317,7 @@ function buildExpectedPaper(definition: ExpectedExamDefinition): ExpectedExamPap
       title: "正規分布・標準化",
       context: normalContext,
       questions: [
-        makeQuestion(definition, 9, 1, 4, { topic: "continuous", genre: "標準化", difficulty: 1, format: "number", prompt: `\\(X=${formatDecimal(normalValue, 2)}\\) に対応する標準得点 \\(z\\) を求めよ。`, context: normalContext, answer: formatDecimal(normalRow.z, 2), numericAnswer: normalRow.z, tolerance: 0.0001, formula: "z=\\frac{x-\\mu}{\\sigma}", steps: [`\\(z=(${formatDecimal(normalValue, 2)}-${normalMean})/${normalSigma}\\)`, `\\(=${formatDecimal(normalRow.z, 2)}\\)`], explanation: "平均との差を標準偏差で割る。" }),
+        makeQuestion(definition, 9, 1, 4, { topic: "continuous", genre: "標準化", difficulty: 1, format: "number", prompt: `\\(X=${formatDecimal(normalValue, 2)}\\) に対応する標準得点 \\(z\\) を求めよ。`, context: normalContext, answer: formatDecimal(normalRow.z, 2), numericAnswer: normalRow.z, tolerance: 0.0001, formula: "z=\\frac{x-\\mu}{\\sigma}", steps: [`\\(z=\\frac{${formatDecimal(normalValue, 2)}-${normalMean}}{${normalSigma}}\\)`, `\\(z=${formatDecimal(normalRow.z, 2)}\\)`], explanation: "平均との差を標準偏差で割る。" }),
         makeQuestion(definition, 9, 2, 4, { topic: "continuous", genre: "正規分布表", difficulty: 2, format: "number", prompt: `\\(P(X\\le ${formatDecimal(normalValue, 2)})\\) を求めよ。`, context: normalContext, answer: probabilityAnswer(normalRow.phi, 4), numericAnswer: normalRow.phi, tolerance: 0.00005, formula: "P(X\\le x)=\\Phi\\!\\left(\\frac{x-\\mu}{\\sigma}\\right)", steps: [`標準化すると \\(z=${formatDecimal(normalRow.z, 2)}\\)`, `表より \\(\\Phi(${formatDecimal(normalRow.z, 2)})=${formatDecimal(normalRow.phi, 4)}\\)`], explanation: "標準化した値を累積標準正規分布表で読む。" }),
       ],
     },
@@ -326,7 +326,7 @@ function buildExpectedPaper(definition: ExpectedExamDefinition): ExpectedExamPap
       title: "チェビシェフの不等式",
       context: chebyshevContext,
       questions: [
-        makeQuestion(definition, 10, 1, 5, { topic: "continuous", genre: "チェビシェフ", difficulty: 2, format: "number", prompt: `区間 \\(${chebyshevMean - chebyshevK * chebyshevSigma}\\le X\\le ${chebyshevMean + chebyshevK * chebyshevSigma}\\) に入る確率の下限を求めよ。`, context: chebyshevContext, answer: probabilityAnswer(chebyshevInside), numericAnswer: chebyshevInside, tolerance: 0.0001, formula: "P(|X-\\mu|<k\\sigma)\\ge1-\\frac{1}{k^2}", steps: [`区間は平均から \\(\\pm${chebyshevK}\\sigma\\)`, `外側確率の上限は \\(1/${chebyshevK}^2=${formatDecimal(chebyshevOutside, 5)}\\)`, `\\(1-1/${chebyshevK}^2=${formatDecimal(chebyshevInside, 5)}\\)`], explanation: "外側確率の上限を1から引くと内側確率の下限になる。" }),
+        makeQuestion(definition, 10, 1, 5, { topic: "continuous", genre: "チェビシェフ", difficulty: 2, format: "number", prompt: `区間 \\(${chebyshevMean - chebyshevK * chebyshevSigma}\\le X\\le ${chebyshevMean + chebyshevK * chebyshevSigma}\\) に入る確率の下限を求めよ。`, context: chebyshevContext, answer: probabilityAnswer(chebyshevInside), numericAnswer: chebyshevInside, tolerance: 0.0001, formula: "P(|X-\\mu|<k\\sigma)\\ge1-\\frac{1}{k^2}", steps: [`区間は平均から \\(\\pm${chebyshevK}\\sigma\\)`, `外側確率の上限は \\(\\frac{1}{${chebyshevK}^2}=${formatDecimal(chebyshevOutside, 5)}\\)`, `\\(1-\\frac{1}{${chebyshevK}^2}=${formatDecimal(chebyshevInside, 5)}\\)`], explanation: "外側確率の上限を1から引くと内側確率の下限になる。" }),
       ],
     },
     {
@@ -357,6 +357,12 @@ function validateExpectedPaper(paper: ExpectedExamPaper) {
     if (!paper.questions.some((question) => question.topic === topic)) throw new Error(`${paper.definition.id}: missing topic ${topic}`);
   }
   if (paper.questions.filter((question) => question.format === "text").length !== 1) throw new Error(`${paper.definition.id}: exactly one proof/explanation question is required`);
+  for (const question of paper.questions) {
+    if (!question.formula?.includes("\\sum")) continue;
+    if (!question.expandedFormula || question.expandedFormula.includes("\\sum")) {
+      throw new Error(`${question.id}: every Sigma formula requires a Sigma-free expandedFormula`);
+    }
+  }
 }
 
 const EXPECTED_PAPERS_BY_ID = new Map(STATISTICS_EXPECTED_EXAMS.map((definition) => {
@@ -466,6 +472,24 @@ function restoreSavedExam(): SavedExpectedExam | null {
   }
 }
 
+function SigmaAwareFormula({ question }: { question: Pick<StatisticsQuestion, "formula" | "expandedFormula"> }) {
+  if (!question.formula) return null;
+  return (
+    <>
+      <div className="statistics-solution-formula">
+        <span>{question.expandedFormula ? "Σを使う書き方" : "使う公式"}</span>
+        <DisplayMath tex={question.formula} />
+      </div>
+      {question.expandedFormula && (
+        <div className="statistics-solution-formula">
+          <span>Σなしで書くと</span>
+          <DisplayMath tex={question.expandedFormula} />
+        </div>
+      )}
+    </>
+  );
+}
+
 function ExamPaper({ paper }: { paper: ExpectedExamPaper }) {
   return (
     <article className={styles.paper}>
@@ -505,7 +529,7 @@ function AnswerBooklet({ paper }: { paper: ExpectedExamPaper }) {
             {section.questions.map((question) => (
               <div className={styles.answerItem} key={question.id}>
                 <h4>({question.sub}) 正答：<RichMathText text={question.answer} />〔{question.points}点〕</h4>
-                {question.formula && <DisplayMath tex={question.formula} />}
+                <SigmaAwareFormula question={question} />
                 <ol>{question.steps.map((step, index) => <li key={`${question.id}-print-${index}`}><RichMathText text={step} /></li>)}</ol>
                 <p><b>解説：</b><RichMathText text={question.explanation} /></p>
               </div>
@@ -760,7 +784,7 @@ export default function StatisticsExpectedExams() {
               <h3><RichMathText text={row.question.prompt} /></h3>
               <p><b>あなたの解答：</b><RichMathText text={row.response || "未回答"} /></p>
               <p><b>正答：</b><RichMathText text={row.question.answer} /></p>
-              {row.question.formula && <div className="statistics-solution-formula"><span>使う公式</span><DisplayMath tex={row.question.formula} /></div>}
+              <SigmaAwareFormula question={row.question} />
               <div className="statistics-solution-steps"><span>途中式</span><ol>{row.question.steps.map((step, stepIndex) => <li key={`${row.question.id}-${stepIndex}`}><RichMathText text={step} /></li>)}</ol></div>
               <p><b>解説：</b><RichMathText text={row.question.explanation} /></p>
             </article>

@@ -174,7 +174,9 @@ test("server-renders the preserved Layer Sum trainer", async () => {
   assert.match(html, /<title>ネットワーク専用ドリル \| TEST\/\/GRID/);
   assert.match(html, /①〜⑦の用語を/);
   assert.match(html, /96(?:<!-- -->)? CARDS/);
-  assert.match(html, /フラッシュ暗算/);
+  assert.match(html, /暗算を始める/);
+  assert.match(html, /時間制限つき層即答・ランキング/);
+  assert.match(html, /層を即答・連続正解・ランキング/);
   assert.match(html, /カードを編集/);
 });
 
@@ -215,6 +217,18 @@ test("server-renders the English exam lab", async () => {
   assert.match(html, /出題方向/);
   assert.match(html, /日 → 英/);
   assert.match(html, /英 → 日/);
+});
+
+test("server-renders the separate on-demand generated-practice lab", async () => {
+  const response = await render("/generated-practice?subject=subject-2");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /自動生成問題/);
+  assert.match(html, /プリント問題とは別/);
+  assert.match(html, /今すぐ1問作る/);
+  assert.match(html, /本文一文の並び替え|本文抜粋の和訳|選択問題/);
+  assert.doesNotMatch(html, /COMPLETE ANSWER|模範解答/);
+  assert.doesNotMatch(html, /ネットワーク.*自動生成/u);
 });
 
 test("server-renders the probability and statistics exam lab", async () => {
@@ -583,6 +597,9 @@ test("covers all red textbook terms and graph thresholds with dedicated drills",
   assert.match(page, /<SmartControlResponseGraph/);
   assert.match(page, /教科書赤字・図/);
   assert.match(page, /教科書カードだけ/);
+  assert.match(page, /function startAllCards/);
+  assert.match(page, /FORMULA \+ TEXTBOOK MEMORY/);
+  assert.match(page, /currentCard\.id\.startsWith\("textbook-response-"\)/);
   assert.match(page, /図表問題だけ/);
   assert.match(page, /smart-control-tabs/);
   assert.match(hub, /SMART_CONTROL_ALL_CARDS/);
@@ -822,11 +839,20 @@ test("ships layer filtering, autocomplete card search, rapid drills, and balance
   ]);
 
   assert.match(networkCardsPage, /レイヤーで絞り込み/);
-  assert.match(networkCardsPage, /cardLayers\(card\)\.includes\(layer\)/);
+  assert.match(networkCardsPage, /type LayerFilter = Layer\[\]/);
+  assert.match(networkCardsPage, /Array\.isArray\(value\)/);
+  assert.match(networkCardsPage, /typeof value === "number"/);
+  assert.match(networkCardsPage, /cardLayers\(card\)\.some\(\(layer\) => selectedLayers\.includes\(layer\)\)/);
+  assert.match(networkCardsPage, /selectedLayers\.includes\(layer\)/);
+  assert.match(networkCardsPage, /複数選択できます/);
   assert.match(networkCardsPage, /memory-search-suggestions/);
   assert.match(networkCardsPage, /aria-autocomplete="list"/);
   assert.match(networkCardsPage, /exactProtocolScore/);
   assert.match(globalCardSearch, /全教科の暗記帳検索/);
+  assert.match(globalCardSearch, /type SubjectFilter = SubjectId\[\]/);
+  assert.match(globalCardSearch, /selectedSubjects\.includes\(card\.subjectId\)/);
+  assert.match(globalCardSearch, /function toggleSubject/);
+  assert.match(globalCardSearch, /複数選択可/);
   assert.match(globalCardSearch, /function fuzzyScore/);
   assert.match(globalCardSearch, /function exactMatchScore/);
   assert.match(globalCardSearch, /card-search-suggestions/);
@@ -882,6 +908,16 @@ test("ships the applied-math graph break as a safe, exam-excluded interactive la
   assert.match(graphLab, /function-2d/);
   assert.match(graphLab, /surface-3d/);
   assert.match(graphLab, /vector-2d/);
+  assert.match(graphLab, /addEventListener\("wheel", handleWheel, \{ passive: false \}\)/);
+  assert.match(graphLab, /activePointersRef/);
+  assert.match(graphLab, /pinchDistanceRef/);
+  assert.match(graphLab, /Math\.hypot/);
+  assert.match(graphLab, /event\.pointerType === "mouse" && event\.button !== 0/);
+  assert.match(graphLab, /zoomedBoundsFor2D/);
+  assert.match(graphLab, /draw2DGrid\(context, width, height, visibleBounds, project\)/);
+  assert.match(graphLab, /ドラッグで回転/);
+  assert.match(graphLab, /ホイール／トラックパッド／ピンチで拡大縮小/);
+  assert.doesNotMatch(graphLab, /aria-label="(?:左|右|上|下)へ回転"/);
   assert.doesNotMatch(graphLab, /eval\s*\(|new\s+Function|Function\s*\(/);
   assert.match(appliedPage, /mode === "graph"/);
   assert.match(appliedPage, /<AppliedMathGraphLab/);
@@ -928,16 +964,12 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(hubPage, /\[dialogOpen\]/);
   assert.doesNotMatch(hubPage, /\[editing\]\);/);
   assert.match(networkPage, /layer-sum-cards-v1/);
-  assert.match(networkPage, /mode === "sum"/);
-  assert.match(networkPage, /mode === "identify"/);
   assert.match(networkPage, /cardLayers\(/);
   assert.match(networkPage, /cardLayerLabel\(/);
-  assert.match(networkPage, /chosen: Layer \| null/);
-  assert.match(networkPage, /identifyLimit/);
-  assert.match(networkPage, /performance\.now\(\)/);
-  assert.match(networkPage, /clearInterval/);
-  assert.match(networkPage, /時間切れ/);
-  assert.match(networkPage, /1問ごとの制限時間/);
+  assert.match(networkPage, /href="\/rapid\/network"/);
+  assert.match(networkPage, /時間制限つき層即答・ランキング/);
+  assert.match(networkPage, /層を即答・連続正解・ランキング/);
+  assert.doesNotMatch(networkPage, /type Mode|mode ===|identifyLimit|finishIdentify|phase === "identify"|id="identify-limit"/);
   assert.match(networkPage, /type="number"/);
   assert.doesNotMatch(networkPage, /selectedLayers|対象レイヤー/);
   assert.match(cardsPage, /layer-sum-memory-v1/);
@@ -950,7 +982,8 @@ test("ships the study hub without starter artifacts", async () => {
     assert.ok(protocolDescriptions.includes(`"${label}"`), `${label} should have a role explanation`);
   }
   assert.match(englishPage, /test-grid:english-memory:v1/);
-  assert.match(englishPage, /ENGLISH_UNITS\.map/);
+  assert.match(englishPage, /COURSE_UNITS\.map/);
+  assert.match(englishPage, /english-chapter-filter/);
   assert.match(englishPage, /questionPassage/);
   assert.match(englishData, /Chapter 15/);
   assert.match(englishData, /passage-wheelchair/);

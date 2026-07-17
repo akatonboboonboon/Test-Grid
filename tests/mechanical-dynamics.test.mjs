@@ -5,6 +5,8 @@ import ts from "typescript";
 
 const DATA_URL = new URL("../app/mechanical-dynamics-data.ts", import.meta.url);
 const TOPICS = ["undamped", "stiffness", "laplace", "damping", "decrement", "rotational"];
+const USER_VISIBLE_FIELD = /\.(?:title|prompt|context|answer|explanation|example|cue|description|officialConditionsNote|options\[\d+\]|steps\[\d+\])$/;
+const ALLOWED_UNIT_SLASH = /(?:rad\/s|m\/s(?:²|\^2)?|k?N\/m|N[·・ ]?s\/m|kg\/s|kg\/m³|N·m\/rad)/g;
 
 function compile(source) {
   return ts.transpileModule(source, {
@@ -32,29 +34,50 @@ function allStrings(value, path = "root", output = []) {
 
 function checkFormula(tex, katex, label) {
   assert.doesNotMatch(tex, /\\\(|\\\)/, label + " pure TeX");
-  assert.doesNotThrow(() => katex.renderToString(tex, {
-    displayMode: true,
-    output: "htmlAndMathml",
-    strict: "error",
-    throwOnError: true,
-    trust: false,
-  }), label + " TeX: " + tex);
+  const formulaWithoutUnits = tex.replace(/\\mathrm\{[^{}]*\}/g, "");
+  assert.doesNotMatch(formulaWithoutUnits, /\//, label + " uses stacked fractions");
+  let markup = "";
+  assert.doesNotThrow(() => {
+    markup = katex.renderToString(tex, {
+      displayMode: true,
+      output: "htmlAndMathml",
+      strict: "error",
+      throwOnError: true,
+      trust: false,
+    });
+  }, label + " TeX: " + tex);
+  return markup;
 }
 
 function checkInlineMath(value, katex, label) {
+  const markup = [];
   for (const [path, text] of allStrings(value, label)) {
     assert.doesNotMatch(text, /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/, path + " control");
     assert.equal((text.match(/\\\(/g) ?? []).length, (text.match(/\\\)/g) ?? []).length, path + " delimiters");
+    if (USER_VISIBLE_FIELD.test(path)) {
+      const plainText = text
+        .replace(/\\\([\s\S]*?\\\)/g, "")
+        .replace(ALLOWED_UNIT_SLASH, "");
+      assert.doesNotMatch(plainText, /\//, path + " has horizontal math outside TeX");
+    }
     for (const match of text.matchAll(/\\\(([\s\S]*?)\\\)/g)) {
-      assert.doesNotThrow(() => katex.renderToString(match[1], {
-        displayMode: false,
-        output: "htmlAndMathml",
-        strict: "error",
-        throwOnError: true,
-        trust: false,
-      }), path + " inline TeX: " + match[1]);
+      const tex = match[1];
+      const formulaWithoutUnits = tex.replace(/\\mathrm\{[^{}]*\}/g, "");
+      assert.doesNotMatch(formulaWithoutUnits, /\//, path + " inline uses stacked fractions");
+      let rendered = "";
+      assert.doesNotThrow(() => {
+        rendered = katex.renderToString(tex, {
+          displayMode: false,
+          output: "htmlAndMathml",
+          strict: "error",
+          throwOnError: true,
+          trust: false,
+        });
+      }, path + " inline TeX: " + tex);
+      markup.push(rendered);
     }
   }
+  return markup;
 }
 
 function checkRangeSources(items, label) {
@@ -120,13 +143,50 @@ test("formula deck and normal practice meet count, source, page, and TeX contrac
     assert.ok(item.explanation.length >= 10, item.id + " explanation");
     if (item.formula) checkFormula(item.formula, katex, item.id);
   }
-  checkInlineMath(data.MECHANICAL_DYNAMICS_FORMULAS, katex, "formula");
-  checkInlineMath(data.MECHANICAL_DYNAMICS_QUESTIONS, katex, "question");
+  const frequencyCard = data.MECHANICAL_DYNAMICS_FORMULAS.find((item) => item.id === "md-f-frequency");
+  const amplitudeCard = data.MECHANICAL_DYNAMICS_FORMULAS.find((item) => item.id === "md-f-amplitude");
+  assert.match(checkFormula(frequencyCard.formula, katex, frequencyCard.id), /<mfrac>/);
+  assert.match(checkFormula(amplitudeCard.formula, katex, amplitudeCard.id), /<mtable/);
+  const inlineMarkup = [
+    ...checkInlineMath(data.MECHANICAL_DYNAMICS_FORMULAS, katex, "formula"),
+    ...checkInlineMath(data.MECHANICAL_DYNAMICS_QUESTIONS, katex, "question"),
+  ];
+  assert.ok(inlineMarkup.some((markup) => /<mfrac>/.test(markup)), "inline fractions render as stacked MathML");
   assert.doesNotMatch(JSON.stringify([data.MECHANICAL_DYNAMICS_FORMULAS, data.MECHANICAL_DYNAMICS_QUESTIONS]), /強制振動|共振|周波数応答/);
+});
+
+test("mechanical setup and waveform questions carry diagrams across cards and practice", async () => {
+  const data = await loadData();
+  const cards = new Map(data.MECHANICAL_DYNAMICS_FORMULAS.map((card) => [card.id, card]));
+  const questions = new Map(data.MECHANICAL_DYNAMICS_QUESTIONS.map((question) => [question.id, question]));
+  assert.equal(cards.get("md-f-wn").diagram, "single-spring-mass");
+  assert.equal(cards.get("md-f-zeta").diagram, "damped-spring-mass");
+  assert.equal(cards.get("md-f-logdec").diagram, "amplitude-decay");
+  assert.equal(cards.get("md-f-simple-pendulum").diagram, "simple-pendulum");
+  for (const id of ["md-q-u1", "md-q-u6"]) assert.equal(questions.get(id).diagram, "single-spring-mass", id);
+  assert.equal(questions.get("md-q-u7").diagram, "static-deflection");
+  for (const id of ["md-q-d1", "md-q-d6"]) assert.equal(questions.get(id).diagram, "damped-spring-mass", id);
+  for (const id of ["md-q-g1", "md-q-g6"]) assert.equal(questions.get(id).diagram, "amplitude-decay", id);
+});
+
+test("mechanical calculation steps do not expose bare horizontal math", async () => {
+  const data = await loadData();
+  const questions = [
+    ...data.MECHANICAL_DYNAMICS_QUESTIONS,
+    ...data.MECHANICAL_DYNAMICS_ACTUAL_EXAM.questions,
+    ...data.MECHANICAL_DYNAMICS_EXPECTED_EXAMS.flatMap((exam) => exam.questions),
+  ];
+  for (const question of questions) {
+    for (const step of question.steps) {
+      const prose = step.replace(/\\\([\s\S]*?\\\)/g, "");
+      assert.doesNotMatch(prose, /[=<>√]|\\sqrt|\d\s*[×÷+]\s*\d/, question.id + " bare step: " + step);
+    }
+  }
 });
 
 test("actual exam preserves 7 majors, 13 answer fields, 100 points and official constants", async () => {
   const data = await loadData();
+  const katex = await import(new URL("../app/vendor/katex/katex.mjs", import.meta.url));
   const exam = data.MECHANICAL_DYNAMICS_ACTUAL_EXAM;
   assert.equal(exam.kind, "actual");
   assert.equal(exam.sections.length, 7);
@@ -143,6 +203,13 @@ test("actual exam preserves 7 majors, 13 answer fields, 100 points and official 
   assert.match(exam.officialConditionsNote, /g=9\.80/);
   assert.match(exam.officialConditionsNote, /π=3\.14/);
   checkRangeSources(exam.questions, "actual");
+  assert.ok(exam.questions.every((item) => item.diagram), "every setup-based actual-exam field has its section diagram");
+  for (const item of exam.questions) {
+    if (item.formula) checkFormula(item.formula, katex, item.id);
+    if (item.printedFormula) checkFormula(item.printedFormula, katex, item.id + " printed");
+  }
+  const actualInlineMarkup = checkInlineMath(exam, katex, "actual");
+  assert.ok(actualInlineMarkup.some((markup) => /<mfrac>/.test(markup)), "actual exam inline fractions render as stacked MathML");
 
   const answers = exam.questions.map((item) => item.numericAnswer);
   assert.ok(Math.abs(answers[0] - 63.2456) < 1e-6);
@@ -153,10 +220,10 @@ test("actual exam preserves 7 majors, 13 answer fields, 100 points and official 
   assert.equal(answers[5], 100);
   assert.ok(Math.abs(answers[6] - 99.99995) < 1e-6);
   assert.ok(Math.abs(answers[7] - 0.01459) < 1e-6);
-  assert.match(exam.sections[3].questions[0].formula, /1\{?\/?\}?\{?2\\pi n/);
-  assert.match(exam.sections[4].questions[0].answer, /7k\/\(2m\)/);
+  assert.match(exam.sections[3].questions[0].formula, /\\frac\{1\}\{2\\pi n\}/);
+  assert.match(exam.sections[4].questions[0].answer, /\\frac\{7k\}\{2m\}/);
   assert.match(exam.sections[5].questions[0].answer, /mr\^2/);
-  assert.match(exam.sections[5].questions[1].answer, /cr\/\(2l/);
+  assert.match(exam.sections[5].questions[1].answer, /\\frac\{cr\}\{2l\\sqrt\{mk\}\}/);
   assert.ok(Math.abs(exam.sections[5].questions[2].numericAnswer - 0.50596) < 1e-6);
   assert.ok(Math.abs(exam.sections[6].questions[0].numericAnswer - 0.993955) < 1e-6);
 });
@@ -181,6 +248,10 @@ test("six expected exams repeat the real 7-major/13-field format and cover all t
     assert.match(exam.officialConditionsNote, /g=9\.80/);
     assert.match(exam.officialConditionsNote, /π=3\.14/);
     checkRangeSources(exam.questions, exam.id);
+    for (const item of exam.questions) {
+      if (item.topic === "laplace") assert.equal(item.diagram, undefined, item.id + " must not show an unrelated spring diagram");
+      else assert.ok(item.diagram, item.id + " setup diagram");
+    }
     for (const item of exam.questions) {
       assert.ok(item.answer.length, item.id + " answer");
       assert.ok(item.steps.length >= 1, item.id + " steps");

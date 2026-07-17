@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import CardDeckSearch from "../../card-deck-search";
 import {
   ENGLISH_PASSAGES,
   ENGLISH_QUESTIONS,
@@ -10,6 +11,11 @@ import {
   type EnglishQuestion,
   type EnglishVocabCard,
 } from "../../english-data";
+import {
+  chapterMatches,
+  normalizeChapterSelection,
+  toggleChapterSelection,
+} from "../../english-chapter-filter";
 import { EnglishQuestionExplanation, EnglishVocabInsight } from "../../english-explanation-panel";
 import EnglishCh18Quiz from "../../english-ch18-quiz";
 import EnglishExpectedExams from "../../english-expected-exams";
@@ -29,9 +35,9 @@ type TestResult = {
   correct: boolean;
 };
 type SavedTestSession = {
-  version: 1;
+  version: 2;
   questionIds: string[];
-  testUnit: string;
+  testUnits: string[];
   questionCountDraft: string;
   selectedGroups: string[];
   testIndex: number;
@@ -45,10 +51,11 @@ type SavedTestSession = {
   savedAt: number;
 };
 
-const ALL_UNITS = "all";
 const VOCAB_PROGRESS_KEY = "test-grid:english-memory:v1";
 const TEST_SESSION_KEY = "test-grid:english-mock-test:v1";
 const COURSE_UNITS = ENGLISH_UNITS.filter((unit) => unit.id !== "exam-sample");
+const COURSE_UNIT_IDS = COURSE_UNITS.map((unit) => unit.id);
+const COURSE_PASSAGE_IDS = new Set(ENGLISH_PASSAGES.map((passage) => passage.id));
 const STUDY_QUESTIONS = ENGLISH_QUESTIONS.filter((question) => question.unit !== "exam-sample");
 
 function questionGenre(question: EnglishQuestion) {
@@ -173,9 +180,12 @@ function restoreTestSession(): SavedTestSession | null {
   try {
     const raw = window.localStorage.getItem(TEST_SESSION_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<SavedTestSession>;
+    const parsed = JSON.parse(raw) as Partial<Omit<SavedTestSession, "version">> & {
+      version?: unknown;
+      testUnit?: unknown;
+    };
     if (
-      parsed.version !== 1
+      (parsed.version !== 1 && parsed.version !== 2)
       || !Array.isArray(parsed.questionIds)
       || parsed.questionIds.length === 0
       || parsed.questionIds.some((id) => typeof id !== "string")
@@ -183,10 +193,14 @@ function restoreTestSession(): SavedTestSession | null {
     ) return null;
     const knownIds = new Set(STUDY_QUESTIONS.map((question) => question.id));
     if (parsed.questionIds.some((id) => !knownIds.has(id))) return null;
+    const restoredTestUnits = normalizeChapterSelection(
+      Array.isArray(parsed.testUnits) ? parsed.testUnits : parsed.testUnit,
+      COURSE_UNIT_IDS,
+    );
     return {
-      version: 1,
+      version: 2,
       questionIds: parsed.questionIds,
-      testUnit: typeof parsed.testUnit === "string" ? parsed.testUnit : ALL_UNITS,
+      testUnits: restoredTestUnits,
       questionCountDraft: typeof parsed.questionCountDraft === "string" ? parsed.questionCountDraft : String(parsed.questionIds.length),
       selectedGroups: Array.isArray(parsed.selectedGroups) ? parsed.selectedGroups.filter((group): group is string => typeof group === "string") : [],
       testIndex: Math.max(0, Math.min(parsed.questionIds.length - 1, Math.floor(parsed.testIndex))),
@@ -238,6 +252,11 @@ function unitLabel(unitId: string) {
   return ENGLISH_UNITS.find((unit) => unit.id === unitId)?.shortTitle ?? unitId;
 }
 
+function chapterSelectionLabel(unitIds: readonly string[]) {
+  if (!unitIds.length) return "全Chapter";
+  return unitIds.map((unitId) => unitLabel(unitId).split(" ")[0]).join("・");
+}
+
 function formatLabel(format: EnglishQuestion["format"]) {
   if (format === "choice") return "選択";
   if (format === "order") return "語順整序";
@@ -258,13 +277,13 @@ export default function EnglishSubjectPage() {
 
   const [cardProgress, setCardProgress] = useState<CardProgress>({});
   const [progressReady, setProgressReady] = useState(false);
-  const [cardUnit, setCardUnit] = useState(ALL_UNITS);
+  const [cardUnits, setCardUnits] = useState<string[]>([]);
   const [cardDeck, setCardDeck] = useState<EnglishVocabCard[]>([...ENGLISH_VOCAB]);
   const [cardIndex, setCardIndex] = useState(0);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [cardDirection, setCardDirection] = useState<CardDirection>("ja-en");
 
-  const [testUnit, setTestUnit] = useState(ALL_UNITS);
+  const [testUnits, setTestUnits] = useState<string[]>([]);
   const [questionCountDraft, setQuestionCountDraft] = useState("10");
   const [selectedTestGroups, setSelectedTestGroups] = useState<string[]>(ALL_QUESTION_GROUPS);
   const [testPhase, setTestPhase] = useState<TestPhase>("setup");
@@ -281,6 +300,7 @@ export default function EnglishSubjectPage() {
   const [savedTestSession, setSavedTestSession] = useState<SavedTestSession | null>(null);
 
   const [selectedPassageId, setSelectedPassageId] = useState(ENGLISH_PASSAGES[0]?.id ?? "");
+  const [readingUnits, setReadingUnits] = useState<string[]>([]);
   const [readingStudyMode, setReadingStudyMode] = useState<ReadingStudyMode>("memory");
   const [readingMemoryIndex, setReadingMemoryIndex] = useState(0);
   const [showMemoryTranslation, setShowMemoryTranslation] = useState(false);
@@ -313,8 +333,8 @@ export default function EnglishSubjectPage() {
   }, [cardProgress, progressReady]);
 
   const filteredVocab = useMemo(
-    () => ENGLISH_VOCAB.filter((card) => cardUnit === ALL_UNITS || card.unit === cardUnit),
-    [cardUnit],
+    () => ENGLISH_VOCAB.filter((card) => chapterMatches(card.unit, cardUnits)),
+    [cardUnits],
   );
   const masteredTotal = ENGLISH_VOCAB.filter((card) => cardProgress[card.id] === "mastered").length;
   const learningTotal = ENGLISH_VOCAB.filter((card) => cardProgress[card.id] === "learning").length;
@@ -325,17 +345,17 @@ export default function EnglishSubjectPage() {
   const availableTestGroups = useMemo(
     () => Array.from(new Set(
       STUDY_QUESTIONS
-        .filter((question) => testUnit === ALL_UNITS || question.unit === testUnit)
+        .filter((question) => chapterMatches(question.unit, testUnits))
         .map(questionGenre),
     )),
-    [testUnit],
+    [testUnits],
   );
   const availableQuestions = useMemo(
     () => STUDY_QUESTIONS.filter(
-      (question) => (testUnit === ALL_UNITS || question.unit === testUnit)
+      (question) => chapterMatches(question.unit, testUnits)
         && selectedTestGroups.includes(questionGenre(question)),
     ),
-    [selectedTestGroups, testUnit],
+    [selectedTestGroups, testUnits],
   );
   const currentQuestion = testQuestions[testIndex];
   const questionPassage = currentQuestion?.passageId
@@ -351,12 +371,23 @@ export default function EnglishSubjectPage() {
 
   const selectedPassage = ENGLISH_PASSAGES.find((passage) => passage.id === selectedPassageId)
     ?? ENGLISH_PASSAGES[0];
-  const selectedPassageQuestions = useMemo(
+  const selectedPassageQuestionsForReference = useMemo(
     () => STUDY_QUESTIONS.filter((question) => question.passageId === selectedPassageId),
     [selectedPassageId],
   );
+  const readingPracticeQuestions = useMemo(
+    () => STUDY_QUESTIONS.filter(
+      (question) => Boolean(question.passageId)
+        && COURSE_PASSAGE_IDS.has(question.passageId as string)
+        && chapterMatches(question.unit, readingUnits),
+    ),
+    [readingUnits],
+  );
   const memoryParagraph = selectedPassage?.paragraphs[readingMemoryIndex];
-  const readingQuestion = selectedPassageQuestions[readingQuestionIndex];
+  const readingQuestion = readingPracticeQuestions[readingQuestionIndex];
+  const readingQuestionPassage = readingQuestion?.passageId
+    ? ENGLISH_PASSAGES.find((passage) => passage.id === readingQuestion.passageId)
+    : undefined;
   const readingResponse = readingQuestion?.format === "choice"
     ? readingSelectedChoice
     : readingQuestion?.format === "order"
@@ -368,9 +399,9 @@ export default function EnglishSubjectPage() {
   const currentTestSessionSnapshot = useMemo<SavedTestSession | null>(() => {
     if (!testQuestions.length) return null;
     return {
-      version: 1,
+      version: 2,
       questionIds: testQuestions.map((question) => question.id),
-      testUnit,
+      testUnits,
       questionCountDraft,
       selectedGroups: selectedTestGroups,
       testIndex,
@@ -398,7 +429,7 @@ export default function EnglishSubjectPage() {
     testIndex,
     testQuestions,
     testResults,
-    testUnit,
+    testUnits,
     typedAnswer,
   ]);
 
@@ -429,14 +460,20 @@ export default function EnglishSubjectPage() {
     if (nextMode === "test" && testPhase === "result") setTestPhase("setup");
   }
 
-  function changeTestUnit(nextUnit: string) {
+  function changeTestChapters(nextUnits: readonly string[]) {
+    const normalizedUnits = normalizeChapterSelection(nextUnits, COURSE_UNIT_IDS);
     const groups = Array.from(new Set(
       STUDY_QUESTIONS
-        .filter((question) => nextUnit === ALL_UNITS || question.unit === nextUnit)
+        .filter((question) => chapterMatches(question.unit, normalizedUnits))
         .map(questionGenre),
     ));
-    setTestUnit(nextUnit);
+    setTestUnits(normalizedUnits);
     setSelectedTestGroups(groups);
+    setAnnouncement(`${chapterSelectionLabel(normalizedUnits)}を模擬テストの出題範囲にしました。`);
+  }
+
+  function toggleTestChapter(chapterId: string) {
+    changeTestChapters(toggleChapterSelection(testUnits, chapterId, COURSE_UNIT_IDS));
   }
 
   function toggleTestGroup(group: string) {
@@ -445,13 +482,18 @@ export default function EnglishSubjectPage() {
     ));
   }
 
-  function changeCardUnit(nextUnit: string) {
-    const source = ENGLISH_VOCAB.filter((card) => nextUnit === ALL_UNITS || card.unit === nextUnit);
-    setCardUnit(nextUnit);
+  function changeCardChapters(nextUnits: readonly string[]) {
+    const normalizedUnits = normalizeChapterSelection(nextUnits, COURSE_UNIT_IDS);
+    const source = ENGLISH_VOCAB.filter((card) => chapterMatches(card.unit, normalizedUnits));
+    setCardUnits(normalizedUnits);
     setCardDeck([...source]);
     setCardIndex(0);
     setCardFlipped(false);
-    setAnnouncement(`${nextUnit === ALL_UNITS ? "全単元" : unitLabel(nextUnit)}の暗記帳を開きました。`);
+    setAnnouncement(`${chapterSelectionLabel(normalizedUnits)}の暗記帳を開きました。`);
+  }
+
+  function toggleCardChapter(chapterId: string) {
+    changeCardChapters(toggleChapterSelection(cardUnits, chapterId, COURSE_UNIT_IDS));
   }
 
   function changeCardDirection(nextDirection: CardDirection) {
@@ -462,6 +504,21 @@ export default function EnglishSubjectPage() {
         ? "日本語から英語を答える暗記帳に切り替えました。"
         : "英語から日本語を答える暗記帳に切り替えました。",
     );
+  }
+
+  function jumpToVocabCard(cardId: string) {
+    const card = ENGLISH_VOCAB.find((item) => item.id === cardId);
+    if (!card) return;
+    const alreadyVisible = chapterMatches(card.unit, cardUnits);
+    const nextUnits = alreadyVisible
+      ? cardUnits
+      : normalizeChapterSelection([...cardUnits, card.unit], COURSE_UNIT_IDS);
+    const nextDeck = ENGLISH_VOCAB.filter((item) => chapterMatches(item.unit, nextUnits));
+    setCardUnits(nextUnits);
+    setCardDeck(nextDeck);
+    setCardIndex(Math.max(0, nextDeck.findIndex((item) => item.id === cardId)));
+    setCardFlipped(false);
+    setAnnouncement(card.en + " のカードを開きました。" + (alreadyVisible ? "" : "対象Chapterも表示に追加しました。"));
   }
 
   function moveCard(delta: number) {
@@ -566,11 +623,11 @@ export default function EnglishSubjectPage() {
     const nextQuestion = questions[nextIndex];
     const unitGroups = Array.from(new Set(
       STUDY_QUESTIONS
-        .filter((question) => session.testUnit === ALL_UNITS || question.unit === session.testUnit)
+        .filter((question) => chapterMatches(question.unit, session.testUnits))
         .map(questionGenre),
     ));
     const restoredGroups = session.selectedGroups.filter((group) => unitGroups.includes(group));
-    setTestUnit(session.testUnit);
+    setTestUnits(session.testUnits);
     setQuestionCountDraft(session.questionCountDraft);
     setSelectedTestGroups(restoredGroups.length ? restoredGroups : unitGroups);
     setTestQuestions(questions);
@@ -658,19 +715,34 @@ export default function EnglishSubjectPage() {
     setReadingFeedback(null);
   }
 
-  function resetReadingPractice(passageId = selectedPassageId) {
-    const questions = STUDY_QUESTIONS.filter((question) => question.passageId === passageId);
+  function resetReadingPractice(unitIds: readonly string[] = readingUnits) {
+    const normalizedUnits = normalizeChapterSelection(unitIds, COURSE_UNIT_IDS);
+    const questions = STUDY_QUESTIONS.filter(
+      (question) => Boolean(question.passageId)
+        && COURSE_PASSAGE_IDS.has(question.passageId as string)
+        && chapterMatches(question.unit, normalizedUnits),
+    );
     setReadingQuestionIndex(0);
     setReadingResults([]);
     setReadingFinished(false);
     prepareReadingQuestion(questions[0]);
   }
 
+  function changeReadingChapters(nextUnits: readonly string[]) {
+    const normalizedUnits = normalizeChapterSelection(nextUnits, COURSE_UNIT_IDS);
+    setReadingUnits(normalizedUnits);
+    resetReadingPractice(normalizedUnits);
+    setAnnouncement(`${chapterSelectionLabel(normalizedUnits)}を長文実戦の出題範囲にしました。`);
+  }
+
+  function toggleReadingChapter(chapterId: string) {
+    changeReadingChapters(toggleChapterSelection(readingUnits, chapterId, COURSE_UNIT_IDS));
+  }
+
   function changeSelectedPassage(passageId: string) {
     setSelectedPassageId(passageId);
     setReadingMemoryIndex(0);
     setShowMemoryTranslation(false);
-    resetReadingPractice(passageId);
   }
 
   function changeReadingStudyMode(nextMode: ReadingStudyMode) {
@@ -711,14 +783,14 @@ export default function EnglishSubjectPage() {
 
   function nextReadingQuestion() {
     if (!readingQuestion || !readingFeedback) return;
-    if (readingQuestionIndex >= selectedPassageQuestions.length - 1) {
+    if (readingQuestionIndex >= readingPracticeQuestions.length - 1) {
       setReadingFinished(true);
       setReadingFeedback(null);
       return;
     }
     const nextIndex = readingQuestionIndex + 1;
     setReadingQuestionIndex(nextIndex);
-    prepareReadingQuestion(selectedPassageQuestions[nextIndex]);
+    prepareReadingQuestion(readingPracticeQuestions[nextIndex]);
   }
 
   function acceptReadingTranslation() {
@@ -772,6 +844,7 @@ export default function EnglishSubjectPage() {
           </button>
           <Link className="outline-button header-link" href="/cards?subject=subject-2">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/rapid/subject-2">時間制限 即答</Link>
+          <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-2">自動生成問題</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -827,9 +900,30 @@ export default function EnglishSubjectPage() {
                       <button type="button" aria-pressed={cardDirection === "en-ja"} onClick={() => changeCardDirection("en-ja")}>英 → 日</button>
                     </div>
                   </div>
-                  <label className="english-unit-select"><span>単元</span><select value={cardUnit} onChange={(event) => changeCardUnit(event.target.value)}><option value={ALL_UNITS}>全単元</option>{ENGLISH_UNITS.map((unit) => <option key={unit.id} value={unit.id}>{unit.shortTitle}</option>)}</select></label>
+                  <fieldset className="english-chapter-filter english-card-chapter-filter">
+                    <legend>Chapter（複数選択可）</legend>
+                    <div role="group" aria-label="暗記帳のChapter絞り込み（複数選択）">
+                      <button type="button" aria-pressed={cardUnits.length === 0} onClick={() => changeCardChapters([])}>全Chapter</button>
+                      {COURSE_UNITS.map((unit) => <button key={unit.id} type="button" title={unit.title} aria-pressed={cardUnits.includes(unit.id)} onClick={() => toggleCardChapter(unit.id)}>{unitLabel(unit.id).split(" ")[0]}</button>)}
+                    </div>
+                    <small>選んだ章のどれかに属するカードを表示</small>
+                  </fieldset>
                 </div>
               </div>
+
+              <CardDeckSearch
+                items={ENGLISH_VOCAB.map((card) => ({
+                  id: card.id,
+                  label: card.en,
+                  description: card.ja,
+                  meta: unitLabel(card.unit),
+                  searchText: [card.note],
+                }))}
+                currentId={currentCard?.id}
+                label="英単語・日本語訳を検索"
+                placeholder="英単語、日本語、覚え方を入力"
+                onSelect={jumpToVocabCard}
+              />
 
               <div className="generic-progress english-card-progress">
                 <div><span>覚えた {cardMastered} / {filteredVocab.length}</span><strong>{cardCompletion}%</strong></div>
@@ -876,8 +970,15 @@ export default function EnglishSubjectPage() {
                       </div>
                     </div>
                   )}
-                  <div className="english-test-settings">
-                    <label><span>出題単元</span><select value={testUnit} onChange={(event) => changeTestUnit(event.target.value)}><option value={ALL_UNITS}>全単元</option>{COURSE_UNITS.map((unit) => <option key={unit.id} value={unit.id}>{unit.title}</option>)}</select></label>
+                  <div className="english-test-settings english-test-settings-multi">
+                    <fieldset className="english-chapter-filter english-test-chapter-filter">
+                      <legend>出題Chapter（複数選択可）</legend>
+                      <div role="group" aria-label="模擬テストのChapter絞り込み（複数選択）">
+                        <button type="button" aria-pressed={testUnits.length === 0} onClick={() => changeTestChapters([])}>全Chapter</button>
+                        {COURSE_UNITS.map((unit) => <button key={unit.id} type="button" title={unit.title} aria-pressed={testUnits.includes(unit.id)} onClick={() => toggleTestChapter(unit.id)}>{unitLabel(unit.id).split(" ")[0]}</button>)}
+                      </div>
+                      <small>選んだ章の問題をまとめて出題します</small>
+                    </fieldset>
                     <label><span>問題数 <small>最大 {availableQuestions.length}問</small></span><input type="number" min="1" max={Math.max(1, availableQuestions.length)} inputMode="numeric" value={questionCountDraft} onChange={(event) => setQuestionCountDraft(event.target.value)} /></label>
                     <button type="button" onClick={startTest} disabled={!availableQuestions.length}>ランダム出題を開始 →</button>
                   </div>
@@ -935,12 +1036,23 @@ export default function EnglishSubjectPage() {
 
           {mode === "reading" && selectedPassage && (
             <section className="english-reading-workspace" aria-labelledby="english-reading-title">
-              <div className="english-panel-heading"><div><span>READING LAB</span><h2 id="english-reading-title">長文読解</h2></div><div className="english-reading-tools"><label><span>Chapter・長文</span><select value={selectedPassageId} onChange={(event) => changeSelectedPassage(event.target.value)}>{ENGLISH_PASSAGES.map((passage) => <option key={passage.id} value={passage.id}>{unitLabel(passage.unit)}｜{passage.title}</option>)}</select></label></div></div>
+              <div className="english-panel-heading"><div><span>READING LAB</span><h2 id="english-reading-title">長文読解</h2></div><div className="english-reading-tools"><label><span>暗記で表示する長文（1件）</span><select value={selectedPassageId} onChange={(event) => changeSelectedPassage(event.target.value)}>{ENGLISH_PASSAGES.map((passage) => <option key={passage.id} value={passage.id}>{unitLabel(passage.unit)}｜{passage.title}</option>)}</select></label></div></div>
 
               <div className="workspace-tabs english-tabs english-reading-mode-switch" role="tablist" aria-label="長文読解の学習方法">
                 <button type="button" role="tab" aria-selected={readingStudyMode === "memory"} className={readingStudyMode === "memory" ? "active" : ""} onClick={() => changeReadingStudyMode("memory")}>暗記モード</button>
                 <button type="button" role="tab" aria-selected={readingStudyMode === "practice"} className={readingStudyMode === "practice" ? "active" : ""} onClick={() => changeReadingStudyMode("practice")}>実戦モード</button>
               </div>
+
+              {readingStudyMode === "practice" && (
+                <fieldset className="english-chapter-filter english-reading-chapter-filter">
+                  <legend>実戦のChapter（複数選択可）</legend>
+                  <div role="group" aria-label="長文実戦のChapter絞り込み（複数選択）">
+                    <button type="button" aria-pressed={readingUnits.length === 0} onClick={() => changeReadingChapters([])}>全Chapter</button>
+                    {COURSE_UNITS.map((unit) => <button key={unit.id} type="button" title={unit.title} aria-pressed={readingUnits.includes(unit.id)} onClick={() => toggleReadingChapter(unit.id)}>{unitLabel(unit.id).split(" ")[0]}</button>)}
+                  </div>
+                  <small>選んだ章のどれかに属する関連問題を連続出題</small>
+                </fieldset>
+              )}
 
               {readingStudyMode === "memory" && memoryParagraph && (
                 <div className="english-reading-memory" role="tabpanel">
@@ -949,7 +1061,7 @@ export default function EnglishSubjectPage() {
                     <progress value={readingMemoryIndex + 1} max={selectedPassage.paragraphs.length} aria-label={`長文暗記の進捗 ${readingMemoryIndex + 1}/${selectedPassage.paragraphs.length}`} />
                   </div>
                   <article className="english-passage english-memory-passage">
-                    <header><span>{unitLabel(selectedPassage.unit)}・暗記モード</span><h3>{selectedPassage.title}</h3><p>英文を読んで自分で訳してから、模範訳を表示してください。</p></header>
+                    <header><span>{unitLabel(selectedPassage.unit)}・暗記モード</span><h3>{selectedPassage.title}</h3><p>英文を読んで自分で訳してから、模範訳を表示してください。この長文の関連問題は{selectedPassageQuestionsForReference.length}問です。</p></header>
                     <div><section><span>{String(readingMemoryIndex + 1).padStart(2, "0")}</span><p lang="en">{memoryParagraph.en}</p>{showMemoryTranslation && <p className="english-translation">{memoryParagraph.ja}</p>}</section></div>
                   </article>
                   <div className="generic-card-controls english-card-controls english-reading-memory-controls">
@@ -962,24 +1074,26 @@ export default function EnglishSubjectPage() {
 
               {readingStudyMode === "practice" && (
                 <div className="english-reading-practice" role="tabpanel">
-                  <article className="english-passage">
-                    <header><span>{unitLabel(selectedPassage.unit)}・実戦モード</span><h3>{selectedPassage.title}</h3><p>{selectedPassage.titleJa}｜和訳を見ずに本文を読んで解答します。</p></header>
-                    <div>{selectedPassage.paragraphs.map((paragraph, index) => <section key={`${selectedPassage.id}-practice-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><p lang="en">{paragraph.en}</p></section>)}</div>
-                  </article>
+                  {readingQuestionPassage && (
+                    <article className="english-passage">
+                      <header><span>{unitLabel(readingQuestionPassage.unit)}・実戦モード</span><h3>{readingQuestionPassage.title}</h3><p>{readingQuestionPassage.titleJa}｜現在の問題に対応する本文です。和訳を見ずに解答します。</p></header>
+                      <div>{readingQuestionPassage.paragraphs.map((paragraph, index) => <section key={`${readingQuestionPassage.id}-practice-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><p lang="en">{paragraph.en}</p></section>)}</div>
+                    </article>
+                  )}
 
-                  {!selectedPassageQuestions.length && <div className="generic-empty english-empty"><h3>このChapterの関連問題はまだありません。</h3></div>}
+                  {!readingPracticeQuestions.length && <div className="generic-empty english-empty"><h3>選んだChapterの関連問題はまだありません。</h3></div>}
 
-                  {selectedPassageQuestions.length > 0 && readingFinished && (
+                  {readingPracticeQuestions.length > 0 && readingFinished && (
                     <div className="english-test-result">
                       <span>READING RESULT</span><h2>{readingScore} / {readingResults.length}</h2><p>正答率 {readingResults.length ? Math.round((readingScore / readingResults.length) * 100) : 0}%</p>
                       <div className="english-result-list">{readingResults.map((result, index) => <article key={`${result.question.id}-reading-result-${index}`} className={result.correct ? "is-correct" : "is-wrong"}><span>{result.correct ? "○" : "×"} Q{index + 1}</span><strong>{result.question.prompt}</strong><p>正解：{result.question.answer}</p><details className="english-result-explanation" open={!result.correct}><summary>詳しい解説を開く</summary><EnglishQuestionExplanation question={result.question} compact /></details><Link className="result-card-jump" href={"/cards?subject=subject-2&q=" + encodeURIComponent(result.question.prompt)}>{result.correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}</Link></article>)}</div>
-                      <div className="english-result-actions"><button type="button" onClick={() => resetReadingPractice()}>この長文をもう一度解く</button></div>
+                      <div className="english-result-actions"><button type="button" onClick={() => resetReadingPractice()}>同じChapter範囲でもう一度</button></div>
                     </div>
                   )}
 
-                  {selectedPassageQuestions.length > 0 && !readingFinished && readingQuestion && (
+                  {readingPracticeQuestions.length > 0 && !readingFinished && readingQuestion && (
                     <div className="english-test-active english-reading-question-area">
-                      <div className="generic-progress english-card-progress"><div><span>関連問題 {readingQuestionIndex + 1} / {selectedPassageQuestions.length}</span><strong>{readingScore}問正解</strong></div><progress value={readingQuestionIndex + 1} max={selectedPassageQuestions.length} aria-label={`関連問題の進捗 ${readingQuestionIndex + 1}/${selectedPassageQuestions.length}`} /></div>
+                      <div className="generic-progress english-card-progress"><div><span>関連問題 {readingQuestionIndex + 1} / {readingPracticeQuestions.length}</span><strong>{readingScore}問正解</strong></div><progress value={readingQuestionIndex + 1} max={readingPracticeQuestions.length} aria-label={`関連問題の進捗 ${readingQuestionIndex + 1}/${readingPracticeQuestions.length}`} /></div>
                       <div className="generic-deck-meta english-test-meta"><span>QUESTION {readingQuestionIndex + 1}</span><span>{readingQuestion.group} · {formatLabel(readingQuestion.format)}</span></div>
                       {readingQuestion.id.startsWith("ch16-homepage-") && <EnglishWeatherFigure />}
                       <div className="generic-test-question english-test-question"><span>問題</span><h2>{readingQuestion.prompt}</h2></div>
@@ -990,7 +1104,7 @@ export default function EnglishSubjectPage() {
                         {readingQuestion.format === "order" && <div className="english-order-answer"><span>チップを正しい順に並べる</span><div className="english-order-line" aria-label="作成中の英文">{readingOrderSelected.length ? readingOrderSelected.map((token) => <button key={token.id} type="button" disabled={Boolean(readingFeedback)} onClick={() => removeReadingOrderToken(token)}>{token.text}</button>) : <small>下の語句を順番に選択</small>}</div><div className="english-order-bank">{readingOrderRemaining.map((token) => <button key={token.id} type="button" disabled={Boolean(readingFeedback)} onClick={() => chooseReadingOrderToken(token)}>{token.text}</button>)}</div>{!readingFeedback && <button className="english-order-reset" type="button" onClick={() => prepareReadingQuestion(readingQuestion)}>並べ直す</button>}</div>}
                         {!readingFeedback && <button className="english-submit-answer" type="submit" disabled={!canSubmitReading}>採点する →</button>}
                       </form>
-                      {readingFeedback && <div className={`generic-test-answer english-test-feedback ${readingFeedback.correct ? "is-correct" : "is-wrong"}`} aria-live="polite"><strong>{readingFeedback.correct ? "正解" : "不正解"}</strong><p><span>あなたの解答</span>{readingFeedback.response}</p><p><span>正解</span>{readingQuestion.answer}</p><EnglishQuestionExplanation question={readingQuestion} />{readingQuestion.format === "translation" && !readingFeedback.correct && <button className="english-translation-override" type="button" onClick={acceptReadingTranslation}>意味は合っていた → 正解にする</button>}<button type="button" onClick={nextReadingQuestion}>{readingQuestionIndex === selectedPassageQuestions.length - 1 ? "結果を見る" : "次の問題へ →"}</button></div>}
+                      {readingFeedback && <div className={`generic-test-answer english-test-feedback ${readingFeedback.correct ? "is-correct" : "is-wrong"}`} aria-live="polite"><strong>{readingFeedback.correct ? "正解" : "不正解"}</strong><p><span>あなたの解答</span>{readingFeedback.response}</p><p><span>正解</span>{readingQuestion.answer}</p><EnglishQuestionExplanation question={readingQuestion} />{readingQuestion.format === "translation" && !readingFeedback.correct && <button className="english-translation-override" type="button" onClick={acceptReadingTranslation}>意味は合っていた → 正解にする</button>}<button type="button" onClick={nextReadingQuestion}>{readingQuestionIndex === readingPracticeQuestions.length - 1 ? "結果を見る" : "次の問題へ →"}</button></div>}
                     </div>
                   )}
                 </div>

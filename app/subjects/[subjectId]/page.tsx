@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import CardDeckSearch from "../../card-deck-search";
 import { shuffle, storageRead, storageWrite } from "../../protocols";
 import {
   DEFAULT_SUBJECTS,
@@ -124,6 +125,20 @@ export default function GenericSubjectPage() {
     setRevealed(false);
     setTypedAnswer("");
     return nextDeck;
+  }
+
+  function jumpToStudyCard(cardId: string) {
+    const card = usableCards.find((item) => item.id === cardId);
+    if (!card) return;
+    const alreadyInDeck = deck.some((item) => item.id === cardId);
+    const nextDeck = alreadyInDeck ? deck : [...usableCards];
+    setDeck(nextDeck);
+    setIndex(Math.max(0, nextDeck.findIndex((item) => item.id === cardId)));
+    setFlipped(false);
+    setRevealed(false);
+    setTypedAnswer("");
+    setAnnouncement(card.prompt + " のカードを開きました。" + (alreadyInDeck ? "" : "全カード表示へ戻しました。"));
+    focusCard();
   }
 
   function changeMode(nextMode: WorkspaceMode) {
@@ -279,6 +294,18 @@ export default function GenericSubjectPage() {
 
         {mode === "study" && currentCard && (
           <section className="generic-card-workspace" aria-label="暗記カード">
+            <CardDeckSearch
+              items={usableCards.map((card) => ({
+                id: card.id,
+                label: card.prompt,
+                description: card.answer,
+                searchText: [subject?.name],
+              }))}
+              currentId={currentCard.id}
+              label={(subject?.name ?? "この教科") + "の暗記カードを検索"}
+              placeholder="問題・用語・答えを入力"
+              onSelect={jumpToStudyCard}
+            />
             <div className="generic-deck-meta"><span>CARD {index + 1} / {deck.length}</span><span>{progress[currentCard.id] === "mastered" ? "覚えた" : progress[currentCard.id] === "learning" ? "復習" : "未判定"}</span></div>
             <button ref={cardRef} type="button" className={`generic-flip-card ${flipped ? "is-flipped" : ""}`} onClick={() => setFlipped((value) => !value)} aria-label={flipped ? "問題に戻る" : "答えを表示"}>
               <span>{flipped ? "ANSWER" : "QUESTION"}</span>

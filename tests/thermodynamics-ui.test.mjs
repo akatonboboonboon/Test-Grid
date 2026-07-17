@@ -7,6 +7,7 @@ const PAGE_URL = new URL("../app/subjects/subject-4/page.tsx", import.meta.url);
 const EXAMS_URL = new URL("../app/thermodynamics-expected-exams.tsx", import.meta.url);
 const CSS_URL = new URL("../app/thermodynamics-expected-exams.module.css", import.meta.url);
 const GLOBALS_URL = new URL("../app/globals.css", import.meta.url);
+const DIAGRAMS_URL = new URL("../app/thermodynamics-diagrams.tsx", import.meta.url);
 
 async function extractParser(url, parserName, endMarker) {
   const source = await readFile(url, "utf8");
@@ -52,6 +53,30 @@ test("thermodynamics exams persist, resume, print A4, and keep long math respons
   assert.match(css, /@media\s*\(max-width:\s*680px\)/);
   assert.match(globals, /\.statistics-rich-math-display-segment\s*\{[\s\S]*?overflow-x:\s*auto/);
   assert.match(globals, /\.statistics-math-display\s*\{[\s\S]*?overflow-x:\s*auto/);
+  assert.match(page, /currentCard\.diagram/);
+  assert.match(page, /question\.diagram && <ThermodynamicsDiagram[^>]*solution/);
+  assert.match(page, /振り返り用の模範図/);
+  assert.match(exams, /question\.diagram && <ThermodynamicsDiagram[^>]*解答用線図/);
+  assert.match(exams, /question\.diagram && <ThermodynamicsDiagram[^>]*solution/);
+});
+
+test("Otto and Carnot use dedicated closed-cycle diagrams without leaking solution labels on the question face", async () => {
+  const diagrams = await readFile(DIAGRAMS_URL, "utf8");
+  for (const kind of ["otto-pv", "carnot-pv", "carnot-ts"]) assert.match(diagrams, new RegExp(`"${kind}"`));
+  assert.match(diagrams, /solution && kind === "otto-pv"/);
+  assert.match(diagrams, /solution && kind === "carnot-pv"/);
+  assert.match(diagrams, /solution && kind === "carnot-ts"/);
+  assert.match(diagrams, /M180 145 C145 132 108 111 76 96/);
+  assert.match(diagrams, /M76 96 V48/);
+  assert.match(diagrams, /M76 48 C109 54 147 68 180 84/);
+  assert.match(diagrams, /M180 84 V145/);
+  assert.match(diagrams, /高温等温膨張 Q₁/);
+  assert.match(diagrams, /低温等温圧縮 Q₂/);
+  assert.match(diagrams, /M72 55 H176/);
+  assert.match(diagrams, /M176 55 V135/);
+  assert.match(diagrams, /M176 135 H72/);
+  assert.match(diagrams, /M72 135 V55/);
+  assert.match(diagrams, /!solution && <text[^>]*>ここに過程を描く<\/text>/);
 });
 
 test("study hub treats thermodynamics as ready material with real card metrics", async () => {

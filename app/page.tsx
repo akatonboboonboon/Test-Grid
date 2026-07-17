@@ -256,6 +256,15 @@ export default function StudyHub() {
           <b aria-hidden="true">開く →</b>
         </Link>
 
+        <Link className="hub-generated-launch" href="/generated-practice">
+          <span>
+            <small>ON-DEMAND / SOLVED QUESTIONS</small>
+            <strong>自動生成問題で、もう1問。</strong>
+            <em>プリント問題とは別。範囲内・解答と途中式付きで1問ずつ生成</em>
+          </span>
+          <b aria-hidden="true">作る →</b>
+        </Link>
+
         <section className="hub-summary" aria-label="全体の学習状況">
           <div><span>SUBJECTS NAMED</span><strong>{configuredCount}<small>/9</small></strong></div>
           <div><span>STUDY CARDS</span><strong>{totals.cards}<small>枚</small></strong></div>

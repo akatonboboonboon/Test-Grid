@@ -17,18 +17,23 @@ import {
 
 type MemoryState = "learning" | "mastered";
 type MemoryProgress = Record<string, MemoryState>;
-type LayerFilter = "all" | Layer;
+type LayerFilter = Layer[];
 
 const LAYER_FILTER_STORAGE_KEY = "layer-sum-memory-filter-v1";
 
 function normalizeLayerFilter(value: unknown): LayerFilter {
-  return value === "all" || (typeof value === "number" && ALL_LAYERS.includes(value as Layer))
-    ? value as LayerFilter
-    : "all";
+  const candidates = Array.isArray(value)
+    ? value
+    : typeof value === "number"
+      ? [value]
+      : [];
+  return ALL_LAYERS.filter((layer) => candidates.includes(layer));
 }
 
-function filterCardsByLayer(cards: ProtocolCard[], layer: LayerFilter) {
-  return layer === "all" ? cards : cards.filter((card) => cardLayers(card).includes(layer));
+function filterCardsByLayer(cards: ProtocolCard[], selectedLayers: LayerFilter) {
+  return selectedLayers.length === 0
+    ? cards
+    : cards.filter((card) => cardLayers(card).some((layer) => selectedLayers.includes(layer)));
 }
 
 function normalizeSearchText(value: string) {
@@ -133,7 +138,7 @@ function normalizeProgress(value: unknown, cards: ProtocolCard[]): MemoryProgres
 export default function CardsPage() {
   const [cards, setCards] = useState<ProtocolCard[]>(DEFAULT_CARDS);
   const [deck, setDeck] = useState<ProtocolCard[]>(DEFAULT_CARDS);
-  const [selectedLayer, setSelectedLayer] = useState<LayerFilter>("all");
+  const [selectedLayers, setSelectedLayers] = useState<LayerFilter>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [highlightedSuggestion, setHighlightedSuggestion] = useState(0);
@@ -151,10 +156,10 @@ export default function CardsPage() {
   useEffect(() => {
     const usableCards = normalizeCards(storageRead<unknown>("layer-sum-cards-v1", DEFAULT_CARDS))
       .filter((card) => card.enabled && card.label.trim());
-    const savedLayer = normalizeLayerFilter(storageRead<unknown>(LAYER_FILTER_STORAGE_KEY, "all"));
+    const savedLayers = normalizeLayerFilter(storageRead<unknown>(LAYER_FILTER_STORAGE_KEY, "all"));
     setCards(usableCards);
-    setSelectedLayer(savedLayer);
-    setDeck(shuffle(filterCardsByLayer(usableCards, savedLayer)));
+    setSelectedLayers(savedLayers);
+    setDeck(shuffle(filterCardsByLayer(usableCards, savedLayers)));
     setProgress(normalizeProgress(storageRead<unknown>("layer-sum-memory-v1", {}), usableCards));
     setHydrated(true);
   }, []);
@@ -165,24 +170,24 @@ export default function CardsPage() {
   }, [progress, hydrated]);
 
   useEffect(() => {
-    if (hydrated) storageWrite(LAYER_FILTER_STORAGE_KEY, selectedLayer);
-  }, [selectedLayer, hydrated]);
+    if (hydrated) storageWrite(LAYER_FILTER_STORAGE_KEY, selectedLayers);
+  }, [selectedLayers, hydrated]);
 
   const currentCard = deck[index];
   const currentLayerLabel = currentCard ? cardLayerLabel(currentCard) : "";
   const currentFullName = currentCard?.fullName?.trim() || "正式名称未登録";
   const currentDescription = currentCard?.description?.trim() || "このカードの働きはまだ登録されていません。";
   const layerCards = useMemo(
-    () => filterCardsByLayer(cards, selectedLayer),
-    [cards, selectedLayer],
+    () => filterCardsByLayer(cards, selectedLayers),
+    [cards, selectedLayers],
   );
   const filteredCards = useMemo(
     () => searchCards(layerCards, searchQuery),
     [layerCards, searchQuery],
   );
   const searchSuggestions = useMemo(
-    () => suggestCards(layerCards, searchQuery),
-    [layerCards, searchQuery],
+    () => suggestCards(cards, searchQuery),
+    [cards, searchQuery],
   );
   const showSearchSuggestions = hydrated
     && suggestionsOpen
@@ -191,7 +196,7 @@ export default function CardsPage() {
   const layerCounts = useMemo(
     () => Object.fromEntries(ALL_LAYERS.map((layer) => [
       layer,
-      filterCardsByLayer(cards, layer).length,
+      filterCardsByLayer(cards, [layer]).length,
     ])) as Record<Layer, number>,
     [cards],
   );
@@ -204,6 +209,12 @@ export default function CardsPage() {
     [filteredCards, progress],
   );
   const completion = filteredCards.length ? Math.round((masteredCount / filteredCards.length) * 100) : 0;
+  const selectedLayerLabel = selectedLayers.length
+    ? selectedLayers.map((layer) => `第${layer}層`).join("・")
+    : "全レイヤー";
+  const selectedLayerCode = selectedLayers.length
+    ? selectedLayers.map((layer) => `L${layer}`).join(" + ")
+    : "ALL LAYERS";
 
   function focusCard() {
     window.setTimeout(() => cardRef.current?.focus(), 0);
@@ -242,20 +253,32 @@ export default function CardsPage() {
     focusCard();
   }
 
-  function changeLayerFilter(nextLayer: LayerFilter) {
-    const nextCards = searchCards(filterCardsByLayer(cards, nextLayer), searchQuery);
-    setSelectedLayer(nextLayer);
+  function changeLayerFilter(nextLayers: LayerFilter) {
+    const normalizedLayers = normalizeLayerFilter(nextLayers);
+    const nextCards = searchCards(filterCardsByLayer(cards, normalizedLayers), searchQuery);
+    setSelectedLayers(normalizedLayers);
     setSuggestionsOpen(Boolean(normalizeSearchText(searchQuery)));
     setHighlightedSuggestion(0);
     setResetArmed(false);
     shuffleDeck(nextCards);
-    setAnnouncement(nextLayer === "all"
+    setAnnouncement(normalizedLayers.length === 0
       ? `全レイヤーの${nextCards.length}枚に切り替えました。`
-      : `第${nextLayer}層の${nextCards.length}枚に絞り込みました。`);
+      : `${normalizedLayers.map((layer) => `第${layer}層`).join("・")}のいずれかに属する${nextCards.length}枚へ絞り込みました。`);
+  }
+
+  function toggleLayerFilter(layer: Layer) {
+    changeLayerFilter(selectedLayers.includes(layer)
+      ? selectedLayers.filter((selectedLayer) => selectedLayer !== layer)
+      : ALL_LAYERS.filter((candidate) => candidate === layer || selectedLayers.includes(candidate)));
   }
 
   function updateSearch(nextQuery: string) {
-    const nextCards = searchCards(filterCardsByLayer(cards, selectedLayer), nextQuery);
+    const hasQuery = Boolean(normalizeSearchText(nextQuery));
+    const nextCards = searchCards(
+      hasQuery ? cards : filterCardsByLayer(cards, selectedLayers),
+      nextQuery,
+    );
+    if (hasQuery && selectedLayers.length) setSelectedLayers([]);
     setSearchQuery(nextQuery);
     setSuggestionsOpen(Boolean(normalizeSearchText(nextQuery)));
     setHighlightedSuggestion(0);
@@ -265,12 +288,13 @@ export default function CardsPage() {
     setResetArmed(false);
     setAnnouncement(nextQuery.trim()
       ? nextCards.length
-        ? `${nextCards.length}枚が見つかりました。先頭のカードを表示します。`
+        ? `${nextCards.length}枚が見つかりました。検索中は全レイヤーが対象です。`
         : "完全一致はありません。入力欄の「もしかして？」候補を確認してください。"
       : "検索を解除しました。");
   }
 
   function selectSearchSuggestion(card: ProtocolCard) {
+    if (selectedLayers.length) setSelectedLayers([]);
     setSearchQuery(card.label);
     setDeck([card]);
     setIndex(0);
@@ -278,7 +302,7 @@ export default function CardsPage() {
     setSuggestionsOpen(false);
     setHighlightedSuggestion(0);
     setResetArmed(false);
-    setAnnouncement(`${card.label}のカードを表示しました。`);
+    setAnnouncement(`${card.label}のカードを表示しました。全レイヤー検索へ切り替えました。`);
     focusCard();
   }
 
@@ -304,7 +328,7 @@ export default function CardsPage() {
     const remaining = filteredCards.filter((card) => progress[card.id] !== "mastered");
     if (!remaining.length) {
       shuffleDeck(filteredCards);
-      setAnnouncement(`${selectedLayer === "all" ? "全カード" : `第${selectedLayer}層`}は暗記済みです。${filteredCards.length}枚でもう一周します。`);
+      setAnnouncement(`${selectedLayerLabel}のカードは暗記済みです。${filteredCards.length}枚でもう一周します。`);
       return;
     }
     shuffleDeck(remaining);
@@ -357,7 +381,7 @@ export default function CardsPage() {
           </span>
         </Link>
         <div className="header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {selectedLayer === "all" ? cards.length : `${filteredCards.length} / ${cards.length}`} CARDS</span>
+          <span className="card-count-label"><i aria-hidden="true" /> {selectedLayers.length === 0 ? cards.length : `${filteredCards.length} / ${cards.length}`} CARDS</span>
           <Link className="outline-button header-link" href="/subjects/network">暗算へ戻る</Link>
         </div>
       </header>
@@ -441,14 +465,14 @@ export default function CardsPage() {
           <div className="memory-layer-filter-copy">
             <span>FILTER DECK</span>
             <h2 id="memory-layer-filter-title">レイヤーで絞り込み</h2>
-            <p>選んだ層のカードだけをシャッフル・復習します。複数層に属するカードは、どちらの層にも表示されます。</p>
+            <p>複数選択できます。選んだ層のどれかに属するカードをシャッフル・復習し、複数層カードも1枚だけ表示します。</p>
           </div>
-          <div className="memory-layer-filter-buttons" role="group" aria-label="出題するレイヤー">
+          <div className="memory-layer-filter-buttons" role="group" aria-label="出題するレイヤー（複数選択可）">
             <button
               type="button"
-              className={selectedLayer === "all" ? "active" : ""}
-              aria-pressed={selectedLayer === "all"}
-              onClick={() => changeLayerFilter("all")}
+              className={selectedLayers.length === 0 ? "active" : ""}
+              aria-pressed={selectedLayers.length === 0}
+              onClick={() => changeLayerFilter([])}
             >
               <strong>全レイヤー</strong><small>{cards.length}枚</small>
             </button>
@@ -456,9 +480,9 @@ export default function CardsPage() {
               <button
                 type="button"
                 key={layer}
-                className={selectedLayer === layer ? "active" : ""}
-                aria-pressed={selectedLayer === layer}
-                onClick={() => changeLayerFilter(layer)}
+                className={selectedLayers.includes(layer) ? "active" : ""}
+                aria-pressed={selectedLayers.includes(layer)}
+                onClick={() => toggleLayerFilter(layer)}
               >
                 <strong>L{layer}</strong><small>{layerCounts[layer]}枚</small>
               </button>
@@ -468,7 +492,7 @@ export default function CardsPage() {
 
         <section className="memory-progress" aria-label="暗記進捗">
           <div className="memory-progress-copy">
-            <span>{selectedLayer === "all" ? "ALL LAYERS" : `LAYER ${selectedLayer}`} · MASTERED</span>
+            <span>{selectedLayerCode} · MASTERED</span>
             <strong>{masteredCount}<small> / {filteredCards.length}</small></strong>
           </div>
           <div className="memory-progress-track" aria-hidden="true"><i style={{ width: `${completion}%` }} /></div>
@@ -550,8 +574,8 @@ export default function CardsPage() {
           </section>
         ) : (
           <section className="memory-empty">
-            <span>EMPTY DECK</span><h2>{selectedLayer === "all" ? "出題できるカードがありません。" : `第${selectedLayer}層に出題できるカードがありません。`}</h2><p>別のレイヤーを選ぶか、暗算ページの「カードを編集」で出題するカードをONにしてください。</p><Link href="/subjects/network">暗算ページへ戻る</Link>
-            {searchQuery && <button type="button" onClick={() => updateSearch("")}>検索を解除して全カードを表示</button>}
+            <span>EMPTY DECK</span><h2>{selectedLayers.length === 0 ? "出題できるカードがありません。" : `${selectedLayerLabel}のいずれにも出題できるカードがありません。`}</h2><p>別のレイヤーを選ぶか、暗算ページの「カードを編集」で出題するカードをONにしてください。</p><Link href="/subjects/network">暗算ページへ戻る</Link>
+            {searchQuery && <button type="button" onClick={() => updateSearch("")}>検索を解除して選択中のカードを表示</button>}
           </section>
         )}
 

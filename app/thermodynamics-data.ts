@@ -60,6 +60,8 @@ export type ThermodynamicsRangePage = {
   orientation?: "portrait-source" | "landscape-sideways-source";
 };
 
+export type ThermodynamicsDiagramKind = "pv" | "ts" | "hs" | "piston" | "otto-pv" | "carnot-pv" | "carnot-ts";
+
 export type ThermodynamicsFormulaCard = {
   id: string;
   topic: ThermodynamicsTopicId;
@@ -69,6 +71,7 @@ export type ThermodynamicsFormulaCard = {
   explanation: string;
   cue: string;
   example?: string;
+  diagram?: ThermodynamicsDiagramKind;
   sourceRefs: ThermodynamicsSourceRef[];
 };
 
@@ -96,7 +99,7 @@ export type ThermodynamicsQuestion = {
   formula?: string;
   steps: string[];
   explanation: string;
-  diagram?: "pv" | "ts" | "piston";
+  diagram?: ThermodynamicsDiagramKind;
   sourceRefs: ThermodynamicsSourceRef[];
 };
 
@@ -331,9 +334,9 @@ const FORMULA_DEFINITIONS: FormulaDefinition[] = [
     topic: "adiabatic",
     title: "断熱のT-P関係",
     prompt: "理想気体の可逆断熱変化で温度と圧力は？",
-    formula: "\\frac{T}{P^{(\\kappa-1)/\\kappa}}=C",
+    formula: "\\frac{T}{P^{\\frac{\\kappa-1}{\\kappa}}}=C",
     explanation: "体積を使わず、圧力比から温度比を出したいときに使う。",
-    cue: "Pの指数は(κ−1)/κ",
+    cue: "Pの指数は" + inline("\\frac{\\kappa-1}{\\kappa}"),
   },
   {
     id: "th-ad-works",
@@ -441,7 +444,7 @@ const FORMULA_DEFINITIONS: FormulaDefinition[] = [
     prompt: "状態1から2までのエントロピー変化は？",
     formula: "\\Delta S=S_2-S_1=\\int_1^2\\frac{\\delta Q_{\\mathrm{rev}}}{T}",
     explanation: "実際の経路が不可逆でも、同じ両端を結ぶ可逆経路で積分して状態量差を得る。",
-    cue: "可逆経路でQ/Tを積分",
+    cue: "可逆経路で" + inline("\\frac{\\delta Q_{\\mathrm{rev}}}{T}") + "を積分",
   },
   {
     id: "th-ent-two-reservoirs",
@@ -450,7 +453,7 @@ const FORMULA_DEFINITIONS: FormulaDefinition[] = [
     prompt: "T1>T2で熱量Qが高温側から低温側へ移ると？",
     formula: "\\Delta S_{\\mathrm{total}}=-\\frac{Q}{T_1}+\\frac{Q}{T_2}>0",
     explanation: "高温側の減少より低温側の増加が大きく、不可逆な熱移動では全体が増える。",
-    cue: "高温側−Q/T1、低温側＋Q/T2",
+    cue: "高温側" + inline("-\\frac{Q}{T_1}") + "、低温側" + inline("+\\frac{Q}{T_2}"),
   },
   {
     id: "th-otto-processes",
@@ -494,7 +497,7 @@ const FORMULA_DEFINITIONS: FormulaDefinition[] = [
     title: "円筒体積",
     prompt: "内径d、長さLの円筒体積は？",
     formula: "V=\\frac{\\pi d^2L}{4}",
-    explanation: "底面積πd²/4に長さを掛ける。mmからcmまたはmへの換算を先にそろえる。",
+    explanation: "底面積" + inline("\\frac{\\pi d^2}{4}") + "に長さを掛ける。mmからcmまたはmへの換算を先にそろえる。",
     cue: "円の面積×長さ",
     sourceRefs: [rangeRef(5), FORMAT3_OTTO_REF],
   },
@@ -555,9 +558,19 @@ const FORMULA_DEFINITIONS: FormulaDefinition[] = [
   },
 ];
 
+function formulaDiagram(card: FormulaDefinition): ThermodynamicsDiagramKind | undefined {
+  if (["th-ad-pv", "th-poly-law", "th-poly-pressure"].includes(card.id)) return "pv";
+  if (["th-otto-processes", "th-otto-compression", "th-otto-efficiency", "th-otto-temperature"].includes(card.id)) return "otto-pv";
+  if (["th-carnot-processes", "th-carnot-qin", "th-carnot-qout", "th-carnot-ratio", "th-carnot-efficiency"].includes(card.id)) return "carnot-pv";
+  if (card.id === "th-otto-cylinder") return "piston";
+  if (card.id === "th-carnot-entropy") return "carnot-ts";
+  return undefined;
+}
+
 export const THERMODYNAMICS_FORMULAS: ThermodynamicsFormulaCard[] = FORMULA_DEFINITIONS.map(
   (card) => ({
     ...card,
+    diagram: formulaDiagram(card),
     sourceRefs: card.sourceRefs ?? rangeRefsForTopic(card.topic),
   }),
 );
@@ -567,8 +580,17 @@ type QuestionInput = Omit<ThermodynamicsQuestion, "topicId" | "sourceRefs"> & {
 };
 
 function question(input: QuestionInput): ThermodynamicsQuestion {
+  const inferredDiagram: ThermodynamicsDiagramKind | undefined =
+    input.id === "th-q-poly-map"
+      ? "pv"
+      : input.id.startsWith("th-q-otto-") && input.id !== "th-q-otto-format3"
+        ? "otto-pv"
+        : input.id.startsWith("th-q-carnot-")
+          ? input.id === "th-q-carnot-entropy" ? "carnot-ts" : "carnot-pv"
+          : undefined;
   return {
     ...input,
+    diagram: input.diagram ?? inferredDiagram,
     topicId: input.topic,
     sourceRefs: input.sourceRefs ?? rangeRefsForTopic(input.topic),
   };
@@ -604,19 +626,19 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "断熱圧力",
     difficulty: 1,
     format: "number",
-    prompt: "空気を可逆断熱で体積が1/4になるまで圧縮する。初圧100 kPa、比熱比1.4のとき終圧を求めよ。",
+    prompt: "空気を可逆断熱で体積が" + inline("\\frac{1}{4}") + "になるまで圧縮する。初圧100 kPa、比熱比1.4のとき終圧を求めよ。",
     answer: numberText(PRACTICE_AD_P2, 1) + " kPa",
     numericAnswer: PRACTICE_AD_P2,
     expectedUnit: "kPa",
     acceptedUnits: { Pa: 0.001, kPa: 1, MPa: 1000 },
     requiresUnit: true,
     tolerance: 1,
-    formula: "P_2=P_1(V_1/V_2)^{\\kappa}",
+    formula: "P_2=P_1\\left(\\frac{V_1}{V_2}\\right)^{\\kappa}",
     steps: [
-      inline("V_1/V_2=4"),
+      inline("\\frac{V_1}{V_2}=4"),
       inline("P_2=100\\times4^{1.4}=" + numberText(PRACTICE_AD_P2, 1) + "\\,\\mathrm{kPa}"),
     ],
-    explanation: "圧縮では体積比V1/V2が1より大きくなり、終圧は初圧より高くなる。",
+    explanation: "圧縮では体積比" + inline("\\frac{V_1}{V_2}") + "が1より大きくなり、終圧は初圧より高くなる。",
   }),
   question({
     id: "th-q-ad-temperature",
@@ -624,14 +646,14 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "断熱温度",
     difficulty: 1,
     format: "number",
-    prompt: "初温300 Kの空気を体積が1/4になるまで可逆断熱圧縮する。比熱比1.4として終温を求めよ。",
+    prompt: "初温300 Kの空気を体積が" + inline("\\frac{1}{4}") + "になるまで可逆断熱圧縮する。比熱比1.4として終温を求めよ。",
     answer: numberText(PRACTICE_AD_T2, 1) + " K",
     numericAnswer: PRACTICE_AD_T2,
     expectedUnit: "K",
     acceptedUnits: { K: 1 },
     requiresUnit: true,
     tolerance: 1,
-    formula: "T_2=T_1(V_1/V_2)^{\\kappa-1}",
+    formula: "T_2=T_1\\left(\\frac{V_1}{V_2}\\right)^{\\kappa-1}",
     steps: [
       inline("T_2=300\\times4^{1.4-1}"),
       inline("T_2=" + numberText(PRACTICE_AD_T2, 1) + "\\,\\mathrm{K}"),
@@ -644,16 +666,16 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "境界仕事",
     difficulty: 2,
     format: "number",
-    prompt: "1 kgの空気が600 Kから400 Kへ可逆断熱膨張する。R=287 J/(kg K)、κ=1.4として境界仕事を求めよ。",
+    prompt: "1 kgの空気が600 Kから400 Kへ可逆断熱膨張する。" + inline("R=287\\,\\mathrm{J\\,(kg\\,K)^{-1}},\\ \\kappa=1.4") + "として境界仕事を求めよ。",
     answer: numberText(PRACTICE_AD_WB, 1) + " kJ",
     numericAnswer: PRACTICE_AD_WB,
     expectedUnit: "kJ",
     acceptedUnits: { J: 0.001, kJ: 1 },
     requiresUnit: true,
     tolerance: 0.3,
-    formula: "W_b=mR(T_1-T_2)/(\\kappa-1)",
+    formula: "W_b=\\frac{mR(T_1-T_2)}{\\kappa-1}",
     steps: [
-      inline("W_b=1\\times287\\times(600-400)/(1.4-1)\\times10^{-3}"),
+      inline("W_b=\\frac{1\\times287\\times(600-400)}{1.4-1}\\times10^{-3}"),
       inline("W_b=" + numberText(PRACTICE_AD_WB, 1) + "\\,\\mathrm{kJ}"),
     ],
     explanation: "膨張を正とする符号規約ではT1>T2なので仕事は正になる。",
@@ -683,7 +705,7 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     format: "choice",
     prompt: "理想気体の可逆断熱変化で一定になる組合せを選べ。",
     answer: inline("PV^{\\kappa}"),
-    options: [inline("PV"), inline("PV^{\\kappa}"), inline("P/V"), inline("TV")],
+    options: [inline("PV"), inline("PV^{\\kappa}"), inline("\\frac{P}{V}"), inline("TV")],
     formula: "PV^{\\kappa}=C",
     steps: ["断熱では熱の出入りがない。", inline("PV^{\\kappa}=C") + "を選ぶ。"],
     explanation: "PV一定は等温変化であり、断熱では体積の指数が比熱比κになる。",
@@ -708,14 +730,14 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "ポリトロープ圧力",
     difficulty: 2,
     format: "number",
-    prompt: "P1=120 kPa、V1/V2=2、n=1.3のポリトロープ圧縮でP2を求めよ。",
+    prompt: inline("P_1=120\\,\\mathrm{kPa},\\ \\frac{V_1}{V_2}=2,\\ n=1.3") + "のポリトロープ圧縮で" + inline("P_2") + "を求めよ。",
     answer: numberText(PRACTICE_POLY_P2, 1) + " kPa",
     numericAnswer: PRACTICE_POLY_P2,
     expectedUnit: "kPa",
     acceptedUnits: { Pa: 0.001, kPa: 1, MPa: 1000 },
     requiresUnit: true,
     tolerance: 0.8,
-    formula: "P_2=P_1(V_1/V_2)^n",
+    formula: "P_2=P_1\\left(\\frac{V_1}{V_2}\\right)^n",
     steps: [inline("P_2=120\\times2^{1.3}"), inline("P_2=" + numberText(PRACTICE_POLY_P2, 1) + "\\,\\mathrm{kPa}")],
     explanation: "PV^nが両状態で等しいことから体積比をn乗する。",
   }),
@@ -725,14 +747,14 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "ポリトロープ温度",
     difficulty: 2,
     format: "number",
-    prompt: "理想気体をT1=300 K、V1/V2=2、n=1.3でポリトロープ圧縮した。T2を求めよ。",
+    prompt: "理想気体を" + inline("T_1=300\\,\\mathrm{K},\\ \\frac{V_1}{V_2}=2,\\ n=1.3") + "でポリトロープ圧縮した。" + inline("T_2") + "を求めよ。",
     answer: numberText(PRACTICE_POLY_T2, 1) + " K",
     numericAnswer: PRACTICE_POLY_T2,
     expectedUnit: "K",
     acceptedUnits: { K: 1 },
     requiresUnit: true,
     tolerance: 0.8,
-    formula: "T_2=T_1(V_1/V_2)^{n-1}",
+    formula: "T_2=T_1\\left(\\frac{V_1}{V_2}\\right)^{n-1}",
     steps: [
       inline("PV^n=C") + "と" + inline("PV=mRT") + "から" + inline("TV^{n-1}=C") + "。",
       inline("T_2=300\\times2^{0.3}=" + numberText(PRACTICE_POLY_T2, 1) + "\\,\\mathrm{K}"),
@@ -758,17 +780,17 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "気体質量",
     difficulty: 2,
     format: "number",
-    prompt: "P=101.3 kPa、V=200 cc、T=288 Kの窒素をR=287 J/(kg K)として、質量を求めよ。",
+    prompt: inline("P=101.3\\,\\mathrm{kPa},\\ V=200\\,\\mathrm{cc},\\ T=288\\,\\mathrm{K}") + "の窒素を" + inline("R=287\\,\\mathrm{J\\,(kg\\,K)^{-1}}") + "として、質量を求めよ。",
     answer: numberText(PRACTICE_N2_MASS * 1000, 3) + " g",
     numericAnswer: PRACTICE_N2_MASS * 1000,
     expectedUnit: "g",
     acceptedUnits: { kg: 1000, g: 1 },
     requiresUnit: true,
     tolerance: 0.003,
-    formula: "m=PV/(RT)",
+    formula: "m=\\frac{PV}{RT}",
     steps: [
       inline("101.3\\,\\mathrm{kPa}=101300\\,\\mathrm{Pa},\\ 200\\,\\mathrm{cc}=200\\times10^{-6}\\,\\mathrm{m^3}"),
-      inline("m=101300\\times200\\times10^{-6}/(287\\times288)=" + numberText(PRACTICE_N2_MASS * 1000, 3) + "\\,\\mathrm{g}"),
+      inline("m=\\frac{101300\\times200\\times10^{-6}}{287\\times288}=" + numberText(PRACTICE_N2_MASS * 1000, 3) + "\\,\\mathrm{g}"),
     ],
     explanation: "状態方程式へ入れる前に圧力と体積をSI単位へそろえる。",
   }),
@@ -795,7 +817,7 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     prompt: "周期熱機関について正しい説明を選べ。",
     answer: "単一熱源から受けた熱を、他に変化を残さず全て仕事へ変えることはできない。",
     options: ["単一熱源から受けた熱を、他に変化を残さず全て仕事へ変えることはできない。", "放熱なしで必ず効率1になる。", "仕事を全て熱へ変えることも不可能である。", "低温熱源は不要である。"],
-    formula: "\\eta=1-Q_2/Q_1<1",
+    formula: "\\eta=1-\\frac{Q_2}{Q_1}<1",
     steps: ["周期機関には低温側への放熱が必要。", inline("Q_2>0") + "なので" + inline("\\eta<1") + "。"],
     explanation: "受熱の一部を放熱する必要があり、100%の熱効率は実現できない。",
   }),
@@ -856,9 +878,9 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     acceptedUnits: { "J/K": 0.001, "kJ/K": 1 },
     requiresUnit: true,
     tolerance: 0.01,
-    formula: "\\Delta S=Q_{\\mathrm{rev}}/T",
-    steps: [inline("\\Delta S=600/300"), inline("\\Delta S=2\\,\\mathrm{kJ/K}")],
-    explanation: "温度が一定なのでQ/Tをそのまま用いる。受熱なので正。",
+    formula: "\\Delta S=\\frac{Q_{\\mathrm{rev}}}{T}",
+    steps: [inline("\\Delta S=\\frac{600}{300}"), inline("\\Delta S=2\\,\\mathrm{kJ\\,K^{-1}}")],
+    explanation: "温度が一定なので" + inline("\\frac{Q}{T}") + "をそのまま用いる。受熱なので正。",
   }),
   question({
     id: "th-q-ent-hot",
@@ -873,9 +895,9 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     acceptedUnits: { "J/K": 0.001, "kJ/K": 1 },
     requiresUnit: true,
     tolerance: 0.002,
-    formula: "\\Delta S_{\\mathrm{hot}}=-Q/T_1",
-    steps: [inline("\\Delta S_{\\mathrm{hot}}=-100/500"), inline("=-0.2\\,\\mathrm{kJ/K}")],
-    explanation: "高温熱源は熱を失うので、Q/Tの符号は負。",
+    formula: "\\Delta S_{\\mathrm{hot}}=-\\frac{Q}{T_1}",
+    steps: [inline("\\Delta S_{\\mathrm{hot}}=-\\frac{100}{500}"), inline("=-0.2\\,\\mathrm{kJ\\,K^{-1}}")],
+    explanation: "高温熱源は熱を失うので、" + inline("\\frac{Q}{T}") + "の符号は負。",
   }),
   question({
     id: "th-q-ent-total",
@@ -890,10 +912,10 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     acceptedUnits: { "J/K": 0.001, "kJ/K": 1 },
     requiresUnit: true,
     tolerance: 0.002,
-    formula: "\\Delta S_{\\mathrm{total}}=-Q/T_1+Q/T_2",
+    formula: "\\Delta S_{\\mathrm{total}}=-\\frac{Q}{T_1}+\\frac{Q}{T_2}",
     steps: [
-      inline("\\Delta S=-100/500+100/300"),
-      inline("\\Delta S=0.133\\,\\mathrm{kJ/K}>0"),
+      inline("\\Delta S=-\\frac{100}{500}+\\frac{100}{300}"),
+      inline("\\Delta S=0.133\\,\\mathrm{kJ\\,K^{-1}}>0"),
     ],
     explanation: "不可逆な有限温度差の熱移動なので、全体のエントロピーは増加する。",
   }),
@@ -906,7 +928,7 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     prompt: "可逆断熱変化で正しい関係を選べ。",
     answer: inline("\\Delta S=0"),
     options: [inline("\\Delta S>0"), inline("\\Delta S=0"), inline("\\Delta S<0"), inline("S=0")],
-    formula: "dS=\\delta Q_{\\mathrm{rev}}/T",
+    formula: "dS=\\frac{\\delta Q_{\\mathrm{rev}}}{T}",
     steps: [inline("\\delta Q_{\\mathrm{rev}}=0"), "したがって" + inline("dS=0") + "。"],
     explanation: "エントロピーそのものがゼロなのではなく、可逆断熱過程で変化量がゼロ。",
   }),
@@ -916,15 +938,15 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "比エントロピー",
     difficulty: 1,
     format: "number",
-    prompt: "質量3 kgの系の全エントロピーが12 kJ/Kである。比エントロピーを求めよ。",
+    prompt: "質量3 kgの系の全エントロピーが" + inline("12\\,\\mathrm{kJ\\,K^{-1}}") + "である。比エントロピーを求めよ。",
     answer: "4 kJ/(kg K)",
     numericAnswer: 4,
     expectedUnit: "kJ/(kg K)",
     acceptedUnits: { "J/(kg K)": 0.001, "kJ/(kg K)": 1 },
     requiresUnit: true,
     tolerance: 0.01,
-    formula: "s=S/m",
-    steps: [inline("s=12/3"), inline("s=4\\,\\mathrm{kJ/(kg\\,K)}")],
+    formula: "s=\\frac{S}{m}",
+    steps: [inline("s=\\frac{12}{3}"), inline("s=4\\,\\mathrm{kJ\\,(kg\\,K)^{-1}}")],
     explanation: "全エントロピーを質量で割ると比エントロピーになる。",
   }),
 
@@ -951,8 +973,8 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     answer: "10",
     numericAnswer: 10,
     tolerance: 0.01,
-    formula: "\\varepsilon=V_1/V_2",
-    steps: [inline("\\varepsilon=500/50"), inline("\\varepsilon=10")],
+    formula: "\\varepsilon=\\frac{V_1}{V_2}",
+    steps: [inline("\\varepsilon=\\frac{500}{50}"), inline("\\varepsilon=10")],
     explanation: "圧縮比は最大体積を最小体積で割った無次元量。",
   }),
   question({
@@ -968,9 +990,9 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     acceptedUnits: { "%": 1 },
     requiresUnit: true,
     tolerance: 0.1,
-    formula: "\\eta_{\\mathrm{th}}=1-1/\\varepsilon^{\\kappa-1}",
+    formula: "\\eta_{\\mathrm{th}}=1-\\frac{1}{\\varepsilon^{\\kappa-1}}",
     steps: [
-      inline("\\eta_{\\mathrm{th}}=1-1/10^{0.4}"),
+      inline("\\eta_{\\mathrm{th}}=1-\\frac{1}{10^{0.4}}"),
       inline("\\eta_{\\mathrm{th}}=" + numberText(PRACTICE_OTTO_EFF, 4) + "=" + numberText(PRACTICE_OTTO_EFF * 100, 2) + "\\%"),
     ],
     explanation: "効率を百分率で答えるときだけ最後に100を掛ける。",
@@ -1014,13 +1036,13 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     accepted: ["25.7 cc,206 cc,9,48.3%,576 K"],
     keywords: ["25.7", "206", "9", "48.3", "576"],
     minKeywords: 4,
-    formula: "V=\\pi d^2L/4,\\ \\varepsilon=(V_s+V_c)/V_c,\\ \\eta=1-1/\\varepsilon^{\\kappa-1},\\ T_2=T_1\\varepsilon^{\\kappa-1}",
+    formula: "\\begin{aligned}V&=\\frac{\\pi d^2L}{4}\\\\ \\varepsilon&=\\frac{V_s+V_c}{V_c}\\\\ \\eta&=1-\\frac{1}{\\varepsilon^{\\kappa-1}}\\\\ T_2&=T_1\\varepsilon^{\\kappa-1}\\end{aligned}",
     steps: [
       inline("d=6.4\\,\\mathrm{cm},\\ L=6.4\\,\\mathrm{cm},\\ l_c=0.8\\,\\mathrm{cm}"),
-      inline("V_c=\\pi(6.4)^2(0.8)/4=" + numberText(FORMAT3_CLEARANCE_CC, 2) + "\\,\\mathrm{cc}"),
-      inline("V_s=\\pi(6.4)^2(6.4)/4=" + numberText(FORMAT3_SWEPT_CC, 1) + "\\,\\mathrm{cc}"),
-      inline("\\varepsilon=(V_s+V_c)/V_c=" + numberText(FORMAT3_COMPRESSION, 2)),
-      inline("\\eta=1-1/\\varepsilon^{0.30}=" + numberText(FORMAT3_OTTO_EFF * 100, 2) + "\\%,\\quad T_2=298\\varepsilon^{0.30}=" + numberText(FORMAT3_OTTO_T2, 1) + "\\,\\mathrm{K}"),
+      inline("V_c=\\frac{\\pi(6.4)^2(0.8)}{4}=" + numberText(FORMAT3_CLEARANCE_CC, 2) + "\\,\\mathrm{cc}"),
+      inline("V_s=\\frac{\\pi(6.4)^2(6.4)}{4}=" + numberText(FORMAT3_SWEPT_CC, 1) + "\\,\\mathrm{cc}"),
+      inline("\\varepsilon=\\frac{V_s+V_c}{V_c}=" + numberText(FORMAT3_COMPRESSION, 2)),
+      inline("\\eta=1-\\frac{1}{\\varepsilon^{0.30}}=" + numberText(FORMAT3_OTTO_EFF * 100, 2) + "\\%,\\quad T_2=298\\varepsilon^{0.30}=" + numberText(FORMAT3_OTTO_T2, 1) + "\\,\\mathrm{K}"),
     ],
     explanation: "形式3問3の明瞭な寸法を使う許可済み重複問題。長さをcmへ統一してccを得る。",
     diagram: "piston",
@@ -1053,10 +1075,10 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     acceptedUnits: { "%": 1 },
     requiresUnit: true,
     tolerance: 0.1,
-    formula: "\\eta_c=1-T_2/T_1",
+    formula: "\\eta_c=1-\\frac{T_2}{T_1}",
     steps: [
       inline("T_1=773\\,\\mathrm{K},\\ T_2=373\\,\\mathrm{K}"),
-      inline("\\eta_c=1-373/773=" + numberText(PRACTICE_CARNOT_EFF, 4) + "=" + numberText(PRACTICE_CARNOT_EFF * 100, 2) + "\\%"),
+      inline("\\eta_c=1-\\frac{373}{773}=" + numberText(PRACTICE_CARNOT_EFF, 4) + "=" + numberText(PRACTICE_CARNOT_EFF * 100, 2) + "\\%"),
     ],
     explanation: "摂氏温度の比ではなく、273を加えた絶対温度の比を使う。",
     sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
@@ -1067,12 +1089,12 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "熱量比",
     difficulty: 1,
     format: "number",
-    prompt: "前問のカルノー熱機関でQ2/Q1を求めよ。",
+    prompt: "前問のカルノー熱機関で" + inline("\\frac{Q_2}{Q_1}") + "を求めよ。",
     answer: numberText(PRACTICE_CARNOT_RATIO, 4),
     numericAnswer: PRACTICE_CARNOT_RATIO,
     tolerance: 0.002,
-    formula: "Q_2/Q_1=T_2/T_1",
-    steps: [inline("Q_2/Q_1=373/773"), inline("Q_2/Q_1=" + numberText(PRACTICE_CARNOT_RATIO, 4))],
+    formula: "\\frac{Q_2}{Q_1}=\\frac{T_2}{T_1}",
+    steps: [inline("\\frac{Q_2}{Q_1}=\\frac{373}{773}"), inline("\\frac{Q_2}{Q_1}=" + numberText(PRACTICE_CARNOT_RATIO, 4))],
     explanation: "可逆カルノーでは熱量比が絶対温度比に等しい。",
     sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
   }),
@@ -1089,9 +1111,9 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     acceptedUnits: { J: 0.001, kJ: 1 },
     requiresUnit: true,
     tolerance: 0.05,
-    formula: "Q_2/Q_1=T_2/T_1,\\quad W=Q_1-Q_2",
+    formula: "\\begin{aligned}\\frac{Q_2}{Q_1}&=\\frac{T_2}{T_1}\\\\ W&=Q_1-Q_2\\end{aligned}",
     steps: [
-      inline("Q_1=Q_2T_1/T_2=10\\times773/373=" + numberText(PRACTICE_CARNOT_Q1, 2) + "\\,\\mathrm{kJ}"),
+      inline("Q_1=Q_2\\frac{T_1}{T_2}=10\\times\\frac{773}{373}=" + numberText(PRACTICE_CARNOT_Q1, 2) + "\\,\\mathrm{kJ}"),
       inline("W=Q_1-Q_2=" + numberText(PRACTICE_CARNOT_Q1 - 10, 2) + "\\,\\mathrm{kJ}"),
     ],
     explanation: "放熱量から先に受熱量を熱量比で戻し、その差を仕事にする。",
@@ -1108,11 +1130,11 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     accepted: ["-0.0259,+0.0259,0"],
     keywords: ["-0.0259", "+0.0259", "0"],
     minKeywords: 3,
-    formula: "\\Delta S_{\\mathrm{hot}}=-Q_1/T_1,\\ \\Delta S_{\\mathrm{cold}}=Q_2/T_2",
+    formula: "\\begin{aligned}\\Delta S_{\\mathrm{hot}}&=-\\frac{Q_1}{T_1}\\\\ \\Delta S_{\\mathrm{cold}}&=\\frac{Q_2}{T_2}\\end{aligned}",
     steps: [
-      inline("\\Delta S_{\\mathrm{hot}}=-20/773=-0.0259\\,\\mathrm{kJ/K}"),
-      inline("Q_2/Q_1=T_2/T_1") + "より" + inline("Q_2/T_2=Q_1/T_1"),
-      inline("\\Delta S_{\\mathrm{cold}}=+0.0259\\,\\mathrm{kJ/K},\\quad\\Delta S_{\\mathrm{total}}=0"),
+      inline("\\Delta S_{\\mathrm{hot}}=-\\frac{20}{773}=-0.0259\\,\\mathrm{kJ\\,K^{-1}}"),
+      inline("\\frac{Q_2}{Q_1}=\\frac{T_2}{T_1}") + "より" + inline("\\frac{Q_2}{T_2}=\\frac{Q_1}{T_1}"),
+      inline("\\Delta S_{\\mathrm{cold}}=+0.0259\\,\\mathrm{kJ\\,K^{-1}},\\quad\\Delta S_{\\mathrm{total}}=0"),
     ],
     explanation: "可逆カルノーでは高温側の減少と低温側の増加が等しく、全体はゼロ。",
   }),
@@ -1204,7 +1226,7 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           topic: "second-law", genre: "ケルビン・プランク", difficulty: 1, format: "text",
           prompt: "単一熱源から受けた熱を全て仕事へ変える周期機関が不可能な理由を説明せよ。",
           answer: "周期機関には放熱Q2が必要で、Q2=0かつη=1は第2法則に反する。",
-          keywords: ["放熱", "Q2", "効率", "第2法則"], minKeywords: 2, formula: "\\eta=1-Q_2/Q_1<1",
+          keywords: ["放熱", "Q2", "効率", "第2法則"], minKeywords: 2, formula: "\\eta=1-\\frac{Q_2}{Q_1}<1",
           steps: [inline("W=Q_1-Q_2") + "である。", "第2法則により周期機関では" + inline("Q_2>0") + "。"],
           explanation: "エネルギー収支を満たして見えても、熱を100%仕事へ変換する周期機関は実現しない。",
         }),
@@ -1218,10 +1240,10 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
         }),
         examQuestion(id, 1, 4, 4, {
           topic: "polytropic", genre: "終圧", difficulty: 2, format: "number",
-          prompt: "P1=" + polyP1 + " kPa、V1/V2=" + polyRatio + "、n=" + polyN + "の圧縮でP2を求めよ。",
+          prompt: inline("P_1=" + polyP1 + "\\,\\mathrm{kPa},\\ \\frac{V_1}{V_2}=" + polyRatio + ",\\ n=" + polyN) + "の圧縮で" + inline("P_2") + "を求めよ。",
           answer: numberText(polyP2, 1) + " kPa", numericAnswer: polyP2, expectedUnit: "kPa",
           acceptedUnits: { Pa: 0.001, kPa: 1, MPa: 1000 }, requiresUnit: true, tolerance: 1,
-          formula: "P_2=P_1(V_1/V_2)^n",
+          formula: "P_2=P_1\\left(\\frac{V_1}{V_2}\\right)^n",
           steps: [inline("P_2=" + polyP1 + "\\times" + polyRatio + "^{" + polyN + "}"), inline("P_2=" + numberText(polyP2, 1) + "\\,\\mathrm{kPa}")],
           explanation: "PVのn乗が両状態で等しいため、体積比のn乗を初圧へ掛ける。",
         }),
@@ -1233,14 +1255,14 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
       topic: "adiabatic",
       topicIds: ["adiabatic"],
       points: 18,
-      context: "空気をR=287 J/(kg K)、κ=" + adKappa + "とする。P1=" + adP1 + " kPa、T1=" + adT1 + " K、質量" + adMass + " kgから体積が1/" + adRatio + "になるまで可逆断熱圧縮する。系がする仕事を正とする。",
+      context: "空気を" + inline("R=287\\,\\mathrm{J\\,(kg\\,K)^{-1}},\\ \\kappa=" + adKappa) + "とする。" + inline("P_1=" + adP1 + "\\,\\mathrm{kPa},\\ T_1=" + adT1 + "\\,\\mathrm{K},\\ m=" + adMass + "\\,\\mathrm{kg}") + "から体積が" + inline("\\frac{1}{" + adRatio + "}") + "になるまで可逆断熱圧縮する。系がする仕事を正とする。",
       questions: [
         examQuestion(id, 2, 1, 4, {
           topic: "adiabatic", genre: "基本関係", difficulty: 1, format: "text",
           prompt: "P-V、T-V、T-Pの三つの断熱関係式を書け。",
-          answer: inline("PV^{\\kappa}=C,\\ TV^{\\kappa-1}=C,\\ T/P^{(\\kappa-1)/\\kappa}=C"),
+          answer: inline("\\begin{aligned}PV^{\\kappa}&=C\\\\ TV^{\\kappa-1}&=C\\\\ \\frac{T}{P^{\\frac{\\kappa-1}{\\kappa}}}&=C\\end{aligned}"),
           keywords: ["PV", "TV", "T/P"], minKeywords: 3,
-          formula: "PV^{\\kappa}=C,\\quad TV^{\\kappa-1}=C,\\quad T/P^{(\\kappa-1)/\\kappa}=C",
+          formula: "\\begin{aligned}PV^{\\kappa}&=C\\\\ TV^{\\kappa-1}&=C\\\\ \\frac{T}{P^{\\frac{\\kappa-1}{\\kappa}}}&=C\\end{aligned}",
           steps: ["第一法則と理想気体式を組み合わせる。", "利用する状態量の組に応じて三つの形へ整理する。"],
           explanation: "三式は同じ可逆断熱関係を別の状態量の組で表したもの。",
         }),
@@ -1248,15 +1270,15 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           topic: "adiabatic", genre: "終圧", difficulty: 2, format: "number",
           prompt: "終圧P2を求めよ。", answer: numberText(adP2, 1) + " kPa", numericAnswer: adP2,
           expectedUnit: "kPa", acceptedUnits: { Pa: 0.001, kPa: 1, MPa: 1000 }, requiresUnit: true, tolerance: 1.5,
-          formula: "P_2=P_1(V_1/V_2)^{\\kappa}",
+          formula: "P_2=P_1\\left(\\frac{V_1}{V_2}\\right)^{\\kappa}",
           steps: [inline("P_2=" + adP1 + "\\times" + adRatio + "^{" + adKappa + "}"), inline("P_2=" + numberText(adP2, 1) + "\\,\\mathrm{kPa}")],
-          explanation: "圧縮なのでV1/V2は1より大きく、終圧は初圧より高くなる。",
+          explanation: "圧縮なので" + inline("\\frac{V_1}{V_2}") + "は1より大きく、終圧は初圧より高くなる。",
         }),
         examQuestion(id, 2, 3, 5, {
           topic: "adiabatic", genre: "終温", difficulty: 2, format: "number",
           prompt: "終温T2を求めよ。", answer: numberText(adT2, 1) + " K", numericAnswer: adT2,
           expectedUnit: "K", acceptedUnits: { K: 1 }, requiresUnit: true, tolerance: 1,
-          formula: "T_2=T_1(V_1/V_2)^{\\kappa-1}",
+          formula: "T_2=T_1\\left(\\frac{V_1}{V_2}\\right)^{\\kappa-1}",
           steps: [inline("T_2=" + adT1 + "\\times" + adRatio + "^{" + numberText(adKappa - 1, 2) + "}"), inline("T_2=" + numberText(adT2, 1) + "\\,\\mathrm{K}")],
           explanation: "温度関係の指数はκではなくκ−1。圧縮では温度が上がる。",
         }),
@@ -1265,8 +1287,8 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           prompt: "境界仕事Wbと工業仕事Wtを求め、圧縮時の符号を説明せよ。",
           answer: "Wb=" + numberText(adWb, 1) + " kJ、Wt=" + numberText(adWt, 1) + " kJ。系がする仕事を正としたため負。",
           keywords: [numberText(adWb, 1), numberText(adWt, 1), "負"], minKeywords: 3,
-          formula: "W_b=mR(T_1-T_2)/(\\kappa-1),\\quad W_t=\\kappa W_b",
-          steps: [inline("W_b=" + adMass + "\\times287(" + adT1 + "-" + numberText(adT2, 1) + ")/(" + adKappa + "-1)\\times10^{-3}=" + numberText(adWb, 1) + "\\,\\mathrm{kJ}"), inline("W_t=" + adKappa + "W_b=" + numberText(adWt, 1) + "\\,\\mathrm{kJ}")],
+          formula: "\\begin{aligned}W_b&=\\frac{mR(T_1-T_2)}{\\kappa-1}\\\\ W_t&=\\kappa W_b\\end{aligned}",
+          steps: [inline("W_b=\\frac{" + adMass + "\\times287(" + adT1 + "-" + numberText(adT2, 1) + ")}{" + adKappa + "-1}\\times10^{-3}=" + numberText(adWb, 1) + "\\,\\mathrm{kJ}"), inline("W_t=" + adKappa + "W_b=" + numberText(adWt, 1) + "\\,\\mathrm{kJ}")],
           explanation: "圧縮ではT2>T1となるため、系が外へする仕事を正とした値は負になる。",
         }),
       ],
@@ -1282,8 +1304,8 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
         examQuestion(id, 3, 1, 4, {
           topic: "entropy", genre: "定義", difficulty: 1, format: "text",
           prompt: "可逆微小過程での定義式とエントロピーの単位を書け。",
-          answer: inline("dS=\\delta Q_{\\mathrm{rev}}/T") + "、単位J/K。",
-          keywords: ["dS", "Q", "T", "J/K"], minKeywords: 3, formula: "dS=\\delta Q_{\\mathrm{rev}}/T",
+          answer: inline("dS=\\frac{\\delta Q_{\\mathrm{rev}}}{T}") + "、単位J/K。",
+          keywords: ["dS", "Q", "T", "J/K"], minKeywords: 3, formula: "dS=\\frac{\\delta Q_{\\mathrm{rev}}}{T}",
           steps: ["可逆熱量を用いることを示す。", "熱量を絶対温度で割るため単位はJ/K。"],
           explanation: "温度には絶対温度を使い、比エントロピーならさらに質量で割る。",
         }),
@@ -1292,8 +1314,8 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           prompt: "高温熱源のエントロピー変化を求めよ。",
           answer: numberText(entropyHotDelta, 4) + " kJ/K", numericAnswer: entropyHotDelta,
           expectedUnit: "kJ/K", acceptedUnits: { "J/K": 0.001, "kJ/K": 1 }, requiresUnit: true, tolerance: 0.002,
-          formula: "\\Delta S_{\\mathrm{hot}}=-Q/T_1",
-          steps: [inline("\\Delta S_{\\mathrm{hot}}=-" + entropyQ + "/" + entropyHot), inline("=" + numberText(entropyHotDelta, 4) + "\\,\\mathrm{kJ/K}")],
+          formula: "\\Delta S_{\\mathrm{hot}}=-\\frac{Q}{T_1}",
+          steps: [inline("\\Delta S_{\\mathrm{hot}}=-\\frac{" + entropyQ + "}{" + entropyHot + "}"), inline("=" + numberText(entropyHotDelta, 4) + "\\,\\mathrm{kJ\\,K^{-1}}")],
           explanation: "高温熱源は熱を失うので変化量は負。",
         }),
         examQuestion(id, 3, 3, 5, {
@@ -1301,8 +1323,8 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           prompt: "低温熱源のエントロピー変化を求めよ。",
           answer: "+" + numberText(entropyColdDelta, 4) + " kJ/K", numericAnswer: entropyColdDelta,
           expectedUnit: "kJ/K", acceptedUnits: { "J/K": 0.001, "kJ/K": 1 }, requiresUnit: true, tolerance: 0.002,
-          formula: "\\Delta S_{\\mathrm{cold}}=Q/T_2",
-          steps: [inline("\\Delta S_{\\mathrm{cold}}=" + entropyQ + "/" + entropyCold), inline("=" + numberText(entropyColdDelta, 4) + "\\,\\mathrm{kJ/K}")],
+          formula: "\\Delta S_{\\mathrm{cold}}=\\frac{Q}{T_2}",
+          steps: [inline("\\Delta S_{\\mathrm{cold}}=\\frac{" + entropyQ + "}{" + entropyCold + "}"), inline("=" + numberText(entropyColdDelta, 4) + "\\,\\mathrm{kJ\\,K^{-1}}")],
           explanation: "低温熱源は熱を受け取るので変化量は正。",
         }),
         examQuestion(id, 3, 4, 5, {
@@ -1310,8 +1332,8 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           prompt: "二熱源全体のエントロピー変化を求め、第2法則との関係を述べよ。",
           answer: "ΔS_total=" + numberText(entropyTotal, 4) + " kJ/K>0。有限温度差の不可逆熱移動なので増大する。",
           keywords: [numberText(entropyTotal, 4), "正", "不可逆", "増大"], minKeywords: 3,
-          formula: "\\Delta S_{\\mathrm{total}}=-Q/T_1+Q/T_2",
-          steps: [inline("\\Delta S_{\\mathrm{total}}=" + numberText(entropyHotDelta, 4) + "+" + numberText(entropyColdDelta, 4)), inline("=" + numberText(entropyTotal, 4) + "\\,\\mathrm{kJ/K}>0")],
+          formula: "\\Delta S_{\\mathrm{total}}=-\\frac{Q}{T_1}+\\frac{Q}{T_2}",
+          steps: [inline("\\Delta S_{\\mathrm{total}}=" + numberText(entropyHotDelta, 4) + "+" + numberText(entropyColdDelta, 4)), inline("=" + numberText(entropyTotal, 4) + "\\,\\mathrm{kJ\\,K^{-1}}>0")],
           explanation: "有限温度差で直接熱が移る不可逆過程では、全体系のエントロピーが増加する。",
         }),
       ],
@@ -1332,32 +1354,35 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           formula: "1\\to2:Q=0,\\ 2\\to3:V=C,\\ 3\\to4:Q=0,\\ 4\\to1:V=C",
           steps: ["右側の大体積から断熱圧縮で左へ進む。", "定容加熱、断熱膨張、定容放熱で閉じる。"],
           explanation: "二本の断熱曲線と二本の定容線で閉じ、囲まれた面積が正味仕事。",
-          diagram: "pv", sourceRefs: [rangeRef(4), rangeRef(5), FORMAT3_OTTO_REF],
+          diagram: "otto-pv", sourceRefs: [rangeRef(4), rangeRef(5), FORMAT3_OTTO_REF],
         }),
         examQuestion(id, 4, 2, 5, {
           topic: "otto", genre: "すきま容積", difficulty: 2, format: "number",
           prompt: "すきま容積Vcをccで求めよ。", answer: numberText(vc, 2) + " cc", numericAnswer: vc,
           expectedUnit: "cc", acceptedUnits: { "cm^3": 1, cc: 1, "m^3": 1e6 }, requiresUnit: true, tolerance: 0.1,
-          formula: "V_c=\\pi d^2l_c/4",
-          steps: [inline("d=" + d + "\\,\\mathrm{cm},\\ l_c=" + clearance + "\\,\\mathrm{cm}"), inline("V_c=\\pi(" + d + ")^2(" + clearance + ")/4=" + numberText(vc, 2) + "\\,\\mathrm{cc}")],
+          formula: "V_c=\\frac{\\pi d^2l_c}{4}",
+          steps: [inline("d=" + d + "\\,\\mathrm{cm},\\ l_c=" + clearance + "\\,\\mathrm{cm}"), inline("V_c=\\frac{\\pi(" + d + ")^2(" + clearance + ")}{4}=" + numberText(vc, 2) + "\\,\\mathrm{cc}")],
           explanation: "mmをcmへそろえて円筒体積を計算すると、結果はcm³すなわちcc。",
+          diagram: "piston",
           sourceRefs: [rangeRef(5), FORMAT3_OTTO_REF],
         }),
         examQuestion(id, 4, 3, 5, {
           topic: "otto", genre: "行程容積", difficulty: 2, format: "number",
           prompt: "行程容積Vsをccで求めよ。", answer: numberText(vs, 2) + " cc", numericAnswer: vs,
           expectedUnit: "cc", acceptedUnits: { "cm^3": 1, cc: 1, "m^3": 1e6 }, requiresUnit: true, tolerance: 0.2,
-          formula: "V_s=\\pi d^2L/4",
-          steps: [inline("L=" + stroke + "\\,\\mathrm{cm}"), inline("V_s=\\pi(" + d + ")^2(" + stroke + ")/4=" + numberText(vs, 2) + "\\,\\mathrm{cc}")],
+          formula: "V_s=\\frac{\\pi d^2L}{4}",
+          steps: [inline("L=" + stroke + "\\,\\mathrm{cm}"), inline("V_s=\\frac{\\pi(" + d + ")^2(" + stroke + ")}{4}=" + numberText(vs, 2) + "\\,\\mathrm{cc}")],
           explanation: "底面積へ上死点から下死点までの行程を掛ける。",
+          diagram: "piston",
           sourceRefs: [rangeRef(5), FORMAT3_OTTO_REF],
         }),
         examQuestion(id, 4, 4, 5, {
           topic: "otto", genre: "圧縮比", difficulty: 2, format: "number",
           prompt: "圧縮比εを求めよ。", answer: numberText(epsilon, 3), numericAnswer: epsilon, tolerance: 0.02,
-          formula: "\\varepsilon=(V_s+V_c)/V_c",
-          steps: [inline("\\varepsilon=(" + numberText(vs, 2) + "+" + numberText(vc, 2) + ")/" + numberText(vc, 2)), inline("\\varepsilon=" + numberText(epsilon, 3))],
+          formula: "\\varepsilon=\\frac{V_s+V_c}{V_c}",
+          steps: [inline("\\varepsilon=\\frac{" + numberText(vs, 2) + "+" + numberText(vc, 2) + "}{" + numberText(vc, 2) + "}"), inline("\\varepsilon=" + numberText(epsilon, 3))],
           explanation: "最大体積は行程容積とすきま容積の和、最小体積はすきま容積。",
+          diagram: "piston",
           sourceRefs: [rangeRef(5), FORMAT3_OTTO_REF],
         }),
         examQuestion(id, 4, 5, 5, {
@@ -1365,9 +1390,10 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           prompt: "理論熱効率と断熱圧縮後温度T2を求めよ。",
           answer: "η=" + numberText(ottoEta * 100, 2) + "%、T2=" + numberText(ottoT2, 1) + " K",
           keywords: [numberText(ottoEta * 100, 2), numberText(ottoT2, 1)], minKeywords: 2,
-          formula: "\\eta=1-1/\\varepsilon^{\\kappa-1},\\quad T_2=T_1\\varepsilon^{\\kappa-1}",
-          steps: [inline("\\eta=1-1/" + numberText(epsilon, 3) + "^{" + numberText(ottoKappa - 1, 2) + "}=" + numberText(ottoEta * 100, 2) + "\\%"), inline("T_1=" + (ottoIntakeC + 273) + "\\,\\mathrm{K}"), inline("T_2=" + (ottoIntakeC + 273) + "\\times" + numberText(epsilon, 3) + "^{" + numberText(ottoKappa - 1, 2) + "}=" + numberText(ottoT2, 1) + "\\,\\mathrm{K}")],
+          formula: "\\begin{aligned}\\eta&=1-\\frac{1}{\\varepsilon^{\\kappa-1}}\\\\ T_2&=T_1\\varepsilon^{\\kappa-1}\\end{aligned}",
+          steps: [inline("\\eta=1-\\frac{1}{" + numberText(epsilon, 3) + "^{" + numberText(ottoKappa - 1, 2) + "}}=" + numberText(ottoEta * 100, 2) + "\\%"), inline("T_1=" + (ottoIntakeC + 273) + "\\,\\mathrm{K}"), inline("T_2=" + (ottoIntakeC + 273) + "\\times" + numberText(epsilon, 3) + "^{" + numberText(ottoKappa - 1, 2) + "}=" + numberText(ottoT2, 1) + "\\,\\mathrm{K}")],
           explanation: "効率と圧縮後温度は同じεのκ−1乗を使い、吸気温度はKへ変換する。",
+          diagram: "otto-pv",
           sourceRefs: [rangeRef(4), rangeRef(5), FORMAT3_OTTO_REF],
         }),
       ],
@@ -1388,7 +1414,7 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           formula: "1\\to2:T=T_1,\\ 2\\to3:Q=0,\\ 3\\to4:T=T_2,\\ 4\\to1:Q=0",
           steps: ["高温等温線を上、低温等温線を下に置く。", "二本の断熱曲線で結び時計回りに矢印を付ける。"],
           explanation: "時計回りの閉曲線で、囲む面積が一周期の正味仕事。",
-          diagram: "pv", sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+          diagram: "carnot-pv", sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
         }),
         examQuestion(id, 5, 2, 5, {
           topic: "carnot", genre: "T-S線図", difficulty: 1, format: "diagram",
@@ -1398,15 +1424,16 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           formula: "Q=T\\Delta S",
           steps: ["等温過程を水平線、可逆断熱過程を鉛直線で描く。", "各等温線の下の長方形面積を熱量として示す。"],
           explanation: "可逆断熱ではΔS=0なので、T-S線図上では鉛直線。",
-          diagram: "ts", sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+          diagram: "carnot-ts", sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
         }),
         examQuestion(id, 5, 3, 5, {
           topic: "carnot", genre: "理論効率", difficulty: 2, format: "number",
           prompt: "理論熱効率を求めよ。", answer: numberText(carnotEta * 100, 2) + "%", numericAnswer: carnotEta * 100,
           expectedUnit: "%", acceptedUnits: { "%": 1 }, requiresUnit: true, tolerance: 0.1,
-          formula: "\\eta_c=1-T_2/T_1",
-          steps: [inline("T_1=" + highK + "\\,\\mathrm{K},\\ T_2=" + lowK + "\\,\\mathrm{K}"), inline("\\eta_c=1-" + lowK + "/" + highK + "=" + numberText(carnotEta * 100, 2) + "\\%")],
+          formula: "\\eta_c=1-\\frac{T_2}{T_1}",
+          steps: [inline("T_1=" + highK + "\\,\\mathrm{K},\\ T_2=" + lowK + "\\,\\mathrm{K}"), inline("\\eta_c=1-\\frac{" + lowK + "}{" + highK + "}=" + numberText(carnotEta * 100, 2) + "\\%")],
           explanation: "摂氏温度へ273を加え、必ず絶対温度比を使う。",
+          diagram: "carnot-pv",
           sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
         }),
         examQuestion(id, 5, 4, 5, {
@@ -1414,9 +1441,10 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           prompt: "受熱量Q1と仕事Wを求めよ。",
           answer: "Q1=" + numberText(carnotQIn, 2) + " kJ、W=" + numberText(carnotW, 2) + " kJ",
           keywords: [numberText(carnotQIn, 2), numberText(carnotW, 2)], minKeywords: 2,
-          formula: "Q_2/Q_1=T_2/T_1,\\quad W=Q_1-Q_2",
-          steps: [inline("Q_1=" + carnotQOut + "\\times" + highK + "/" + lowK + "=" + numberText(carnotQIn, 2) + "\\,\\mathrm{kJ}"), inline("W=" + numberText(carnotQIn, 2) + "-" + carnotQOut + "=" + numberText(carnotW, 2) + "\\,\\mathrm{kJ}")],
+          formula: "\\begin{aligned}\\frac{Q_2}{Q_1}&=\\frac{T_2}{T_1}\\\\ W&=Q_1-Q_2\\end{aligned}",
+          steps: [inline("Q_1=" + carnotQOut + "\\times\\frac{" + highK + "}{" + lowK + "}=" + numberText(carnotQIn, 2) + "\\,\\mathrm{kJ}"), inline("W=" + numberText(carnotQIn, 2) + "-" + carnotQOut + "=" + numberText(carnotW, 2) + "\\,\\mathrm{kJ}")],
           explanation: "熱量比から受熱量を戻し、受熱量と放熱量の差を正味仕事とする。",
+          diagram: "carnot-pv",
           sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
         }),
         examQuestion(id, 5, 5, 5, {
@@ -1424,9 +1452,10 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           prompt: "高温・低温熱源のエントロピー変化と合計を求めよ。",
           answer: "高温側" + numberText(carnotHotDelta, 5) + " kJ/K、低温側+" + numberText(carnotColdDelta, 5) + " kJ/K、合計0。",
           keywords: [numberText(carnotHotDelta, 5), numberText(carnotColdDelta, 5), "0"], minKeywords: 3,
-          formula: "\\Delta S_{\\mathrm{hot}}=-Q_1/T_1,\\quad\\Delta S_{\\mathrm{cold}}=Q_2/T_2",
-          steps: [inline("\\Delta S_{\\mathrm{hot}}=-" + numberText(carnotQIn, 2) + "/" + highK + "=" + numberText(carnotHotDelta, 5) + "\\,\\mathrm{kJ/K}"), inline("\\Delta S_{\\mathrm{cold}}=" + carnotQOut + "/" + lowK + "=" + numberText(carnotColdDelta, 5) + "\\,\\mathrm{kJ/K}"), inline("\\Delta S_{\\mathrm{total}}=0")],
+          formula: "\\begin{aligned}\\Delta S_{\\mathrm{hot}}&=-\\frac{Q_1}{T_1}\\\\ \\Delta S_{\\mathrm{cold}}&=\\frac{Q_2}{T_2}\\end{aligned}",
+          steps: [inline("\\Delta S_{\\mathrm{hot}}=-\\frac{" + numberText(carnotQIn, 2) + "}{" + highK + "}=" + numberText(carnotHotDelta, 5) + "\\,\\mathrm{kJ\\,K^{-1}}"), inline("\\Delta S_{\\mathrm{cold}}=\\frac{" + carnotQOut + "}{" + lowK + "}=" + numberText(carnotColdDelta, 5) + "\\,\\mathrm{kJ\\,K^{-1}}"), inline("\\Delta S_{\\mathrm{total}}=0")],
           explanation: "可逆カルノーでは両熱源の変化の大きさが等しく符号が反対なので合計ゼロ。",
+          diagram: "carnot-ts",
           sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
         }),
       ],

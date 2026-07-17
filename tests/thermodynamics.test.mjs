@@ -56,30 +56,42 @@ function checkNoForbidden(value, label) {
 }
 
 function checkMathStrings(value, katex, label) {
+  const rendered = [];
   for (const [path, valueString] of strings(value, label)) {
     assert.doesNotMatch(valueString, /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/, path + " control");
     assert.equal((valueString.match(/\\\(/g) ?? []).length, (valueString.match(/\\\)/g) ?? []).length, path + " delimiters");
     for (const match of valueString.matchAll(/\\\(([\s\S]*?)\\\)/g)) {
-      assert.doesNotThrow(() => katex.renderToString(match[1], {
-        displayMode: false,
-        output: "htmlAndMathml",
-        strict: "error",
-        throwOnError: true,
-        trust: false,
-      }), path + " inline TeX: " + match[1]);
+      assert.doesNotMatch(match[1], /\//, path + " inline uses stacked fractions");
+      let markup = "";
+      assert.doesNotThrow(() => {
+        markup = katex.renderToString(match[1], {
+          displayMode: false,
+          output: "htmlAndMathml",
+          strict: "error",
+          throwOnError: true,
+          trust: false,
+        });
+      }, path + " inline TeX: " + match[1]);
+      rendered.push(markup);
     }
   }
+  return rendered;
 }
 
 function checkFormula(tex, katex, label) {
   assert.doesNotMatch(tex, /\\\(|\\\)/, label + " pure TeX");
-  assert.doesNotThrow(() => katex.renderToString(tex, {
-    displayMode: true,
-    output: "htmlAndMathml",
-    strict: "error",
-    throwOnError: true,
-    trust: false,
-  }), label + " TeX");
+  assert.doesNotMatch(tex, /\//, label + " uses stacked fractions");
+  let markup = "";
+  assert.doesNotThrow(() => {
+    markup = katex.renderToString(tex, {
+      displayMode: true,
+      output: "htmlAndMathml",
+      strict: "error",
+      throwOnError: true,
+      trust: false,
+    });
+  }, label + " TeX");
+  return markup;
 }
 
 test("analysis contract fixes seven pages, six topics, and format3 Q3/Q4 only", async () => {
@@ -117,11 +129,35 @@ test("formula deck and practice pool meet coverage, source, scope, and TeX contr
     assert.ok(item.explanation.length >= 12, item.id + " explanation");
     if (item.formula) checkFormula(item.formula, katex, item.id);
   }
-  checkMathStrings(data.THERMODYNAMICS_FORMULAS, katex, "formula");
-  checkMathStrings(data.THERMODYNAMICS_QUESTIONS, katex, "question");
+  const tpCard = data.THERMODYNAMICS_FORMULAS.find((item) => item.id === "th-ad-tp");
+  const ottoQuestion = data.THERMODYNAMICS_QUESTIONS.find((item) => item.id === "th-q-otto-format3");
+  assert.ok(tpCard);
+  assert.ok(ottoQuestion);
+  assert.match(checkFormula(tpCard.formula, katex, tpCard.id), /<mfrac>/);
+  assert.match(checkFormula(ottoQuestion.formula, katex, ottoQuestion.id), /<mtable/);
+  const inlineMarkup = [
+    ...checkMathStrings(data.THERMODYNAMICS_FORMULAS, katex, "formula"),
+    ...checkMathStrings(data.THERMODYNAMICS_QUESTIONS, katex, "question"),
+  ];
+  assert.ok(inlineMarkup.some((markup) => /<mfrac>/.test(markup)), "inline fractions render as mfrac");
   checkNoForbidden(data.THERMODYNAMICS_FORMULAS, "formula");
   checkNoForbidden(data.THERMODYNAMICS_QUESTIONS, "question");
   assert.doesNotMatch(JSON.stringify(data.THERMODYNAMICS_QUESTIONS), /860 K|380 K|0\.0233/);
+  const cards = new Map(data.THERMODYNAMICS_FORMULAS.map((card) => [card.id, card]));
+  const questions = new Map(data.THERMODYNAMICS_QUESTIONS.map((question) => [question.id, question]));
+  assert.equal(cards.get("th-ad-pv").diagram, "pv");
+  assert.equal(cards.get("th-otto-cylinder").diagram, "piston");
+  for (const id of ["th-otto-processes", "th-otto-compression", "th-otto-efficiency", "th-otto-temperature"]) {
+    assert.equal(cards.get(id).diagram, "otto-pv", id);
+  }
+  for (const id of ["th-carnot-processes", "th-carnot-qin", "th-carnot-qout", "th-carnot-ratio", "th-carnot-efficiency"]) {
+    assert.equal(cards.get(id).diagram, "carnot-pv", id);
+  }
+  assert.equal(cards.get("th-carnot-entropy").diagram, "carnot-ts");
+  assert.equal(questions.get("th-q-otto-processes").diagram, "otto-pv");
+  assert.equal(questions.get("th-q-otto-format3").diagram, "piston");
+  assert.equal(questions.get("th-q-carnot-processes").diagram, "carnot-pv");
+  assert.equal(questions.get("th-q-carnot-entropy").diagram, "carnot-ts");
 });
 
 test("six expected exams are 5-major, 22-subquestion, full-range practice papers", async () => {
@@ -148,8 +184,17 @@ test("six expected exams are 5-major, 22-subquestion, full-range practice papers
       assert.ok(item.explanation.length >= 12, item.id + " explanation");
       if (item.formula) checkFormula(item.formula, katex, item.id);
     }
-    checkMathStrings(exam, katex, exam.id);
+    const inlineMarkup = checkMathStrings(exam, katex, exam.id);
+    assert.ok(inlineMarkup.some((markup) => /<mfrac>/.test(markup)), exam.id + " inline fractions render as mfrac");
     checkNoForbidden(exam, exam.id);
+    const diagramByField = new Map(exam.questions.map((question) => [`${question.major}.${question.sub}`, question.diagram]));
+    assert.equal(diagramByField.get("4.1"), "otto-pv", exam.id + " Otto P-V");
+    for (const field of ["4.2", "4.3", "4.4"]) assert.equal(diagramByField.get(field), "piston", exam.id + " " + field);
+    assert.equal(diagramByField.get("4.5"), "otto-pv", exam.id + " Otto efficiency");
+    assert.equal(diagramByField.get("5.1"), "carnot-pv", exam.id + " Carnot P-V");
+    assert.equal(diagramByField.get("5.2"), "carnot-ts", exam.id + " Carnot T-S");
+    for (const field of ["5.3", "5.4"]) assert.equal(diagramByField.get(field), "carnot-pv", exam.id + " " + field);
+    assert.equal(diagramByField.get("5.5"), "carnot-ts", exam.id + " Carnot entropy");
   }
 });
 

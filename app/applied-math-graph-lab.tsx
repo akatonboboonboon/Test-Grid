@@ -1077,6 +1077,19 @@ function make2DProjector(
   });
 }
 
+function zoomedBoundsFor2D(bounds: Bounds2, zoom: number): Bounds2 {
+  const centerX = (bounds.xMin + bounds.xMax) / 2;
+  const centerY = (bounds.yMin + bounds.yMax) / 2;
+  const xSpan = Math.max(1e-9, (bounds.xMax - bounds.xMin) / zoom);
+  const ySpan = Math.max(1e-9, (bounds.yMax - bounds.yMin) / zoom);
+  return {
+    xMin: centerX - xSpan / 2,
+    xMax: centerX + xSpan / 2,
+    yMin: centerY - ySpan / 2,
+    yMax: centerY + ySpan / 2,
+  };
+}
+
 function make3DProjector(
   width: number,
   height: number,
@@ -1213,8 +1226,9 @@ function draw2DGraph(
   zoom: number,
 ) {
   const bounds = boundsFor2D(graph, sampled);
+  const visibleBounds = zoomedBoundsFor2D(bounds, zoom);
   const project = make2DProjector(width, height, bounds, zoom);
-  draw2DGrid(context, width, height, bounds, project);
+  draw2DGrid(context, width, height, visibleBounds, project);
 
   if (graph.kind === "function-2d" && sampled.kind === "function-2d") {
     context.save();
@@ -1393,7 +1407,8 @@ function draw3DGraph(
 
 function GraphCanvas({ graph }: { graph: GraphSpec }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const activePointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchDistanceRef = useRef<number | null>(null);
   const descriptionId = useId();
   const [view, setView] = useState<ViewState>(DEFAULT_VIEW);
   const sampled = useMemo(() => sampleGraph(graph), [graph]);
@@ -1451,6 +1466,27 @@ function GraphCanvas({ graph }: { graph: GraphSpec }) {
     return () => observer.disconnect();
   }, [draw]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? Math.max(320, canvas.clientHeight)
+          : 1;
+      const normalizedDelta = clamp(event.deltaY * unit, -240, 240);
+      const zoomFactor = Math.exp(-normalizedDelta * 0.0022);
+      setView((current) => ({
+        ...current,
+        zoom: clamp(current.zoom * zoomFactor, 0.45, 3.4),
+      }));
+    };
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, []);
+
   function rotate(horizontal: number, vertical: number) {
     if (!is3D) return;
     setView((current) => ({
@@ -1468,23 +1504,48 @@ function GraphCanvas({ graph }: { graph: GraphSpec }) {
   }
 
   function onPointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (!is3D) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
     event.currentTarget.focus();
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const pointers = [...activePointersRef.current.values()];
+    pinchDistanceRef.current = pointers.length >= 2
+      ? Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y)
+      : null;
   }
 
   function onPointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
-    const drag = dragRef.current;
-    if (!is3D || !drag || drag.pointerId !== event.pointerId) return;
-    const horizontal = (event.clientX - drag.x) * 0.009;
-    const vertical = (event.clientY - drag.y) * 0.009;
-    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-    rotate(horizontal, vertical);
+    const previous = activePointersRef.current.get(event.pointerId);
+    if (!previous) return;
+    activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const pointers = [...activePointersRef.current.values()];
+    if (pointers.length >= 2) {
+      const distance = Math.hypot(
+        pointers[0].x - pointers[1].x,
+        pointers[0].y - pointers[1].y,
+      );
+      const previousDistance = pinchDistanceRef.current;
+      if (previousDistance && previousDistance > 0 && distance > 0) {
+        zoom(clamp(distance / previousDistance, 0.82, 1.22));
+      }
+      pinchDistanceRef.current = distance;
+      return;
+    }
+    pinchDistanceRef.current = null;
+    if (is3D) {
+      rotate(
+        (event.clientX - previous.x) * 0.009,
+        (event.clientY - previous.y) * 0.009,
+      );
+    }
   }
 
   function endPointer(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+    activePointersRef.current.delete(event.pointerId);
+    const pointers = [...activePointersRef.current.values()];
+    pinchDistanceRef.current = pointers.length >= 2
+      ? Math.hypot(pointers[0].x - pointers[1].x, pointers[0].y - pointers[1].y)
+      : null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -1530,7 +1591,7 @@ function GraphCanvas({ graph }: { graph: GraphSpec }) {
       </div>
       <canvas
         ref={canvasRef}
-        className={styles.canvas}
+        className={[styles.canvas, is3D ? styles.rotatableCanvas : ""].filter(Boolean).join(" ")}
         role="img"
         tabIndex={0}
         aria-label={graph.title + "のインタラクティブグラフ"}
@@ -1540,23 +1601,17 @@ function GraphCanvas({ graph }: { graph: GraphSpec }) {
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
+        onLostPointerCapture={endPointer}
         onKeyDown={onKeyDown}
       />
+      <p className={styles.gestureHint}>
+        {is3D ? "ドラッグで回転 · " : ""}ホイール／トラックパッド／ピンチで拡大縮小
+      </p>
       <div className={styles.canvasControls} role="group" aria-label="グラフ表示操作">
-        {is3D && (
-          <>
-            <button type="button" onClick={() => rotate(-0.16, 0)} aria-label="左へ回転">←</button>
-            <button type="button" onClick={() => rotate(0, -0.13)} aria-label="上へ回転">↑</button>
-            <button type="button" onClick={() => rotate(0, 0.13)} aria-label="下へ回転">↓</button>
-            <button type="button" onClick={() => rotate(0.16, 0)} aria-label="右へ回転">→</button>
-          </>
-        )}
-        <button type="button" onClick={() => zoom(1.12)} aria-label="拡大">＋</button>
-        <button type="button" onClick={() => zoom(1 / 1.12)} aria-label="縮小">−</button>
         <button type="button" onClick={() => setView(DEFAULT_VIEW)}>表示を戻す</button>
       </div>
       <p id={descriptionId} className={styles.canvasHelp}>
-        {graph.description}。{is3D ? "ドラッグまたは矢印キーで回転、" : ""}＋/−キーで拡大縮小、Homeキーで初期表示に戻せます。
+        {graph.description}。キーボードでは{is3D ? "矢印キーで回転、" : ""}＋/−キーで拡大縮小、Homeキーで初期表示に戻せます。
       </p>
     </section>
   );

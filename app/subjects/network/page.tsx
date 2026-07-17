@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ALL_LAYERS,
   DEFAULT_CARDS,
@@ -15,30 +15,18 @@ import {
   type ProtocolCard,
 } from "../../protocols";
 
-type Mode = "sum" | "identify";
-type Phase = "idle" | "countdown" | "flash" | "answer" | "identify" | "result";
+type Phase = "idle" | "countdown" | "flash" | "answer" | "result";
 
 type Stats = {
   sumSessions: number;
   sumCorrect: number;
-  identifyAnswers: number;
-  identifyCorrect: number;
   streak: number;
   bestStreak: number;
-};
-
-type IdentifyAnswer = {
-  card: ProtocolCard;
-  chosen: Layer | null;
-  correct: boolean;
-  timedOut: boolean;
 };
 
 const EMPTY_STATS: Stats = {
   sumSessions: 0,
   sumCorrect: 0,
-  identifyAnswers: 0,
-  identifyCorrect: 0,
   streak: 0,
   bestStreak: 0,
 };
@@ -47,9 +35,6 @@ const MIN_CARD_COUNT = 1;
 const MAX_CARD_COUNT = 100;
 const MIN_SPEED_MS = 100;
 const MAX_SPEED_MS = 10_000;
-const MIN_IDENTIFY_LIMIT_MS = 500;
-const MAX_IDENTIFY_LIMIT_MS = 30_000;
-const DEFAULT_IDENTIFY_LIMIT_MS = 3_000;
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -63,13 +48,6 @@ function normalizeCardCount(value: string | number) {
 function normalizeSpeed(value: string | number) {
   const seconds = Number(value);
   return Number.isFinite(seconds) ? clamp(Math.round(seconds * 1000), MIN_SPEED_MS, MAX_SPEED_MS) : 600;
-}
-
-function normalizeIdentifyLimit(value: string | number) {
-  const seconds = Number(value);
-  return Number.isFinite(seconds)
-    ? clamp(Math.round(seconds * 1000), MIN_IDENTIFY_LIMIT_MS, MAX_IDENTIFY_LIMIT_MS)
-    : DEFAULT_IDENTIFY_LIMIT_MS;
 }
 
 function buildSequence(items: ProtocolCard[], count: number) {
@@ -100,8 +78,6 @@ function normalizeStats(value: unknown): Stats {
   return {
     sumSessions: safeNumber(saved.sumSessions),
     sumCorrect: safeNumber(saved.sumCorrect),
-    identifyAnswers: safeNumber(saved.identifyAnswers),
-    identifyCorrect: safeNumber(saved.identifyCorrect),
     streak: safeNumber(saved.streak),
     bestStreak: safeNumber(saved.bestStreak),
   };
@@ -111,23 +87,17 @@ export default function Home() {
   const [cards, setCards] = useState<ProtocolCard[]>(DEFAULT_CARDS);
   const [stats, setStats] = useState<Stats>(EMPTY_STATS);
   const [hydrated, setHydrated] = useState(false);
-  const [mode, setMode] = useState<Mode>("sum");
   const [phase, setPhase] = useState<Phase>("idle");
   const [cardCount, setCardCount] = useState(5);
   const [cardCountDraft, setCardCountDraft] = useState("5");
   const [speed, setSpeed] = useState(600);
   const [speedDraft, setSpeedDraft] = useState("0.6");
-  const [identifyLimit, setIdentifyLimit] = useState(DEFAULT_IDENTIFY_LIMIT_MS);
-  const [identifyLimitDraft, setIdentifyLimitDraft] = useState("3");
-  const [identifyRemaining, setIdentifyRemaining] = useState(DEFAULT_IDENTIFY_LIMIT_MS);
   const [sequence, setSequence] = useState<ProtocolCard[]>([]);
   const [index, setIndex] = useState(0);
   const [countdown, setCountdown] = useState(3);
   const [termVisible, setTermVisible] = useState(true);
   const [answer, setAnswer] = useState("");
   const [sumCorrect, setSumCorrect] = useState<boolean | null>(null);
-  const [identifyAnswers, setIdentifyAnswers] = useState<IdentifyAnswer[]>([]);
-  const [feedback, setFeedback] = useState<{ chosen: Layer | null; correct: boolean; timedOut: boolean } | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newFullName, setNewFullName] = useState("");
@@ -136,7 +106,6 @@ export default function Home() {
   const answerRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const editorCloseRef = useRef<HTMLButtonElement>(null);
-  const identifyLockedRef = useRef(false);
 
   /* Device-local preferences can only be restored after the client mounts. */
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -147,11 +116,9 @@ export default function Home() {
     const settings = savedSettings && typeof savedSettings === "object" ? savedSettings as {
       cardCount?: unknown;
       speed?: unknown;
-      identifyLimit?: unknown;
     } : {
       cardCount: 5,
       speed: 600,
-      identifyLimit: DEFAULT_IDENTIFY_LIMIT_MS,
     };
     const restoredCount = typeof settings.cardCount === "number"
       ? normalizeCardCount(settings.cardCount)
@@ -159,16 +126,10 @@ export default function Home() {
     const restoredSpeed = typeof settings.speed === "number"
       ? clamp(Math.round(settings.speed), MIN_SPEED_MS, MAX_SPEED_MS)
       : 600;
-    const restoredIdentifyLimit = typeof settings.identifyLimit === "number"
-      ? clamp(Math.round(settings.identifyLimit), MIN_IDENTIFY_LIMIT_MS, MAX_IDENTIFY_LIMIT_MS)
-      : DEFAULT_IDENTIFY_LIMIT_MS;
     setCardCount(restoredCount);
     setCardCountDraft(String(restoredCount));
     setSpeed(restoredSpeed);
     setSpeedDraft(String(Number((restoredSpeed / 1000).toFixed(2))));
-    setIdentifyLimit(restoredIdentifyLimit);
-    setIdentifyLimitDraft(String(Number((restoredIdentifyLimit / 1000).toFixed(1))));
-    setIdentifyRemaining(restoredIdentifyLimit);
     setHydrated(true);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -177,8 +138,8 @@ export default function Home() {
     if (!hydrated) return;
     storageWrite("layer-sum-cards-v1", cards);
     storageWrite("layer-sum-stats-v1", stats);
-    storageWrite("layer-sum-settings-v1", { cardCount, speed, identifyLimit });
-  }, [cards, stats, cardCount, speed, identifyLimit, hydrated]);
+    storageWrite("layer-sum-settings-v1", { cardCount, speed });
+  }, [cards, stats, cardCount, speed, hydrated]);
 
   useEffect(() => {
     if (!editorOpen) return;
@@ -234,27 +195,7 @@ export default function Home() {
   }, [sequence]);
   const expectedLabel = formatTotals(expectedSums);
 
-  const identifyScore = identifyAnswers.filter((item) => item.correct).length;
   const currentCard = sequence[index];
-
-  const finishIdentify = useCallback((chosen: Layer | null) => {
-    if (phase !== "identify" || feedback || !currentCard || identifyLockedRef.current) return;
-    identifyLockedRef.current = true;
-    const correct = chosen !== null && cardLayers(currentCard).includes(chosen);
-    const timedOut = chosen === null;
-    setFeedback({ chosen, correct, timedOut });
-    setIdentifyAnswers((previous) => [...previous, { card: currentCard, chosen, correct, timedOut }]);
-    setStats((previous) => {
-      const streak = correct ? previous.streak + 1 : 0;
-      return {
-        ...previous,
-        identifyAnswers: previous.identifyAnswers + 1,
-        identifyCorrect: previous.identifyCorrect + (correct ? 1 : 0),
-        streak,
-        bestStreak: Math.max(previous.bestStreak, streak),
-      };
-    });
-  }, [phase, feedback, currentCard]);
 
   useEffect(() => {
     if (phase !== "countdown") return;
@@ -264,11 +205,11 @@ export default function Home() {
       } else {
         setIndex(0);
         setTermVisible(true);
-        setPhase(mode === "sum" ? "flash" : "identify");
+        setPhase("flash");
       }
     }, 560);
     return () => window.clearTimeout(timer);
-  }, [phase, countdown, mode]);
+  }, [phase, countdown]);
 
   useEffect(() => {
     if (phase !== "flash" || !currentCard) return;
@@ -296,61 +237,20 @@ export default function Home() {
     if (phase === "answer") answerRef.current?.focus();
   }, [phase]);
 
-  useEffect(() => {
-    if (phase !== "identify" || !feedback) return;
-    const timer = window.setTimeout(() => {
-      if (index < sequence.length - 1) {
-        setIndex((value) => value + 1);
-        setFeedback(null);
-      } else {
-        setFeedback(null);
-        setPhase("result");
-      }
-    }, 680);
-    return () => window.clearTimeout(timer);
-  }, [phase, feedback, index, sequence.length]);
-
-  useEffect(() => {
-    if (phase !== "identify" || feedback || !currentCard) return;
-    identifyLockedRef.current = false;
-    const deadline = performance.now() + identifyLimit;
-    const startFrame = window.requestAnimationFrame(() => setIdentifyRemaining(identifyLimit));
-    const updateClock = () => {
-      setIdentifyRemaining(Math.max(0, deadline - performance.now()));
-    };
-    const interval = window.setInterval(updateClock, 100);
-    const timeout = window.setTimeout(() => {
-      setIdentifyRemaining(0);
-      finishIdentify(null);
-    }, identifyLimit);
-    return () => {
-      window.cancelAnimationFrame(startFrame);
-      window.clearInterval(interval);
-      window.clearTimeout(timeout);
-    };
-  }, [phase, feedback, currentCard, identifyLimit, finishIdentify]);
-
   function startRound() {
     if (pool.length === 0) return;
     const nextCount = normalizeCardCount(cardCountDraft);
     const nextSpeed = normalizeSpeed(speedDraft);
-    const nextIdentifyLimit = normalizeIdentifyLimit(identifyLimitDraft);
     setCardCount(nextCount);
     setCardCountDraft(String(nextCount));
     setSpeed(nextSpeed);
     setSpeedDraft(String(Number((nextSpeed / 1000).toFixed(2))));
-    setIdentifyLimit(nextIdentifyLimit);
-    setIdentifyLimitDraft(String(Number((nextIdentifyLimit / 1000).toFixed(1))));
-    setIdentifyRemaining(nextIdentifyLimit);
-    identifyLockedRef.current = false;
     setSequence(buildSequence(pool, nextCount));
     setIndex(0);
     setCountdown(3);
     setTermVisible(true);
     setAnswer("");
     setSumCorrect(null);
-    setIdentifyAnswers([]);
-    setFeedback(null);
     setPhase("countdown");
   }
 
@@ -370,16 +270,6 @@ export default function Home() {
       };
     });
     setPhase("result");
-  }
-
-  function answerLayer(chosen: Layer) {
-    finishIdentify(chosen);
-  }
-
-  function changeMode(nextMode: Mode) {
-    setMode(nextMode);
-    setPhase("idle");
-    setSequence([]);
   }
 
   function updateCard(id: string, patch: Partial<ProtocolCard>) {
@@ -424,9 +314,6 @@ export default function Home() {
       if (editorOpen) return;
       const target = event.target as HTMLElement | null;
       if (target?.matches("input, select, textarea, button")) return;
-      if (phase === "identify" && /^[1-7]$/.test(event.key)) {
-        answerLayer(Number(event.key) as Layer);
-      }
       if ((phase === "idle" || phase === "result") && event.code === "Space") {
         event.preventDefault();
         startRound();
@@ -437,8 +324,8 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
-  const totalAccuracy = stats.identifyAnswers
-    ? Math.round((stats.identifyCorrect / stats.identifyAnswers) * 100)
+  const sumAccuracy = stats.sumSessions
+    ? Math.round((stats.sumCorrect / stats.sumSessions) * 100)
     : 0;
 
   const stageClass = `stage stage-${phase}`;
@@ -456,7 +343,7 @@ export default function Home() {
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {cards.filter((card) => card.enabled).length} CARDS</span>
           <Link className="outline-button header-link memory-open-button" href="/subjects/network/cards">暗記帳を開く</Link>
-          <Link className="outline-button header-link" href="/rapid/network">ランキング即答</Link>
+          <Link className="outline-button header-link" href="/rapid/network">時間制限つき層即答・ランキング</Link>
           <button className="outline-button" type="button" onClick={() => setEditorOpen(true)} disabled={!["idle", "result"].includes(phase)}>
             カードを編集
           </button>
@@ -471,30 +358,12 @@ export default function Home() {
           <Link className="network-memory-callout" href="/subjects/network/cards">
             <span>暗記帳</span><strong>層・正式名称・働きを覚える</strong><b aria-hidden="true">開く →</b>
           </Link>
+          <Link className="network-memory-callout" href="/rapid/network">
+            <span>時間制限つき</span><strong>層を即答・連続正解・ランキング</strong><b aria-hidden="true">挑戦する →</b>
+          </Link>
         </section>
 
         <section className="practice-panel" aria-label="練習エリア">
-          <div className="mode-switch" role="tablist" aria-label="練習モード">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "sum"}
-              className={mode === "sum" ? "active" : ""}
-              onClick={() => changeMode("sum")}
-            >
-              <span>01</span> フラッシュ暗算
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "identify"}
-              className={mode === "identify" ? "active" : ""}
-              onClick={() => changeMode("identify")}
-            >
-              <span>02</span> 層を即答
-            </button>
-          </div>
-
           <div className={stageClass} aria-live="polite">
             {phase === "idle" && (
               <div className="idle-stage">
@@ -505,8 +374,8 @@ export default function Home() {
                 </div>
                 <div className="idle-copy">
                   <span className="ready-pill"><i /> READY</span>
-                  <h2>{mode === "sum" ? "見えた層を、頭の中で加算。" : "考える前に、1〜7を押す。"}</h2>
-                  <p>{mode === "sum" ? "略語だけが順番に現れます。最後に層番号の合計を入力してください。" : "略語を見たら対応する層番号を選択。反射速度で定着させます。"}</p>
+                  <h2>見えた層を、頭の中で加算。</h2>
+                  <p>略語だけが順番に現れます。最後に層番号の合計を入力してください。</p>
                 </div>
               </div>
             )}
@@ -515,11 +384,7 @@ export default function Home() {
               <div className="countdown-stage">
                 <span>FOCUS</span>
                 <strong key={countdown}>{countdown}</strong>
-                <small>
-                  {sequence.length} CARDS / {mode === "sum"
-                    ? `${speed} MS`
-                    : `${Number((identifyLimit / 1000).toFixed(1))} SEC / QUESTION`}
-                </small>
+                <small>{sequence.length} CARDS / {speed} MS</small>
               </div>
             )}
 
@@ -555,47 +420,7 @@ export default function Home() {
               </div>
             )}
 
-            {phase === "identify" && currentCard && (
-              <div className="identify-stage">
-                <div className="flash-meta"><span>CHOOSE THE LAYER</span><span>{String(index + 1).padStart(2, "0")} / {String(sequence.length).padStart(2, "0")}</span></div>
-                <div
-                  className={`identify-timer ${!feedback && identifyRemaining <= identifyLimit * 0.25 ? "urgent" : ""}`}
-                  aria-hidden="true"
-                >
-                  <strong>{feedback?.timedOut ? "TIME UP" : `${(identifyRemaining / 1000).toFixed(1)}s`}</strong>
-                  <span className="identify-timer-track">
-                    <i style={{ width: `${Math.max(0, Math.min(100, (identifyRemaining / identifyLimit) * 100))}%` }} />
-                  </span>
-                </div>
-                <p className="sr-announcement" aria-live="polite">
-                  {`${currentCard.label}。制限時間は${Number((identifyLimit / 1000).toFixed(1))}秒です。`}
-                </p>
-                <div className={`identify-card ${feedback ? (feedback.correct ? "correct" : "wrong") : ""}`} data-layer={currentCard.layer}>
-                  <strong>{currentCard.label}</strong>
-                  {feedback && <small>{feedback.timedOut
-                    ? `時間切れ — ${cardLayerLabel(currentCard)} が正解`
-                    : feedback.correct
-                      ? `正解 — ${cardLayerLabel(currentCard)}`
-                      : `${cardLayerLabel(currentCard)} が正解`}</small>}
-                </div>
-                <div className="layer-keypad" aria-label="層番号を選ぶ">
-                  {ALL_LAYERS.map((layer) => (
-                    <button
-                      type="button"
-                      key={layer}
-                      aria-label={`第${layer}層`}
-                      onClick={() => answerLayer(layer)}
-                      disabled={Boolean(feedback)}
-                      className={feedback?.chosen === layer ? (feedback.correct ? "picked-correct" : "picked-wrong") : feedback && cardLayers(currentCard).includes(layer) ? "actual" : ""}
-                    >
-                      <span>{layer}</span><small>LAYER</small>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {phase === "result" && mode === "sum" && (
+            {phase === "result" && (
               <div className="result-stage">
                 <div className={`result-banner ${sumCorrect ? "correct" : "wrong"}`}>
                   <span>{sumCorrect ? "PERFECT" : "ONE MORE"}</span>
@@ -618,41 +443,10 @@ export default function Home() {
               </div>
             )}
 
-            {phase === "result" && mode === "identify" && (
-              <div className="result-stage identify-result">
-                <div className={`result-banner ${identifyScore === sequence.length ? "correct" : "mixed"}`}>
-                  <span>RESULT</span>
-                  <strong>{identifyScore}<small>/{sequence.length}</small></strong>
-                  <p>{identifyScore === sequence.length ? "全問正解。反射で取れています。" : "間違えた語だけ、もう一度確認。"}</p>
-                </div>
-                <div className="identify-review">
-                  {identifyAnswers.map((item, answerIndex) => (
-                    <details key={`${item.card.id}-${answerIndex}`} className={item.correct ? "correct" : "wrong"} open={!item.correct}>
-                      <summary>
-                        <span>{item.card.label}</span><strong>{cardLayerLabel(item.card)}</strong>
-                        {!item.correct && <small>{item.timedOut ? "時間切れ" : `回答 L${item.chosen}`}</small>}
-                      </summary>
-                      <div>
-                        {item.card.fullName && <strong>{item.card.fullName}</strong>}
-                        <p>{item.card.description || "このプロトコルの説明は暗記帳で確認できます。"}</p>
-                        {item.card.note && <p>{item.card.note}</p>}
-                        <Link href={"/cards?subject=network&q=" + encodeURIComponent(item.card.label)}>
-                          {item.correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}
-                        </Link>
-                      </div>
-                    </details>
-                  ))}
-                </div>
-                <div className="result-actions">
-                  <button type="button" className="primary-button" onClick={startRound}>もう一度</button>
-                  <button type="button" className="text-button" onClick={() => setPhase("idle")}>設定に戻る</button>
-                </div>
-              </div>
-            )}
           </div>
         </section>
 
-        {!["countdown", "flash", "answer", "identify"].includes(phase) && (
+        {!["countdown", "flash", "answer"].includes(phase) && (
           <aside className="control-panel" aria-label="練習設定">
             <div className="control-heading"><span>SESSION SETUP</span><strong>練習設定</strong></div>
 
@@ -691,94 +485,52 @@ export default function Home() {
               </div>
             </fieldset>
 
-            {mode === "sum" && (
-              <fieldset>
-                <legend><span>02</span> 1枚の表示時間</legend>
-                <div className="number-setting">
-                  <div className="number-input-shell">
-                    <input
-                      id="flash-speed"
-                      type="number"
-                      inputMode="decimal"
-                      min="0.1"
-                      max="10"
-                      step="0.05"
-                      value={speedDraft}
-                      onChange={(event) => {
-                        setSpeedDraft(event.target.value);
-                        const parsed = Number(event.target.value);
-                        if (Number.isFinite(parsed) && parsed >= 0.1 && parsed <= 10) {
-                          setSpeed(Math.round(parsed * 1000));
-                        }
-                      }}
-                      onBlur={() => {
-                        const next = normalizeSpeed(speedDraft);
-                        setSpeed(next);
-                        setSpeedDraft(String(Number((next / 1000).toFixed(2))));
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") event.currentTarget.blur();
-                      }}
-                      aria-describedby="flash-speed-help"
-                    />
-                    <span>秒</span>
-                  </div>
-                  <small id="flash-speed-help">0.1〜10秒。小数で自由に指定できます。</small>
+            <fieldset>
+              <legend><span>02</span> 1枚の表示時間</legend>
+              <div className="number-setting">
+                <div className="number-input-shell">
+                  <input
+                    id="flash-speed"
+                    type="number"
+                    inputMode="decimal"
+                    min="0.1"
+                    max="10"
+                    step="0.05"
+                    value={speedDraft}
+                    onChange={(event) => {
+                      setSpeedDraft(event.target.value);
+                      const parsed = Number(event.target.value);
+                      if (Number.isFinite(parsed) && parsed >= 0.1 && parsed <= 10) {
+                        setSpeed(Math.round(parsed * 1000));
+                      }
+                    }}
+                    onBlur={() => {
+                      const next = normalizeSpeed(speedDraft);
+                      setSpeed(next);
+                      setSpeedDraft(String(Number((next / 1000).toFixed(2))));
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.currentTarget.blur();
+                    }}
+                    aria-describedby="flash-speed-help"
+                  />
+                  <span>秒</span>
                 </div>
-              </fieldset>
-            )}
-
-            {mode === "identify" && (
-              <fieldset>
-                <legend><span>02</span> 1問の制限時間</legend>
-                <div className="number-setting">
-                  <div className="number-input-shell">
-                    <input
-                      id="identify-limit"
-                      type="number"
-                      inputMode="decimal"
-                      min="0.5"
-                      max="30"
-                      step="0.1"
-                      value={identifyLimitDraft}
-                      onChange={(event) => {
-                        setIdentifyLimitDraft(event.target.value);
-                        const parsed = Number(event.target.value);
-                        if (Number.isFinite(parsed) && parsed >= 0.5 && parsed <= 30) {
-                          setIdentifyLimit(Math.round(parsed * 1000));
-                        }
-                      }}
-                      onBlur={() => {
-                        const next = normalizeIdentifyLimit(identifyLimitDraft);
-                        setIdentifyLimit(next);
-                        setIdentifyLimitDraft(String(Number((next / 1000).toFixed(1))));
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") event.currentTarget.blur();
-                      }}
-                      aria-describedby="identify-limit-help"
-                    />
-                    <span>秒</span>
-                  </div>
-                  <small id="identify-limit-help">0.5〜30秒。1問ごとの制限時間です。</small>
-                </div>
-              </fieldset>
-            )}
+                <small id="flash-speed-help">0.1〜10秒。小数で自由に指定できます。</small>
+              </div>
+            </fieldset>
 
             <button type="button" className="start-button" onClick={startRound} disabled={pool.length === 0}>
-              <span>{mode === "sum" ? "暗算を始める" : "即答を始める"}</span>
+              <span>暗算を始める</span>
               <b>START →</b>
             </button>
-            <p className="keyboard-hint">{mode === "sum"
-              ? <><kbd>ENTER</kbd> で回答を確定</>
-              : <><kbd>1</kbd>〜<kbd>7</kbd> キーでも回答</>}
-            </p>
+            <p className="keyboard-hint"><kbd>ENTER</kbd> で回答を確定</p>
           </aside>
         )}
 
         <section className="stats-strip" aria-label="学習記録">
           <div><span>BEST STREAK</span><strong>{stats.bestStreak}<small>連続</small></strong></div>
-          <div><span>LAYER ACCURACY</span><strong>{totalAccuracy}<small>%</small></strong></div>
+          <div><span>SUM ACCURACY</span><strong>{sumAccuracy}<small>%</small></strong></div>
           <div><span>SUM SESSIONS</span><strong>{stats.sumSessions}<small>回</small></strong></div>
           <p>記録はこの端末だけに保存されます。</p>
         </section>

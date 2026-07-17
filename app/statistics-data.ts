@@ -21,6 +21,7 @@ export type StatisticsFormulaCard = {
   title: string;
   prompt: string;
   formula: string;
+  expandedFormula?: string;
   explanation: string;
   cue: string;
   example?: string;
@@ -44,6 +45,7 @@ export type StatisticsQuestion = {
   keywords?: string[];
   minKeywords?: number;
   formula?: string;
+  expandedFormula?: string;
   steps: string[];
   explanation: string;
   source: "course-range";
@@ -114,9 +116,10 @@ const CORE_STATISTICS_FORMULAS: StatisticsFormulaCard[] = [
     title: "平均",
     prompt: "n個のデータの平均 x̄ は？",
     formula: "\\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_i",
+    expandedFormula: "\\bar{x}=\\frac{x_1+x_2+\\cdots+x_n}{n}",
     explanation: "全データの合計を個数で割る。度数があるときは『値×度数』の合計を総度数で割る。",
     cue: "合計 ÷ 個数",
-    example: "4, 6, 8 の平均は (4+6+8)/3 = 6",
+    example: "データ \\(4,6,8\\) の平均は \\(\\bar{x}=\\frac{4+6+8}{3}=6\\)。",
   },
   {
     id: "stats-variance",
@@ -124,6 +127,7 @@ const CORE_STATISTICS_FORMULAS: StatisticsFormulaCard[] = [
     title: "母分散",
     prompt: "データの母分散 σ² は？",
     formula: "\\sigma^2=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})^2",
+    expandedFormula: "\\sigma^2=\\frac{(x_1-\\bar{x})^2+(x_2-\\bar{x})^2+\\cdots+(x_n-\\bar{x})^2}{n}",
     explanation: "平均からの偏差を二乗し、その平均を取る。母分散では n で割る。",
     cue: "偏差を二乗 → 平均",
   },
@@ -169,6 +173,7 @@ const CORE_STATISTICS_FORMULAS: StatisticsFormulaCard[] = [
     title: "共分散",
     prompt: "X と Y の母共分散は？",
     formula: "\\sigma_{xy}=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})(y_i-\\bar{y})",
+    expandedFormula: "\\sigma_{xy}=\\frac{(x_1-\\bar{x})(y_1-\\bar{y})+(x_2-\\bar{x})(y_2-\\bar{y})+\\cdots+(x_n-\\bar{x})(y_n-\\bar{y})}{n}",
     explanation: "2つの偏差の積の平均。同じ向きに動けば正、逆向きなら負になる。",
     cue: "Xの偏差 × Yの偏差 の平均",
   },
@@ -286,6 +291,7 @@ const CORE_STATISTICS_FORMULAS: StatisticsFormulaCard[] = [
     title: "全確率の公式",
     prompt: "場合分け H1,…,Hk からAの確率を求めるには？",
     formula: "P(A)=\\sum_i P(A\\mid H_i)P(H_i)",
+    expandedFormula: "P(A)=P(A\\mid H_1)P(H_1)+P(A\\mid H_2)P(H_2)+\\cdots+P(A\\mid H_n)P(H_n)",
     explanation: "原因ごとに『その原因の確率×その条件でAとなる確率』を足す。",
     cue: "枝ごとの掛け算を全部足す",
   },
@@ -304,6 +310,7 @@ const CORE_STATISTICS_FORMULAS: StatisticsFormulaCard[] = [
     title: "離散型の期待値",
     prompt: "値 xi、確率 pi の期待値は？",
     formula: "E[X]=\\sum_i x_i p_i",
+    expandedFormula: "E[X]=x_1p_1+x_2p_2+\\cdots+x_np_n",
     explanation: "各値にその確率を掛けた加重平均。",
     cue: "値 × 確率 を合計",
   },
@@ -313,6 +320,7 @@ const CORE_STATISTICS_FORMULAS: StatisticsFormulaCard[] = [
     title: "離散型の分散",
     prompt: "離散型確率変数の分散は？",
     formula: "V(X)=\\sum_i(x_i-\\mu)^2p_i",
+    expandedFormula: "V(X)=(x_1-\\mu)^2p_1+(x_2-\\mu)^2p_2+\\cdots+(x_n-\\mu)^2p_n",
     explanation: "平均からの偏差の二乗に確率を掛けて足す。E[X²]−μ²でも求められる。",
     cue: "偏差² × 確率",
   },
@@ -400,57 +408,57 @@ function question(question: Omit<StatisticsQuestion, "source">): StatisticsQuest
 }
 
 const CORE_STATISTICS_QUESTIONS: StatisticsQuestion[] = [
-  question({ id: "stats-q-mean", topic: "descriptive", genre: "平均", difficulty: 1, format: "number", prompt: "データ 4, 6, 8, 10, 12 の平均を求めよ。", answer: "8", numericAnswer: 8, steps: ["合計は 40", "40÷5 = 8"], explanation: "平均はデータの合計を個数で割る。", formula: "\\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_i" }),
-  question({ id: "stats-q-variance", topic: "descriptive", genre: "母分散", difficulty: 2, format: "number", prompt: "データ 2, 4, 6 の母分散を求めよ。小数第3位まで可。", answer: "8/3 ≒ 2.667", numericAnswer: 8 / 3, tolerance: 0.001, steps: ["平均は4", "偏差平方は4,0,4", "(4+0+4)÷3 = 8/3"], explanation: "母分散なので偏差平方和を n=3 で割る。", formula: "\\sigma^2=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})^2" }),
-  question({ id: "stats-q-sd", topic: "descriptive", genre: "標準偏差", difficulty: 1, format: "number", prompt: "母分散が 9 のとき、標準偏差を求めよ。", answer: "3", numericAnswer: 3, steps: ["√9 = 3"], explanation: "標準偏差は分散の正の平方根。", formula: "\\sigma=\\sqrt{V(X)}" }),
-  question({ id: "stats-q-linear-mean", topic: "descriptive", genre: "一次変換", difficulty: 1, format: "number", prompt: "E[X]=5、Y=3X+2 のとき E[Y] を求めよ。", answer: "17", numericAnswer: 17, steps: ["E[Y]=3E[X]+2", "3×5+2=17"], explanation: "期待値では定数項もそのまま加わる。", formula: "E[aX+b]=aE[X]+b" }),
-  question({ id: "stats-q-linear-var", topic: "descriptive", genre: "一次変換", difficulty: 2, format: "number", prompt: "V(X)=4、Y=2X−1 のとき V(Y) を求めよ。", answer: "16", numericAnswer: 16, steps: ["V(Y)=2²V(X)", "4×4=16"], explanation: "分散には倍率の二乗が効き、定数−1は影響しない。", formula: "V(aX+b)=a^2V(X)" }),
+  question({ id: "stats-q-mean", topic: "descriptive", genre: "平均", difficulty: 1, format: "number", prompt: "データ \\(4,6,8,10,12\\) の平均を求めよ。", answer: "\\(8\\)", numericAnswer: 8, steps: ["\\(4+6+8+10+12=40\\)", "\\(\\bar{x}=\\frac{40}{5}=8\\)"], explanation: "平均はデータの合計を個数で割る。", formula: "\\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_i", expandedFormula: "\\bar{x}=\\frac{4+6+8+10+12}{5}" }),
+  question({ id: "stats-q-variance", topic: "descriptive", genre: "母分散", difficulty: 2, format: "number", prompt: "データ \\(2,4,6\\) の母分散を求めよ。小数第3位まで可。", answer: "\\(\\frac{8}{3}\\approx2.667\\)", numericAnswer: 8 / 3, tolerance: 0.001, steps: ["平均は \\(\\bar{x}=4\\)", "偏差平方は \\(4,0,4\\)", "\\(\\sigma^2=\\frac{4+0+4}{3}=\\frac{8}{3}\\)"], explanation: "母分散なので偏差平方和を \\(n=3\\) で割る。", formula: "\\sigma^2=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})^2", expandedFormula: "\\sigma^2=\\frac{(2-4)^2+(4-4)^2+(6-4)^2}{3}" }),
+  question({ id: "stats-q-sd", topic: "descriptive", genre: "標準偏差", difficulty: 1, format: "number", prompt: "母分散が \\(9\\) のとき、標準偏差を求めよ。", answer: "\\(3\\)", numericAnswer: 3, steps: ["\\(\\sigma=\\sqrt{9}=3\\)"], explanation: "標準偏差は分散の正の平方根。", formula: "\\sigma=\\sqrt{V(X)}" }),
+  question({ id: "stats-q-linear-mean", topic: "descriptive", genre: "一次変換", difficulty: 1, format: "number", prompt: "\\(E[X]=5\\)、\\(Y=3X+2\\) のとき \\(E[Y]\\) を求めよ。", answer: "\\(17\\)", numericAnswer: 17, steps: ["\\(E[Y]=3E[X]+2\\)", "\\(E[Y]=3\\times5+2=17\\)"], explanation: "期待値では定数項もそのまま加わる。", formula: "E[aX+b]=aE[X]+b" }),
+  question({ id: "stats-q-linear-var", topic: "descriptive", genre: "一次変換", difficulty: 2, format: "number", prompt: "\\(V(X)=4\\)、\\(Y=2X-1\\) のとき \\(V(Y)\\) を求めよ。", answer: "\\(16\\)", numericAnswer: 16, steps: ["\\(V(Y)=2^2V(X)\\)", "\\(V(Y)=4\\times4=16\\)"], explanation: "分散には倍率の二乗が効き、定数 \\(-1\\) は影響しない。", formula: "V(aX+b)=a^2V(X)" }),
   question({ id: "stats-q-divisor", topic: "descriptive", genre: "定義", difficulty: 1, format: "choice", prompt: "n個のデータを母集団そのものとして扱う母分散では、偏差平方和を何で割るか。", answer: "n", options: ["n", "n²", "√n", "2n"], steps: ["母分散の定義を確認"], explanation: "母分散は偏差平方和をデータ数 n で割る。" }),
 
-  question({ id: "stats-q-covariance", topic: "relation", genre: "共分散", difficulty: 2, format: "number", prompt: "X=(1,2,3)、Y=(2,4,6) の母共分散を求めよ。小数第3位まで可。", answer: "4/3 ≒ 1.333", numericAnswer: 4 / 3, tolerance: 0.001, steps: ["x̄=2、ȳ=4", "偏差積は2,0,2", "(2+0+2)÷3=4/3"], explanation: "両方が同じ向きに動くため共分散は正になる。", formula: "\\sigma_{xy}=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})(y_i-\\bar{y})" }),
+  question({ id: "stats-q-covariance", topic: "relation", genre: "共分散", difficulty: 2, format: "number", prompt: "\\(X=(1,2,3)\\)、\\(Y=(2,4,6)\\) の母共分散を求めよ。小数第3位まで可。", answer: "\\(\\frac{4}{3}\\approx1.333\\)", numericAnswer: 4 / 3, tolerance: 0.001, steps: ["\\(\\bar{x}=2,\\ \\bar{y}=4\\)", "偏差積は \\(2,0,2\\)", "\\(\\sigma_{XY}=\\frac{2+0+2}{3}=\\frac{4}{3}\\)"], explanation: "両方が同じ向きに動くため共分散は正になる。", formula: "\\sigma_{xy}=\\frac{1}{n}\\sum_{i=1}^{n}(x_i-\\bar{x})(y_i-\\bar{y})", expandedFormula: "\\sigma_{xy}=\\frac{(1-2)(2-4)+(2-2)(4-4)+(3-2)(6-4)}{3}" }),
   question({ id: "stats-q-perfect-r", topic: "relation", genre: "相関係数", difficulty: 1, format: "number", prompt: "すべての点が右上がりの一直線上に完全に並ぶとき、相関係数 r はいくつか。", answer: "1", numericAnswer: 1, steps: ["完全な正の直線関係を確認"], explanation: "完全な正の相関では r=1。右下がりなら r=−1。" }),
-  question({ id: "stats-q-regression-slope", topic: "relation", genre: "回帰直線", difficulty: 2, format: "number", prompt: "点 (1,3), (2,5), (3,7) を通る回帰直線の傾き b を求めよ。", answer: "2", numericAnswer: 2, steps: ["xが1増えるとyは2増える", "よって傾きは2"], explanation: "3点は y=2x+1 上に完全に並ぶ。", formula: "b=\\frac{\\sigma_{xy}}{\\sigma_x^2}" }),
-  question({ id: "stats-q-regression-intercept", topic: "relation", genre: "回帰直線", difficulty: 2, format: "number", prompt: "回帰直線の傾き b=2、x̄=3、ȳ=8 のとき切片 a を求めよ。", answer: "2", numericAnswer: 2, steps: ["a=ȳ−bx̄", "8−2×3=2"], explanation: "回帰直線は (x̄,ȳ) を通る。", formula: "a=\\bar{y}-b\\bar{x}" }),
-  question({ id: "stats-q-r2", topic: "relation", genre: "決定係数", difficulty: 1, format: "number", prompt: "相関係数 r=−0.8 のとき決定係数 R² を求めよ。", answer: "0.64", numericAnswer: 0.64, steps: ["R²=r²", "(−0.8)²=0.64"], explanation: "二乗するので相関係数の符号は消える。", formula: "R^2=r^2" }),
+  question({ id: "stats-q-regression-slope", topic: "relation", genre: "回帰直線", difficulty: 2, format: "number", prompt: "点 \\((1,3),(2,5),(3,7)\\) を通る回帰直線の傾き \\(b\\) を求めよ。", answer: "\\(2\\)", numericAnswer: 2, steps: ["\\(x\\) が \\(1\\) 増えると \\(y\\) は \\(2\\) 増える。", "よって傾きは \\(b=2\\)"], explanation: "3点は \\(y=2x+1\\) 上に完全に並ぶ。", formula: "b=\\frac{\\sigma_{xy}}{\\sigma_x^2}" }),
+  question({ id: "stats-q-regression-intercept", topic: "relation", genre: "回帰直線", difficulty: 2, format: "number", prompt: "回帰直線の傾き \\(b=2\\)、\\(\\bar{x}=3\\)、\\(\\bar{y}=8\\) のとき切片 \\(a\\) を求めよ。", answer: "\\(2\\)", numericAnswer: 2, steps: ["\\(a=\\bar{y}-b\\bar{x}\\)", "\\(a=8-2\\times3=2\\)"], explanation: "回帰直線は \\((\\bar{x},\\bar{y})\\) を通る。", formula: "a=\\bar{y}-b\\bar{x}" }),
+  question({ id: "stats-q-r2", topic: "relation", genre: "決定係数", difficulty: 1, format: "number", prompt: "相関係数 \\(r=-0.8\\) のとき決定係数 \\(R^2\\) を求めよ。", answer: "\\(0.64\\)", numericAnswer: 0.64, steps: ["\\(R^2=r^2\\)", "\\(R^2=(-0.8)^2=0.64\\)"], explanation: "二乗するので相関係数の符号は消える。", formula: "R^2=r^2" }),
   question({ id: "stats-q-least-squares", topic: "relation", genre: "最小二乗法", difficulty: 2, format: "text", prompt: "最小二乗法では、何を最小にするよう回帰直線を決めるか。", answer: "残差の二乗和", accepted: ["残差の二乗和", "残差平方和", "誤差の二乗和"], keywords: ["残差", "二乗", "和"], minKeywords: 2, steps: ["観測値と予測値の差が残差", "その二乗を全点で足す"], explanation: "正負の残差が打ち消し合わないよう二乗し、その合計を最小にする。" }),
 
-  question({ id: "stats-q-factorial", topic: "counting", genre: "階乗", difficulty: 1, format: "number", prompt: "5! を求めよ。", answer: "120", numericAnswer: 120, steps: ["5×4×3×2×1", "=120"], explanation: "5個の異なるものを一列に並べる総数でもある。" }),
-  question({ id: "stats-q-permutation", topic: "counting", genre: "順列", difficulty: 1, format: "number", prompt: "7個から3個を選んで順に並べる方法は何通りか。", answer: "210通り", numericAnswer: 210, steps: ["7P3=7×6×5", "=210"], explanation: "順番を区別するので組合せではなく順列。", formula: "{}_nP_r=\\frac{n!}{(n-r)!}" }),
-  question({ id: "stats-q-combination", topic: "counting", genre: "組合せ", difficulty: 1, format: "number", prompt: "8人から2人を選ぶ方法は何通りか。", answer: "28通り", numericAnswer: 28, steps: ["8C2=(8×7)/(2×1)", "=28"], explanation: "選ばれた2人の順番は区別しない。", formula: "{}_nC_r=\\frac{n!}{r!(n-r)!}" }),
-  question({ id: "stats-q-two-dice", topic: "counting", genre: "確率", difficulty: 2, format: "number", prompt: "公平な2個のサイコロを投げ、出目の和が7になる確率を求めよ。", answer: "1/6 ≒ 0.1667", numericAnswer: 1 / 6, tolerance: 0.0001, steps: ["全事象は36通り", "和7は6通り", "6/36=1/6"], explanation: "(1,6)から(6,1)まで6組ある。" }),
-  question({ id: "stats-q-at-least-head", topic: "counting", genre: "余事象", difficulty: 2, format: "number", prompt: "公平なコインを3回投げ、少なくとも1回表が出る確率を求めよ。", answer: "7/8 = 0.875", numericAnswer: 7 / 8, steps: ["1回も表が出ない確率は(1/2)³=1/8", "1−1/8=7/8"], explanation: "『少なくとも』は余事象を使うと一度で求められる。", formula: "1-P(X=0)" }),
-  question({ id: "stats-q-addition", topic: "counting", genre: "加法定理", difficulty: 2, format: "number", prompt: "P(A)=0.4、P(B)=0.5、P(A∩B)=0.2 のとき P(A∪B) を求めよ。", answer: "0.7", numericAnswer: 0.7, steps: ["0.4+0.5−0.2", "=0.7"], explanation: "共通部分を二重に数えた分だけ引く。", formula: "P(A\\cup B)=P(A)+P(B)-P(A\\cap B)" }),
+  question({ id: "stats-q-factorial", topic: "counting", genre: "階乗", difficulty: 1, format: "number", prompt: "\\(5!\\) を求めよ。", answer: "\\(120\\)", numericAnswer: 120, steps: ["\\(5!=5\\times4\\times3\\times2\\times1\\)", "\\(5!=120\\)"], explanation: "5個の異なるものを一列に並べる総数でもある。" }),
+  question({ id: "stats-q-permutation", topic: "counting", genre: "順列", difficulty: 1, format: "number", prompt: "7個から3個を選んで順に並べる方法は何通りか。", answer: "\\({}_7P_3=210\\) 通り", numericAnswer: 210, steps: ["\\({}_7P_3=7\\times6\\times5\\)", "\\({}_7P_3=210\\)"], explanation: "順番を区別するので組合せではなく順列。", formula: "{}_nP_r=\\frac{n!}{(n-r)!}" }),
+  question({ id: "stats-q-combination", topic: "counting", genre: "組合せ", difficulty: 1, format: "number", prompt: "8人から2人を選ぶ方法は何通りか。", answer: "\\({}_8C_2=28\\) 通り", numericAnswer: 28, steps: ["\\({}_8C_2=\\frac{8\\times7}{2\\times1}\\)", "\\({}_8C_2=28\\)"], explanation: "選ばれた2人の順番は区別しない。", formula: "{}_nC_r=\\frac{n!}{r!(n-r)!}" }),
+  question({ id: "stats-q-two-dice", topic: "counting", genre: "確率", difficulty: 2, format: "number", prompt: "公平な2個のサイコロを投げ、出目の和が7になる確率を求めよ。", answer: "\\(\\frac{1}{6}\\approx0.1667\\)", numericAnswer: 1 / 6, tolerance: 0.0001, steps: ["全事象は \\(36\\) 通り", "和が7になるのは \\(6\\) 通り", "\\(P=\\frac{6}{36}=\\frac{1}{6}\\)"], explanation: "\\((1,6)\\) から \\((6,1)\\) まで6組ある。" }),
+  question({ id: "stats-q-at-least-head", topic: "counting", genre: "余事象", difficulty: 2, format: "number", prompt: "公平なコインを3回投げ、少なくとも1回表が出る確率を求めよ。", answer: "\\(\\frac{7}{8}=0.875\\)", numericAnswer: 7 / 8, steps: ["1回も表が出ない確率は \\(\\left(\\frac{1}{2}\\right)^3=\\frac{1}{8}\\)", "\\(1-\\frac{1}{8}=\\frac{7}{8}\\)"], explanation: "『少なくとも』は余事象を使うと一度で求められる。", formula: "1-P(X=0)" }),
+  question({ id: "stats-q-addition", topic: "counting", genre: "加法定理", difficulty: 2, format: "number", prompt: "\\(P(A)=0.4\\)、\\(P(B)=0.5\\)、\\(P(A\\cap B)=0.2\\) のとき \\(P(A\\cup B)\\) を求めよ。", answer: "\\(0.7\\)", numericAnswer: 0.7, steps: ["\\(P(A\\cup B)=0.4+0.5-0.2\\)", "\\(P(A\\cup B)=0.7\\)"], explanation: "共通部分を二重に数えた分だけ引く。", formula: "P(A\\cup B)=P(A)+P(B)-P(A\\cap B)" }),
   question({ id: "stats-q-sample-space", topic: "counting", genre: "標本空間", difficulty: 1, format: "number", prompt: "コインを4回投げるとき、表裏の並びは全部で何通りか。", answer: "16通り", numericAnswer: 16, steps: ["各回2通り", "2⁴=16"], explanation: "4回それぞれに表・裏の2通りがある。" }),
 
-  question({ id: "stats-q-conditional", topic: "conditional", genre: "条件付き確率", difficulty: 1, format: "number", prompt: "P(A∩B)=0.12、P(B)=0.30 のとき P(A|B) を求めよ。", answer: "0.4", numericAnswer: 0.4, steps: ["0.12÷0.30", "=0.4"], explanation: "条件側Bの確率を分母に置く。", formula: "P(A\\mid B)=\\frac{P(A\\cap B)}{P(B)}" }),
-  question({ id: "stats-q-product", topic: "conditional", genre: "乗法定理", difficulty: 1, format: "number", prompt: "P(A|B)=0.6、P(B)=0.5 のとき P(A∩B) を求めよ。", answer: "0.3", numericAnswer: 0.3, steps: ["0.6×0.5", "=0.3"], explanation: "条件付き確率と条件側の確率を掛ける。", formula: "P(A\\cap B)=P(A\\mid B)P(B)" }),
-  question({ id: "stats-q-independent", topic: "conditional", genre: "独立", difficulty: 1, format: "number", prompt: "AとBが独立で P(A)=0.4、P(B)=0.5 のとき P(A∩B) を求めよ。", answer: "0.2", numericAnswer: 0.2, steps: ["独立なので0.4×0.5", "=0.2"], explanation: "独立なら積事象の確率は各確率の積。", formula: "P(A\\cap B)=P(A)P(B)" }),
-  question({ id: "stats-q-total", topic: "conditional", genre: "全確率", difficulty: 2, format: "number", prompt: "製品の60%を機械A、40%を機械Bが作る。Aの不良率2%、Bの不良率5%のとき、無作為に選んだ製品が不良である確率を求めよ。", answer: "0.032（3.2%）", numericAnswer: 0.032, tolerance: 0.00001, steps: ["A経路:0.6×0.02=0.012", "B経路:0.4×0.05=0.020", "合計0.032"], explanation: "原因ごとの経路確率を足す。", formula: "P(D)=\\sum_iP(D\\mid H_i)P(H_i)" }),
-  question({ id: "stats-q-bayes-machine", topic: "conditional", genre: "ベイズ", difficulty: 3, format: "number", prompt: "前問と同じ条件で、不良品が機械A製である確率を求めよ。小数第3位まで可。", context: "機械A:生産60%・不良率2%、機械B:生産40%・不良率5%", answer: "0.375（37.5%）", numericAnswer: 0.375, steps: ["Aかつ不良=0.6×0.02=0.012", "不良全体=0.032", "0.012÷0.032=0.375"], explanation: "分子は目的のA経路、分母は不良になる全経路。", formula: "P(A\\mid D)=\\frac{P(D\\mid A)P(A)}{P(D)}" }),
-  question({ id: "stats-q-bayes-test", topic: "conditional", genre: "ベイズ", difficulty: 3, format: "number", prompt: "有病率1%、感度95%、偽陽性率5%の検査で陽性だった。実際に病気である確率を求めよ。小数第3位まで可。", answer: "約0.161（16.1%）", numericAnswer: 0.0095 / 0.059, tolerance: 0.001, steps: ["病気かつ陽性=0.01×0.95=0.0095", "健康かつ陽性=0.99×0.05=0.0495", "0.0095÷(0.0095+0.0495)≈0.161"], explanation: "感度が高くても、有病率が低いと偽陽性の人数が無視できない。", formula: "P(D\\mid +)=\\frac{P(+\\mid D)P(D)}{P(+)}" }),
+  question({ id: "stats-q-conditional", topic: "conditional", genre: "条件付き確率", difficulty: 1, format: "number", prompt: "\\(P(A\\cap B)=0.12\\)、\\(P(B)=0.30\\) のとき \\(P(A\\mid B)\\) を求めよ。", answer: "\\(0.4\\)", numericAnswer: 0.4, steps: ["\\(P(A\\mid B)=\\frac{0.12}{0.30}\\)", "\\(P(A\\mid B)=0.4\\)"], explanation: "条件側 \\(B\\) の確率を分母に置く。", formula: "P(A\\mid B)=\\frac{P(A\\cap B)}{P(B)}" }),
+  question({ id: "stats-q-product", topic: "conditional", genre: "乗法定理", difficulty: 1, format: "number", prompt: "\\(P(A\\mid B)=0.6\\)、\\(P(B)=0.5\\) のとき \\(P(A\\cap B)\\) を求めよ。", answer: "\\(0.3\\)", numericAnswer: 0.3, steps: ["\\(P(A\\cap B)=0.6\\times0.5\\)", "\\(P(A\\cap B)=0.3\\)"], explanation: "条件付き確率と条件側の確率を掛ける。", formula: "P(A\\cap B)=P(A\\mid B)P(B)" }),
+  question({ id: "stats-q-independent", topic: "conditional", genre: "独立", difficulty: 1, format: "number", prompt: "\\(A\\) と \\(B\\) が独立で \\(P(A)=0.4\\)、\\(P(B)=0.5\\) のとき \\(P(A\\cap B)\\) を求めよ。", answer: "\\(0.2\\)", numericAnswer: 0.2, steps: ["独立なので \\(P(A\\cap B)=0.4\\times0.5\\)", "\\(P(A\\cap B)=0.2\\)"], explanation: "独立なら積事象の確率は各確率の積。", formula: "P(A\\cap B)=P(A)P(B)" }),
+  question({ id: "stats-q-total", topic: "conditional", genre: "全確率", difficulty: 2, format: "number", prompt: "製品の60%を機械A、40%を機械Bが作る。Aの不良率2%、Bの不良率5%のとき、無作為に選んだ製品が不良である確率を求めよ。", answer: "\\(0.032=3.2\\%\\)", numericAnswer: 0.032, tolerance: 0.00001, steps: ["A経路は \\(0.6\\times0.02=0.012\\)", "B経路は \\(0.4\\times0.05=0.020\\)", "\\(P(D)=0.012+0.020=0.032\\)"], explanation: "原因ごとの経路確率を足す。", formula: "P(D)=\\sum_iP(D\\mid H_i)P(H_i)", expandedFormula: "P(D)=P(D\\mid A)P(A)+P(D\\mid B)P(B)=0.02\\times0.60+0.05\\times0.40" }),
+  question({ id: "stats-q-bayes-machine", topic: "conditional", genre: "ベイズ", difficulty: 3, format: "number", prompt: "前問と同じ条件で、不良品が機械A製である確率を求めよ。小数第3位まで可。", context: "機械A：生産60%・不良率2%、機械B：生産40%・不良率5%", answer: "\\(0.375=37.5\\%\\)", numericAnswer: 0.375, steps: ["Aかつ不良の確率は \\(0.6\\times0.02=0.012\\)", "不良全体の確率は \\(0.032\\)", "\\(P(A\\mid D)=\\frac{0.012}{0.032}=0.375\\)"], explanation: "分子は目的のA経路、分母は不良になる全経路。", formula: "P(A\\mid D)=\\frac{P(D\\mid A)P(A)}{P(D)}" }),
+  question({ id: "stats-q-bayes-test", topic: "conditional", genre: "ベイズ", difficulty: 3, format: "number", prompt: "有病率1%、感度95%、偽陽性率5%の検査で陽性だった。実際に病気である確率を求めよ。小数第3位まで可。", answer: "\\(0.161\\approx16.1\\%\\)", numericAnswer: 0.0095 / 0.059, tolerance: 0.001, steps: ["病気かつ陽性の確率は \\(0.01\\times0.95=0.0095\\)", "健康かつ陽性の確率は \\(0.99\\times0.05=0.0495\\)", "\\(P(D\\mid +)=\\frac{0.0095}{0.0095+0.0495}\\approx0.161\\)"], explanation: "感度が高くても、有病率が低いと偽陽性の人数が無視できない。", formula: "P(D\\mid +)=\\frac{P(+\\mid D)P(D)}{P(+)}" }),
   question({ id: "stats-q-independent-definition", topic: "conditional", genre: "独立", difficulty: 2, format: "text", prompt: "事象AとBが独立であることを、積事象の確率を使って式で答えよ。", answer: "P(A∩B)=P(A)P(B)", accepted: ["p(a∩b)=p(a)p(b)", "p(aかつb)=p(a)p(b)"], keywords: ["p(a∩b)", "p(a)", "p(b)"], minKeywords: 3, steps: ["独立なら一方を知っても他方の確率は変わらない"], explanation: "同値な表現としてP(A|B)=P(A)もある。" }),
 
-  question({ id: "stats-q-expectation", topic: "random-variable", genre: "期待値", difficulty: 1, format: "number", prompt: "Xが0,1,2を確率0.2,0.5,0.3で取るとき E[X] を求めよ。", answer: "1.1", numericAnswer: 1.1, steps: ["0×0.2+1×0.5+2×0.3", "=1.1"], explanation: "値に確率を掛けた加重平均。", formula: "E[X]=\\sum_i x_i p_i" }),
-  question({ id: "stats-q-discrete-var", topic: "random-variable", genre: "分散", difficulty: 2, format: "number", prompt: "Xが0,1,2を確率0.2,0.5,0.3で取るとき V(X) を求めよ。", answer: "0.49", numericAnswer: 0.49, steps: ["E[X]=1.1", "E[X²]=0+0.5+4×0.3=1.7", "1.7−1.1²=0.49"], explanation: "E[X²]−E[X]² を使うと表から速く計算できる。", formula: "V(X)=E[X^2]-\\{E[X]\\}^2" }),
-  question({ id: "stats-q-expectation-transform", topic: "random-variable", genre: "一次変換", difficulty: 1, format: "number", prompt: "E[X]=4 のとき E[3X−2] を求めよ。", answer: "10", numericAnswer: 10, steps: ["3E[X]−2", "=3×4−2=10"], explanation: "期待値は線形に変換できる。" }),
-  question({ id: "stats-q-variance-transform", topic: "random-variable", genre: "一次変換", difficulty: 2, format: "number", prompt: "V(X)=3 のとき V(−2X+5) を求めよ。", answer: "12", numericAnswer: 12, steps: ["(−2)²V(X)", "=4×3=12"], explanation: "定数5は分散に影響せず、−2は二乗して4になる。" }),
-  question({ id: "stats-q-binomial-mean", topic: "random-variable", genre: "反復試行", difficulty: 2, format: "number", prompt: "公平なコインを4回投げたとき、表の回数Xの期待値を求めよ。", answer: "2", numericAnswer: 2, steps: ["各回の表の確率は1/2", "E[X]=np=4×1/2=2"], explanation: "表の回数は二項型の確率変数として扱える。" }),
+  question({ id: "stats-q-expectation", topic: "random-variable", genre: "期待値", difficulty: 1, format: "number", prompt: "\\(X\\) が \\(0,1,2\\) を確率 \\(0.2,0.5,0.3\\) で取るとき \\(E[X]\\) を求めよ。", answer: "\\(1.1\\)", numericAnswer: 1.1, steps: ["\\(E[X]=0\\times0.2+1\\times0.5+2\\times0.3\\)", "\\(E[X]=1.1\\)"], explanation: "値に確率を掛けた加重平均。", formula: "E[X]=\\sum_i x_i p_i", expandedFormula: "E[X]=0\\times0.2+1\\times0.5+2\\times0.3" }),
+  question({ id: "stats-q-discrete-var", topic: "random-variable", genre: "分散", difficulty: 2, format: "number", prompt: "\\(X\\) が \\(0,1,2\\) を確率 \\(0.2,0.5,0.3\\) で取るとき \\(V(X)\\) を求めよ。", answer: "\\(0.49\\)", numericAnswer: 0.49, steps: ["\\(E[X]=1.1\\)", "\\(E[X^2]=0+0.5+4\\times0.3=1.7\\)", "\\(V(X)=1.7-1.1^2=0.49\\)"], explanation: "\\(E[X^2]-E[X]^2\\) を使うと表から速く計算できる。", formula: "V(X)=E[X^2]-\\{E[X]\\}^2" }),
+  question({ id: "stats-q-expectation-transform", topic: "random-variable", genre: "一次変換", difficulty: 1, format: "number", prompt: "\\(E[X]=4\\) のとき \\(E[3X-2]\\) を求めよ。", answer: "\\(10\\)", numericAnswer: 10, steps: ["\\(E[3X-2]=3E[X]-2\\)", "\\(E[3X-2]=3\\times4-2=10\\)"], explanation: "期待値は線形に変換できる。" }),
+  question({ id: "stats-q-variance-transform", topic: "random-variable", genre: "一次変換", difficulty: 2, format: "number", prompt: "\\(V(X)=3\\) のとき \\(V(-2X+5)\\) を求めよ。", answer: "\\(12\\)", numericAnswer: 12, steps: ["\\(V(-2X+5)=(-2)^2V(X)\\)", "\\(V(-2X+5)=4\\times3=12\\)"], explanation: "定数 \\(5\\) は分散に影響せず、倍率 \\(-2\\) は二乗して \\(4\\) になる。" }),
+  question({ id: "stats-q-binomial-mean", topic: "random-variable", genre: "反復試行", difficulty: 2, format: "number", prompt: "公平なコインを4回投げたとき、表の回数 \\(X\\) の期待値を求めよ。", answer: "\\(2\\)", numericAnswer: 2, steps: ["各回の表の確率は \\(p=\\frac{1}{2}\\)", "\\(E[X]=np=4\\times\\frac{1}{2}=2\\)"], explanation: "表の回数は二項型の確率変数として扱える。" }),
   question({ id: "stats-q-probability-total", topic: "random-variable", genre: "確率分布", difficulty: 1, format: "number", prompt: "Xが1,2,3を確率0.2,0.3,kで取る。kを求めよ。", answer: "0.5", numericAnswer: 0.5, steps: ["確率の総和は1", "k=1−0.2−0.3=0.5"], explanation: "確率分布ではすべての確率が0以上で、合計が1。" }),
 
-  question({ id: "stats-q-density-k", topic: "continuous", genre: "確率密度", difficulty: 2, format: "number", prompt: "f(x)=kx (0≤x≤2)、それ以外0が確率密度となるよう k を求めよ。", answer: "1/2 = 0.5", numericAnswer: 0.5, steps: ["∫₀²kx dx=1", "2k=1", "k=1/2"], explanation: "密度全体の面積が1になるよう定数を決める。" }),
-  question({ id: "stats-q-density-prob", topic: "continuous", genre: "区間確率", difficulty: 2, format: "number", prompt: "f(x)=x/2 (0≤x≤2) のとき P(0≤X≤1) を求めよ。", answer: "1/4 = 0.25", numericAnswer: 0.25, steps: ["∫₀¹(x/2)dx", "[x²/4]₀¹=1/4"], explanation: "区間確率はその区間の密度曲線下の面積。" }),
-  question({ id: "stats-q-continuous-mean", topic: "continuous", genre: "期待値", difficulty: 3, format: "number", prompt: "f(x)=x/2 (0≤x≤2) のとき E[X] を求めよ。小数第3位まで可。", answer: "4/3 ≒ 1.333", numericAnswer: 4 / 3, tolerance: 0.001, steps: ["E[X]=∫₀²x·(x/2)dx", "=[x³/6]₀²", "=4/3"], explanation: "連続型では値×密度を積分する。", formula: "E[X]=\\int_{-\\infty}^{\\infty}x f(x)\\,dx" }),
-  question({ id: "stats-q-continuous-var", topic: "continuous", genre: "分散", difficulty: 3, format: "number", prompt: "f(x)=x/2 (0≤x≤2) のとき V(X) を求めよ。小数第3位まで可。", answer: "2/9 ≒ 0.222", numericAnswer: 2 / 9, tolerance: 0.001, steps: ["E[X]=4/3", "E[X²]=∫₀²x²·(x/2)dx=2", "2−(4/3)²=2/9"], explanation: "E[X²]を積分してからE[X]²を引く。", formula: "V(X)=E[X^2]-\\{E[X]\\}^2" }),
-  question({ id: "stats-q-uniform", topic: "continuous", genre: "区間確率", difficulty: 1, format: "number", prompt: "f(x)=1/4 (0≤x≤4) の一様分布で P(1≤X≤3) を求めよ。", answer: "1/2 = 0.5", numericAnswer: 0.5, steps: ["幅2×高さ1/4", "=1/2"], explanation: "一定の密度なので長方形の面積で求められる。" }),
+  question({ id: "stats-q-density-k", topic: "continuous", genre: "確率密度", difficulty: 2, format: "number", prompt: "\\(f(x)=kx\\)（\\(0\\le x\\le2\\)）、それ以外では \\(0\\) が確率密度となるよう \\(k\\) を求めよ。", answer: "\\(\\frac{1}{2}=0.5\\)", numericAnswer: 0.5, steps: ["\\(\\int_0^2 kx\\,dx=1\\)", "\\(2k=1\\)", "\\(k=\\frac{1}{2}\\)"], explanation: "密度全体の面積が1になるよう定数を決める。" }),
+  question({ id: "stats-q-density-prob", topic: "continuous", genre: "区間確率", difficulty: 2, format: "number", prompt: "\\(f(x)=\\frac{x}{2}\\)（\\(0\\le x\\le2\\)）のとき \\(P(0\\le X\\le1)\\) を求めよ。", answer: "\\(\\frac{1}{4}=0.25\\)", numericAnswer: 0.25, steps: ["\\(P(0\\le X\\le1)=\\int_0^1\\frac{x}{2}\\,dx\\)", "\\(P(0\\le X\\le1)=\\left[\\frac{x^2}{4}\\right]_0^1=\\frac{1}{4}\\)"], explanation: "区間確率はその区間の密度曲線下の面積。" }),
+  question({ id: "stats-q-continuous-mean", topic: "continuous", genre: "期待値", difficulty: 3, format: "number", prompt: "\\(f(x)=\\frac{x}{2}\\)（\\(0\\le x\\le2\\)）のとき \\(E[X]\\) を求めよ。小数第3位まで可。", answer: "\\(\\frac{4}{3}\\approx1.333\\)", numericAnswer: 4 / 3, tolerance: 0.001, steps: ["\\(E[X]=\\int_0^2x\\cdot\\frac{x}{2}\\,dx\\)", "\\(E[X]=\\left[\\frac{x^3}{6}\\right]_0^2\\)", "\\(E[X]=\\frac{4}{3}\\)"], explanation: "連続型では値と密度の積を積分する。", formula: "E[X]=\\int_{-\\infty}^{\\infty}x f(x)\\,dx" }),
+  question({ id: "stats-q-continuous-var", topic: "continuous", genre: "分散", difficulty: 3, format: "number", prompt: "\\(f(x)=\\frac{x}{2}\\)（\\(0\\le x\\le2\\)）のとき \\(V(X)\\) を求めよ。小数第3位まで可。", answer: "\\(\\frac{2}{9}\\approx0.222\\)", numericAnswer: 2 / 9, tolerance: 0.001, steps: ["\\(E[X]=\\frac{4}{3}\\)", "\\(E[X^2]=\\int_0^2x^2\\cdot\\frac{x}{2}\\,dx=2\\)", "\\(V(X)=2-\\left(\\frac{4}{3}\\right)^2=\\frac{2}{9}\\)"], explanation: "\\(E[X^2]\\) を積分してから \\(E[X]^2\\) を引く。", formula: "V(X)=E[X^2]-\\{E[X]\\}^2" }),
+  question({ id: "stats-q-uniform", topic: "continuous", genre: "区間確率", difficulty: 1, format: "number", prompt: "\\(f(x)=\\frac{1}{4}\\)（\\(0\\le x\\le4\\)）の一様分布で \\(P(1\\le X\\le3)\\) を求めよ。", answer: "\\(\\frac{1}{2}=0.5\\)", numericAnswer: 0.5, steps: ["幅 \\(2\\) と高さ \\(\\frac{1}{4}\\) の長方形", "\\(P(1\\le X\\le3)=2\\times\\frac{1}{4}=\\frac{1}{2}\\)"], explanation: "一定の密度なので長方形の面積で求められる。" }),
   question({ id: "stats-q-density-condition", topic: "continuous", genre: "定義", difficulty: 1, format: "choice", prompt: "確率密度関数の条件として正しい組を選べ。", answer: "f(x)≥0 かつ 全区間の積分が1", options: ["f(x)≥0 かつ 全区間の積分が1", "f(x)>1 かつ 全区間の積分が0", "f(x)は整数 かつ 合計がn", "f(x)≤0 かつ 全区間の積分が−1"], steps: ["密度は負にならない", "全面積は1"], explanation: "離散型の『確率の合計1』が、連続型では『密度の積分1』になる。" }),
-  question({ id: "stats-q-z-score", topic: "continuous", genre: "標準化", difficulty: 1, format: "number", prompt: "平均62、標準偏差8の分布で X=74 の z得点を求めよ。", answer: "1.5", numericAnswer: 1.5, steps: ["z=(74−62)/8", "=12/8=1.5"], explanation: "平均より標準偏差1.5個分だけ上にある。", formula: "z=\\frac{x-\\mu}{\\sigma}" }),
+  question({ id: "stats-q-z-score", topic: "continuous", genre: "標準化", difficulty: 1, format: "number", prompt: "平均 \\(62\\)、標準偏差 \\(8\\) の分布で \\(X=74\\) の \\(z\\) 得点を求めよ。", answer: "\\(1.5\\)", numericAnswer: 1.5, steps: ["\\(z=\\frac{74-62}{8}\\)", "\\(z=\\frac{12}{8}=1.5\\)"], explanation: "平均より標準偏差1.5個分だけ上にある。", formula: "z=\\frac{x-\\mu}{\\sigma}" }),
   question({ id: "stats-q-unstandardize", topic: "continuous", genre: "標準化", difficulty: 1, format: "number", prompt: "平均50、標準偏差5の分布で z=−1.2 に対応する X を求めよ。", answer: "44", numericAnswer: 44, steps: ["x=μ+zσ", "=50+(−1.2)×5=44"], explanation: "標準化の式をxについて解き直す。" }),
   question({ id: "stats-q-normal-table", topic: "continuous", genre: "正規分布表", difficulty: 2, format: "number", prompt: "標準正規分布表で P(Z≤1.28) を求めよ。小数第4位まで。", answer: "0.8997", numericAnswer: 0.8997, tolerance: 0.00005, steps: ["行1.2、列0.08を読む", "累積確率は0.8997"], explanation: "下側確率表ではそのまま行と列の交点を読む。" }),
   question({ id: "stats-q-normal-center", topic: "continuous", genre: "正規分布", difficulty: 2, format: "number", prompt: "標準正規分布で P(−1≤Z≤1) を求めよ。小数第4位まで。", answer: "0.6826", numericAnswer: 0.6826, tolerance: 0.00005, steps: ["P(Z≤1)=0.8413", "P(Z≤−1)=1−0.8413=0.1587", "0.8413−0.1587=0.6826"], explanation: "累積確率の差を取り、対称性を使う。" }),
-  question({ id: "stats-q-normal-x", topic: "continuous", genre: "正規分布", difficulty: 2, format: "number", prompt: "X∼N(100,15²) のとき P(X≤115) を求めよ。小数第4位まで。", answer: "0.8413", numericAnswer: 0.8413, tolerance: 0.00005, steps: ["z=(115−100)/15=1", "P(Z≤1)=0.8413"], explanation: "まず標準化してから標準正規分布表を読む。" }),
+  question({ id: "stats-q-normal-x", topic: "continuous", genre: "正規分布", difficulty: 2, format: "number", prompt: "\\(X\\sim N(100,15^2)\\) のとき \\(P(X\\le115)\\) を求めよ。小数第4位まで。", answer: "\\(0.8413\\)", numericAnswer: 0.8413, tolerance: 0.00005, steps: ["\\(z=\\frac{115-100}{15}=1\\)", "\\(P(Z\\le1)=0.8413\\)"], explanation: "まず標準化してから標準正規分布表を読む。" }),
   question({ id: "stats-q-normal-interval", topic: "continuous", genre: "正規分布", difficulty: 3, format: "number", prompt: "X∼N(100,15²) のとき P(85≤X≤115) を求めよ。小数第4位まで。", answer: "0.6826", numericAnswer: 0.6826, tolerance: 0.00005, steps: ["85はz=−1、115はz=1", "P(−1≤Z≤1)=0.6826"], explanation: "平均の前後1標準偏差の区間に相当する。" }),
   question({ id: "stats-q-three-sigma", topic: "continuous", genre: "正規分布", difficulty: 1, format: "number", prompt: "正規分布で μ−3σ≤X≤μ+3σ となる確率を近似値で答えよ。", answer: "約0.997（99.7%）", numericAnswer: 0.997, tolerance: 0.0005, steps: ["正規分布の3σ範囲を使う", "約99.7%=0.997"], explanation: "平均から±3標準偏差の範囲には、ほぼ全体にあたる約99.7%が入る。" }),
-  question({ id: "stats-q-standardize-text", topic: "continuous", genre: "標準化", difficulty: 2, format: "text", prompt: "X∼N(μ,σ²) を標準正規分布へ変換する式を答えよ。", answer: "Z=(X−μ)/σ", accepted: ["z=(x-μ)/σ", "z=(x−μ)/σ", "(x-μ)/σ"], keywords: ["x", "μ", "σ"], minKeywords: 3, steps: ["平均μを引く", "標準偏差σで割る"], explanation: "この変換後は平均0、分散1の標準正規分布になる。" }),
+  question({ id: "stats-q-standardize-text", topic: "continuous", genre: "標準化", difficulty: 2, format: "text", prompt: "\\(X\\sim N(\\mu,\\sigma^2)\\) を標準正規分布へ変換する式を答えよ。", answer: "\\(Z=\\frac{X-\\mu}{\\sigma}\\)", accepted: ["z=(x-μ)/σ", "z=(x−μ)/σ", "(x-μ)/σ"], keywords: ["x", "μ", "σ"], minKeywords: 3, steps: ["平均 \\(\\mu\\) を引く。", "標準偏差 \\(\\sigma\\) で割る。"], explanation: "この変換後は \\(Z\\sim N(0,1)\\) になる。" }),
 ];
 
 export const STATISTICS_QUESTIONS: StatisticsQuestion[] = [
@@ -458,6 +466,18 @@ export const STATISTICS_QUESTIONS: StatisticsQuestion[] = [
   ...STATISTICS_PDF12_QUESTIONS,
   ...STATISTICS_PDF34_QUESTIONS,
 ];
+
+function validateSigmaExpansions(items: Array<{ id: string; formula?: string; expandedFormula?: string }>) {
+  for (const item of items) {
+    if (!item.formula?.includes("\\sum")) continue;
+    if (!item.expandedFormula || item.expandedFormula.includes("\\sum")) {
+      throw new Error(item.id + ": every Sigma formula requires a Sigma-free expandedFormula");
+    }
+  }
+}
+
+validateSigmaExpansions(STATISTICS_FORMULAS);
+validateSigmaExpansions(STATISTICS_QUESTIONS);
 
 export const STATISTICS_EXAM_FORMATS: StatisticsExamFormat[] = [
   {

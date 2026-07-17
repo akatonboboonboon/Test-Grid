@@ -1,6 +1,13 @@
 import { useId, type ReactNode } from "react";
 
-export type ThermodynamicsDiagramKind = "pv" | "ts" | "hs" | "piston";
+export type ThermodynamicsDiagramKind =
+  | "pv"
+  | "ts"
+  | "hs"
+  | "piston"
+  | "otto-pv"
+  | "carnot-pv"
+  | "carnot-ts";
 
 type DiagramProps = {
   kind: ThermodynamicsDiagramKind;
@@ -13,6 +20,9 @@ const axisLabels: Record<Exclude<ThermodynamicsDiagramKind, "piston">, [string, 
   pv: ["V", "P"],
   ts: ["S", "T"],
   hs: ["s", "h"],
+  "otto-pv": ["V", "P"],
+  "carnot-pv": ["V", "P"],
+  "carnot-ts": ["S", "T"],
 };
 
 function ArrowMarker({ id }: { id: string }) {
@@ -22,6 +32,74 @@ function ArrowMarker({ id }: { id: string }) {
         <path d="M0,0 L7,3.5 L0,7 Z" fill="currentColor" />
       </marker>
     </defs>
+  );
+}
+
+function StatePoint({ x, y, label, labelX, labelY }: { x: number; y: number; label: string; labelX: number; labelY: number }) {
+  return (
+    <>
+      <circle cx={x} cy={y} r="4" />
+      <text x={labelX} y={labelY} fontWeight="700">{label}</text>
+    </>
+  );
+}
+
+function OttoPvSolution({ arrowId }: { arrowId: string }) {
+  return (
+    <g className="thermodynamics-diagram-solution">
+      <path d="M180 145 C145 132 108 111 76 96" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M76 96 V48" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M76 48 C109 54 147 68 180 84" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M180 84 V145" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <StatePoint x={180} y={145} label="1" labelX={187} labelY={151} />
+      <StatePoint x={76} y={96} label="2" labelX={59} labelY={102} />
+      <StatePoint x={76} y={48} label="3" labelX={59} labelY={45} />
+      <StatePoint x={180} y={84} label="4" labelX={187} labelY={86} />
+      <text x="96" y="127">断熱圧縮</text>
+      <text x="48" y="75" textAnchor="end">等容加熱</text>
+      <text x="111" y="53">断熱膨張</text>
+      <text x="188" y="117">等容放熱</text>
+    </g>
+  );
+}
+
+function CarnotPvSolution({ arrowId }: { arrowId: string }) {
+  return (
+    <g className="thermodynamics-diagram-solution">
+      <path d="M70 50 C88 55 106 61 125 68" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M125 68 C141 83 159 108 180 130" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M180 130 C156 124 134 118 112 112" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M112 112 C99 96 85 73 70 50" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <StatePoint x={70} y={50} label="1" labelX={55} labelY={46} />
+      <StatePoint x={125} y={68} label="2" labelX={130} labelY={63} />
+      <StatePoint x={180} y={130} label="3" labelX={187} labelY={136} />
+      <StatePoint x={112} y={112} label="4" labelX={96} labelY={123} />
+      <text x="91" y="43">高温等温膨張 Q₁</text>
+      <text x="157" y="90">断熱膨張</text>
+      <text x="131" y="145">低温等温圧縮 Q₂</text>
+      <text x="52" y="91">断熱圧縮</text>
+    </g>
+  );
+}
+
+function CarnotTsSolution({ arrowId }: { arrowId: string }) {
+  return (
+    <g className="thermodynamics-diagram-solution">
+      <path d="M72 55 H176" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M176 55 V135" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M176 135 H72" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M72 135 V55" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <StatePoint x={72} y={55} label="1" labelX={57} labelY={51} />
+      <StatePoint x={176} y={55} label="2" labelX={182} labelY={51} />
+      <StatePoint x={176} y={135} label="3" labelX={182} labelY={142} />
+      <StatePoint x={72} y={135} label="4" labelX={57} labelY={142} />
+      <text x="124" y="45" textAnchor="middle">高温等温膨張 Q₁</text>
+      <text x="183" y="98">断熱膨張</text>
+      <text x="124" y="153" textAnchor="middle">低温等温圧縮 Q₂</text>
+      <text x="64" y="98" textAnchor="end">断熱圧縮</text>
+      <text x="51" y="59" textAnchor="end">T₁</text>
+      <text x="51" y="139" textAnchor="end">T₂</text>
+    </g>
   );
 }
 
@@ -54,6 +132,12 @@ function AxisDiagram({ kind, solution, arrowId }: { kind: Exclude<Thermodynamics
         <text x="49" y="160">1</text><text x="49" y="62">2</text><text x="183" y="60">3</text>
       </g>
     );
+  } else if (solution && kind === "otto-pv") {
+    solutionPath = <OttoPvSolution arrowId={arrowId} />;
+  } else if (solution && kind === "carnot-pv") {
+    solutionPath = <CarnotPvSolution arrowId={arrowId} />;
+  } else if (solution && kind === "carnot-ts") {
+    solutionPath = <CarnotTsSolution arrowId={arrowId} />;
   }
 
   return (

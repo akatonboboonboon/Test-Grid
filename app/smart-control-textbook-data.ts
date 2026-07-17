@@ -329,12 +329,12 @@ export const TEXTBOOK_RESPONSE_QUESTIONS: TextbookResponseQuestion[] = [
     difficulty: 1,
     format: "choice",
     prompt: "オーバーシュート（行き過ぎ量）\\(O_s\\) の式は？",
-    answer: "\\((y_{\\max}-y_\\infty)/y_\\infty\\times100\\%\\)",
+    answer: "\\(\\frac{y_{\\max}-y_\\infty}{y_\\infty}\\times100\\%\\)",
     options: [
-      "\\((y_{\\max}-y_\\infty)/y_\\infty\\times100\\%\\)",
-      "\\(y_{\\max}/y_\\infty\\times100\\%\\)",
-      "\\((y_\\infty-y_{\\max})/y_\\infty\\times100\\%\\)",
-      "\\((y_{\\max}-y_\\infty)/y_{\\max}\\times100\\%\\)",
+      "\\(\\frac{y_{\\max}-y_\\infty}{y_\\infty}\\times100\\%\\)",
+      "\\(\\frac{y_{\\max}}{y_\\infty}\\times100\\%\\)",
+      "\\(\\frac{y_\\infty-y_{\\max}}{y_\\infty}\\times100\\%\\)",
+      "\\(\\frac{y_{\\max}-y_\\infty}{y_{\\max}}\\times100\\%\\)",
     ],
     formula: "O_s=\\frac{y_{\\max}-y_\\infty}{y_\\infty}\\times100\\%",
     steps: [
@@ -508,7 +508,7 @@ export const TEXTBOOK_RESPONSE_QUESTIONS: TextbookResponseQuestion[] = [
     formula: "O_s=\\frac{10-8}{8}\\times100\\%=25\\%",
     steps: [
       "行き過ぎた量は \\(10-8=2\\)。",
-      "定常値8で割ると \\(2/8=0.25\\)。",
+      "定常値8で割ると \\(\\frac{2}{8}=0.25\\)。",
       "100%を掛けて25%とする。",
     ],
     explanation:

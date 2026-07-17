@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import CardDeckSearch from "../../card-deck-search";
 import StatisticsExpectedExams from "../../statistics-expected-exams";
 import { DisplayMath, RichMathText } from "../../statistics-math";
 import {
@@ -316,7 +317,8 @@ function SolutionFeedback({
       <strong>{feedback.correct ? "正解" : "不正解"}</strong>
       <p><span>あなたの解答</span><RichMathText text={feedback.response} /></p>
       <p><span>正解</span><RichMathText text={question.answer} /></p>
-      {question.formula && <div className="statistics-solution-formula"><span>使う公式</span><DisplayMath tex={question.formula} /></div>}
+      {question.formula && <div className="statistics-solution-formula"><span>{question.expandedFormula ? "Σを使う書き方" : "使う公式"}</span><DisplayMath tex={question.formula} /></div>}
+      {question.expandedFormula && <div className="statistics-solution-formula"><span>Σなしで書くと</span><DisplayMath tex={question.expandedFormula} /></div>}
       <div className="statistics-solution-steps">
         <span>途中式</span>
         <ol>{question.steps.map((step, index) => <li key={question.id + "-step-" + index}><RichMathText text={step} /></li>)}</ol>
@@ -424,6 +426,19 @@ export default function StatisticsSubjectPage() {
     if (mode === "test" && testPhase === "active" && nextMode !== "test") pauseTest();
     setMode(nextMode);
     window.setTimeout(() => workspaceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
+
+  function jumpToFormulaCard(cardId: string) {
+    const card = STATISTICS_FORMULAS.find((item) => item.id === cardId);
+    if (!card) return;
+    const alreadyVisible = cardTopics.includes(card.topic);
+    const nextTopics = alreadyVisible ? cardTopics : [...cardTopics, card.topic];
+    const nextDeck = STATISTICS_FORMULAS.filter((item) => nextTopics.includes(item.topic));
+    setCardTopics(nextTopics);
+    setCardDeck(nextDeck);
+    setCardIndex(Math.max(0, nextDeck.findIndex((item) => item.id === cardId)));
+    setCardFlipped(false);
+    setAnnouncement(card.title + "のカードを開きました。" + (alreadyVisible ? "" : "対象単元も表示に追加しました。"));
   }
 
   function changeCardTopics(nextTopics: StatisticsTopicId[]) {
@@ -626,6 +641,7 @@ export default function StatisticsSubjectPage() {
           <span className="card-count-label"><i aria-hidden="true" /> {STATISTICS_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-7">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/rapid/subject-7">時間制限 即答</Link>
+          <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-7">自動生成問題</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -703,6 +719,18 @@ export default function StatisticsSubjectPage() {
                 <p>表面の問いに答えてから裏返し、公式・意味・使いどころをまとめて確認します。</p>
               </div>
               <TopicFilter legend="カードに含める単元" selected={cardTopics} onChange={changeCardTopics} />
+              <CardDeckSearch
+                items={STATISTICS_FORMULAS.map((card) => ({
+                  id: card.id,
+                  label: card.title,
+                  description: card.prompt,
+                  meta: topicLabel(card.topic),
+                  searchText: [card.formula, card.explanation, card.cue, card.example],
+                }))}
+                currentId={currentCard?.id}
+                label="確率統計の公式カードを検索"
+                onSelect={jumpToFormulaCard}
+              />
               <div className="generic-progress english-card-progress statistics-card-progress">
                 <div><span>覚えた {cardMastered} / {filteredCards.length}・もう一度 {cardLearning}</span><strong>{cardCompletion}%</strong></div>
                 <progress value={cardCompletion} max="100" aria-label={`公式カード暗記進捗 ${cardCompletion}%`} />
@@ -712,12 +740,18 @@ export default function StatisticsSubjectPage() {
                 <>
                   <div className="generic-deck-meta english-deck-meta statistics-deck-meta"><span>CARD {cardIndex + 1} / {cardDeck.length}</span><span>{topicLabel(currentCard.topic)} · {progress[currentCard.id] === "mastered" ? "覚えた" : progress[currentCard.id] === "learning" ? "もう一度" : "未判定"}</span></div>
                   <button type="button" className={`generic-flip-card english-flip-card statistics-flip-card ${cardFlipped ? "is-flipped" : ""}`} onClick={() => setCardFlipped((flipped) => !flipped)} aria-label={cardFlipped ? "問題面に戻る" : "公式を見る"}>
-                    <span>{cardFlipped ? currentCard.title : "QUESTION"}</span>
+                    <span>{cardFlipped ? `${currentCard.title}${currentCard.expandedFormula ? "｜Σを使う書き方" : ""}` : "QUESTION"}</span>
                     {cardFlipped
                       ? <DisplayMath tex={currentCard.formula} ariaLabel={currentCard.title + "の公式"} />
                       : <strong><RichMathText text={currentCard.prompt} /></strong>}
                     <small>{cardFlipped ? currentCard.cue : "頭の中で公式を書いてからタップ"}</small>
                   </button>
+                  {cardFlipped && currentCard.expandedFormula && (
+                    <div className="statistics-solution-formula statistics-card-expanded-formula">
+                      <span>Σなしで書くと</span>
+                      <DisplayMath tex={currentCard.expandedFormula} ariaLabel={currentCard.title + "をΣなしで展開した公式"} />
+                    </div>
+                  )}
                   {cardFlipped && (
                     <div className="english-guide-tip statistics-card-explanation">
                       <span>WHY / HOW</span><p><RichMathText text={currentCard.explanation} />{currentCard.example ? <><br /><b>例：</b><RichMathText text={currentCard.example} /></> : null}</p>

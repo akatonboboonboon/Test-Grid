@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import CardDeckSearch from "../../card-deck-search";
 import SmartControlExams from "../../smart-control-exams";
 import SmartControlResponseGraph from "../../smart-control-response-graph";
 import {
@@ -399,6 +400,22 @@ export default function SmartControlSubjectPage() {
     window.setTimeout(() => workspaceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
   }
 
+  function jumpToSmartCard(cardId: string) {
+    const card = SMART_CONTROL_CARDS.find((item) => item.id === cardId);
+    if (!card) return;
+    const alreadyInPool = cardPool.some((item) => item.id === cardId);
+    const nextTopics = cardTopics.includes(card.topic) ? cardTopics : [...cardTopics, card.topic];
+    const nextPool = alreadyInPool
+      ? cardPool
+      : SMART_CONTROL_CARDS.filter((item) => nextTopics.includes(item.topic));
+    setCardTopics(nextTopics);
+    setCardPool(nextPool);
+    setCardDeck(nextPool);
+    setCardIndex(Math.max(0, nextPool.findIndex((item) => item.id === cardId)));
+    setCardFlipped(false);
+    setAnnouncement(card.title + "のカードを開きました。" + (alreadyInPool ? "" : "検索対象を全収録カードへ広げました。"));
+  }
+
   function changeCardTopics(nextTopics: SmartControlTopicId[]) {
     const nextPool = SMART_CONTROL_CARDS.filter((card) => nextTopics.includes(card.topic));
     setCardTopics(nextTopics);
@@ -406,6 +423,16 @@ export default function SmartControlSubjectPage() {
     setCardDeck(nextPool);
     setCardIndex(0);
     setCardFlipped(false);
+  }
+
+  function startAllCards() {
+    setCardTopics([...ALL_TOPIC_IDS]);
+    setCardPool([...SMART_CONTROL_CARDS]);
+    setCardDeck(randomize(SMART_CONTROL_CARDS));
+    setCardIndex(0);
+    setCardFlipped(false);
+    setAnnouncement("範囲公式と教科書の赤字・図を合わせた暗記カード" + SMART_CONTROL_CARDS.length + "枚で復習します。");
+    changeMode("cards");
   }
 
   function startTextbookCards() {
@@ -623,6 +650,7 @@ export default function SmartControlSubjectPage() {
           <span className="card-count-label"><i aria-hidden="true" /> {SMART_CONTROL_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-6">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/rapid/subject-6">時間制限 即答</Link>
+          <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-6">自動生成問題</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -755,10 +783,26 @@ export default function SmartControlSubjectPage() {
           {mode === "cards" && (
             <section className="generic-card-workspace english-card-workspace statistics-card-workspace" aria-labelledby="smart-card-title">
               <div className="english-panel-heading statistics-panel-heading">
-                <div><span>FORMULA MEMORY</span><h2 id="smart-card-title">暗記カード</h2></div>
-                <p>問題を見て式・意味を頭の中で作ってから裏返します。複数単元を同時に選べます。</p>
+                <div><span>FORMULA + TEXTBOOK MEMORY</span><h2 id="smart-card-title">暗記カード</h2></div>
+                <p>範囲公式に加え、教科書p.65〜68の赤文字・図の数値も同じ暗記帳で回せます。複数単元を同時に選べます。</p>
+              </div>
+              <div className="english-result-actions statistics-scope-actions smart-control-textbook-actions" aria-label="暗記カードの収録元">
+                <button type="button" onClick={startAllCards}>公式＋教科書を全部</button>
+                <button type="button" onClick={startTextbookCards}>教科書の赤字・図だけ</button>
               </div>
               <TopicFilter legend="カードに含める単元" selected={cardTopics} onChange={changeCardTopics} />
+              <CardDeckSearch
+                items={SMART_CONTROL_CARDS.map((card) => ({
+                  id: card.id,
+                  label: card.title,
+                  description: card.prompt,
+                  meta: card.id.startsWith("textbook-response-") ? "教科書 p.65〜68" : topicLabel(card.topic),
+                  searchText: [card.formula, card.explanation, card.cue, card.example],
+                }))}
+                currentId={currentCard?.id}
+                label="スマート制御の公式・教科書カードを検索"
+                onSelect={jumpToSmartCard}
+              />
               <div className="generic-progress english-card-progress statistics-card-progress">
                 <div><span>覚えた {cardMastered} / {filteredCards.length}・もう一度 {cardLearning}</span><strong>{cardCompletion}%</strong></div>
                 <progress value={cardCompletion} max="100" aria-label={`暗記カード進捗 ${cardCompletion}%`} />
@@ -768,14 +812,14 @@ export default function SmartControlSubjectPage() {
                 <>
                   <div className="generic-deck-meta english-deck-meta statistics-deck-meta">
                     <span>CARD {cardIndex + 1} / {cardDeck.length}</span>
-                    <span>{topicLabel(currentCard.topic)} · {progress[currentCard.id] === "mastered" ? "覚えた" : progress[currentCard.id] === "learning" ? "もう一度" : "未判定"}</span>
+                    <span>{currentCard.id.startsWith("textbook-response-") ? "教科書 p.65〜68" : topicLabel(currentCard.topic)} · {progress[currentCard.id] === "mastered" ? "覚えた" : progress[currentCard.id] === "learning" ? "もう一度" : "未判定"}</span>
                   </div>
                   <button type="button" className={`generic-flip-card english-flip-card statistics-flip-card ${cardFlipped ? "is-flipped" : ""}`} onClick={() => setCardFlipped((flipped) => !flipped)} aria-label={cardFlipped ? "問題面に戻る" : "答えを見る"}>
                     <span>{cardFlipped ? currentCard.title : "QUESTION"}</span>
                     {cardFlipped
                       ? <DisplayMath tex={currentCard.formula} ariaLabel={`${currentCard.title}の公式`} />
                       : <strong><RichMathText text={currentCard.prompt} /></strong>}
-                    <small>{cardFlipped ? currentCard.cue : "頭の中で式を作ってからタップ"}</small>
+                    <small>{cardFlipped ? <RichMathText text={currentCard.cue} /> : "頭の中で式を作ってからタップ"}</small>
                   </button>
                   {cardFlipped && (
                     <div className="english-guide-tip statistics-card-explanation">
@@ -790,6 +834,7 @@ export default function SmartControlSubjectPage() {
                     <button type="button" onClick={() => moveCard(1)}>次へ →</button>
                   </div>
                   <div className="generic-deck-tools english-deck-tools statistics-deck-tools">
+                    <button type="button" onClick={startAllCards}>公式＋教科書を全部</button>
                     <button type="button" onClick={startTextbookCards}>教科書赤字・図だけ</button>
                     <button type="button" onClick={shuffleCards}>シャッフル</button>
                     <button type="button" onClick={reviewUnmastered}>未暗記だけ復習</button>

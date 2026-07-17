@@ -75,6 +75,13 @@ function assertCleanMathStrings(value, katex, label) {
     assert.doesNotMatch(string, /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/, `${path} contains a control character`);
     assert.equal((string.match(/\\\(/g) ?? []).length, (string.match(/\\\)/g) ?? []).length, `${path} has unbalanced inline math delimiters`);
     for (const match of string.matchAll(/\\\(([\s\S]*?)\\\)/g)) {
+      const mathematicalTex = match[1]
+        .replace(/\\(?:mathrm|text|operatorname)\{[^{}]*\}/g, "");
+      assert.doesNotMatch(
+        mathematicalTex,
+        /\//,
+        `${path} must use \\frac instead of a horizontal slash fraction: ${match[1]}`,
+      );
       assert.doesNotThrow(() => katex.renderToString(match[1], {
         displayMode: false,
         output: "htmlAndMathml",
@@ -85,6 +92,23 @@ function assertCleanMathStrings(value, katex, label) {
     }
   }
 }
+
+function checkFormula(tex, katex, label) {
+  assert.doesNotMatch(tex, /\\\(|\\\)/, label + " must store pure TeX");
+  assert.doesNotMatch(tex, /\//, label + " uses stacked fractions");
+  let markup = "";
+  assert.doesNotThrow(() => {
+    markup = katex.renderToString(tex, {
+      displayMode: true,
+      output: "htmlAndMathml",
+      strict: "error",
+      throwOnError: true,
+      trust: false,
+    });
+  }, label + " contains invalid formula TeX: " + tex);
+  return markup;
+}
+
 function assertValidSourcePages(items, label) {
   for (const item of items) {
     assert.ok(Array.isArray(item.sourcePages) && item.sourcePages.length > 0, `${label}:${item.id} sourcePages`);
@@ -164,19 +188,33 @@ test("applied-math cards and exercises cover all nine range topics with real TeX
     assert.ok(card.formula.length >= 3, `${card.id} formula length`);
     assert.ok(/[\\_^]|\b(?:div|curl|grad)\b/.test(card.formula), `${card.id} must store TeX rather than prose-only pseudo math`);
     assert.ok(card.explanation?.length >= 15, `${card.id} explanation`);
-    assert.doesNotThrow(() => katex.renderToString(card.formula, {
-      displayMode: true,
-      output: "htmlAndMathml",
-      strict: "error",
-      throwOnError: true,
-      trust: false,
-    }), `${card.id} contains invalid formula TeX`);
+    checkFormula(card.formula, katex, card.id);
   }
   for (const question of APPLIED_MATH_QUESTIONS) {
     assert.ok(question.answer?.length > 0, `${question.id} answer`);
     assert.ok(question.explanation?.length >= 12, `${question.id} explanation`);
     assert.ok(Array.isArray(question.steps) && question.steps.length >= 1, `${question.id} worked steps`);
+    if (question.formula) checkFormula(question.formula, katex, question.id);
   }
+
+  const unitQuestion = APPLIED_MATH_QUESTIONS.find((question) => question.id === "am-q-unit");
+  const linearityCard = APPLIED_MATH_FORMULAS.find((card) => card.id === "am-div-curl-linearity");
+  assert.ok(unitQuestion);
+  assert.ok(linearityCard);
+  assert.match(checkFormula(unitQuestion.formula, katex, unitQuestion.id), /<mfrac>/);
+  const unitAnswerTex = unitQuestion.answer.match(/\\\(([\s\S]*?)\\\)/)?.[1] ?? "";
+  assert.match(
+    katex.renderToString(unitAnswerTex, {
+      displayMode: false,
+      output: "htmlAndMathml",
+      strict: "error",
+      throwOnError: true,
+      trust: false,
+    }),
+    /<mfrac>/,
+    "inline unit-vector answers must render as stacked fractions",
+  );
+  assert.match(checkFormula(linearityCard.formula, katex, linearityCard.id), /<mtable/);
 
   assertCleanMathStrings(APPLIED_MATH_FORMULAS, katex, "formula deck");
   assertCleanMathStrings(APPLIED_MATH_QUESTIONS, katex, "practice/random pool");
@@ -207,6 +245,7 @@ test("six predicted exams are 50-minute, 80-point papers covering all nine topic
       assert.ok(question.answer?.length > 0, `${question.id} answer`);
       assert.ok(Array.isArray(question.steps) && question.steps.length >= 2, `${question.id} worked solution`);
       assert.ok(question.explanation?.length >= 12, `${question.id} detailed explanation`);
+      if (question.formula) checkFormula(question.formula, katex, question.id);
     }
     assertCleanMathStrings(exam, katex, exam.id);
     assertNoExcludedQuestionContent(exam.questions, exam.id);

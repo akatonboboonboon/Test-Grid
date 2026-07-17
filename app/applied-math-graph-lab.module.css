@@ -477,12 +477,26 @@
   width: 100%;
   height: clamp(340px, 47vw, 590px);
   min-height: 0;
-  cursor: grab;
   touch-action: none;
 }
 
-.canvas:active {
+.rotatableCanvas {
+  cursor: grab;
+}
+
+.rotatableCanvas:active {
   cursor: grabbing;
+}
+
+.gestureHint {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  color: #d6f6f8;
+  border-top: 1px solid var(--line);
+  background: rgba(10, 17, 24, 0.94);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .canvasControls {
@@ -490,8 +504,7 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
-  padding: 0.72rem 0.85rem;
-  border-top: 1px solid var(--line);
+  padding: 0 0.85rem 0.65rem;
   background: rgba(10, 17, 24, 0.94);
 }
 

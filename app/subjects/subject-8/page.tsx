@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import CardDeckSearch from "../../card-deck-search";
 import AppliedMathExpectedExams from "../../applied-math-expected-exams";
 import AppliedMathGraphLab from "../../applied-math-graph-lab";
 import { DisplayMath, RichMathText } from "../../statistics-math";
@@ -427,6 +428,19 @@ export default function AppliedMathSubjectPage() {
     window.setTimeout(() => workspaceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
   }
 
+  function jumpToFormulaCard(cardId: string) {
+    const card = APPLIED_MATH_FORMULAS.find((item) => item.id === cardId);
+    if (!card) return;
+    const alreadyVisible = cardTopics.includes(card.topic);
+    const nextTopics = alreadyVisible ? cardTopics : [...cardTopics, card.topic];
+    const nextDeck = APPLIED_MATH_FORMULAS.filter((item) => nextTopics.includes(item.topic));
+    setCardTopics(nextTopics);
+    setCardDeck(nextDeck);
+    setCardIndex(Math.max(0, nextDeck.findIndex((item) => item.id === cardId)));
+    setCardFlipped(false);
+    setAnnouncement(card.title + "のカードを開きました。" + (alreadyVisible ? "" : "対象単元も表示に追加しました。"));
+  }
+
   function changeCardTopics(nextTopics: AppliedMathTopicId[]) {
     setCardTopics(nextTopics);
     setCardDeck(APPLIED_MATH_FORMULAS.filter((card) => nextTopics.includes(card.topic)));
@@ -627,6 +641,7 @@ export default function AppliedMathSubjectPage() {
           <span className="card-count-label"><i aria-hidden="true" /> {APPLIED_MATH_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-8">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/rapid/subject-8">時間制限 即答</Link>
+          <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-8">自動生成問題</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -706,6 +721,18 @@ export default function AppliedMathSubjectPage() {
                 <p>表面の問いに答えてから裏返し、公式・意味・使いどころをまとめて確認します。</p>
               </div>
               <TopicFilter legend="カードに含める単元" selected={cardTopics} onChange={changeCardTopics} />
+              <CardDeckSearch
+                items={APPLIED_MATH_FORMULAS.map((card) => ({
+                  id: card.id,
+                  label: card.title,
+                  description: card.prompt,
+                  meta: topicLabel(card.topic),
+                  searchText: [card.formula, card.explanation, card.cue, card.example],
+                }))}
+                currentId={currentCard?.id}
+                label="応用数学の公式カードを検索"
+                onSelect={jumpToFormulaCard}
+              />
               <div className="generic-progress english-card-progress statistics-card-progress">
                 <div><span>覚えた {cardMastered} / {filteredCards.length}・もう一度 {cardLearning}</span><strong>{cardCompletion}%</strong></div>
                 <progress value={cardCompletion} max="100" aria-label={`公式カード暗記進捗 ${cardCompletion}%`} />

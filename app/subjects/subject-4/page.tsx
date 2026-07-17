@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import CardDeckSearch from "../../card-deck-search";
 import ThermodynamicsExpectedExams from "../../thermodynamics-expected-exams";
 import ThermodynamicsDiagram from "../../thermodynamics-diagrams";
 import { DisplayMath, RichMathText } from "../../statistics-math";
@@ -350,6 +351,7 @@ function SolutionFeedback({
       <strong>{feedback.correct ? "正解" : "不正解"}</strong>
       <p><span>あなたの解答</span><RichMathText text={feedback.response} /></p>
       <p><span>正解</span><RichMathText text={question.answer} /></p>
+      {question.diagram && <ThermodynamicsDiagram kind={question.diagram} solution title="模範図・注記" />}
       {question.formula && <div className="statistics-solution-formula"><span>使う公式</span><DisplayMath tex={question.formula} /></div>}
       <div className="statistics-solution-steps">
         <span>途中式</span>
@@ -474,6 +476,19 @@ export default function ThermodynamicsSubjectPage() {
     if (mode === "test" && testPhase === "active" && nextMode !== "test") pauseTest();
     setMode(nextMode);
     window.setTimeout(() => workspaceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
+
+  function jumpToFormulaCard(cardId: string) {
+    const card = THERMODYNAMICS_FORMULAS.find((item) => item.id === cardId);
+    if (!card) return;
+    const alreadyVisible = cardTopics.includes(card.topic);
+    const nextTopics = alreadyVisible ? cardTopics : [...cardTopics, card.topic];
+    const nextDeck = THERMODYNAMICS_FORMULAS.filter((item) => nextTopics.includes(item.topic));
+    setCardTopics(nextTopics);
+    setCardDeck(nextDeck);
+    setCardIndex(Math.max(0, nextDeck.findIndex((item) => item.id === cardId)));
+    setCardFlipped(false);
+    setAnnouncement(card.title + "のカードを開きました。" + (alreadyVisible ? "" : "対象単元も表示に追加しました。"));
   }
 
   function changeCardTopics(nextTopics: ThermodynamicsTopicId[]) {
@@ -684,6 +699,7 @@ export default function ThermodynamicsSubjectPage() {
           <span className="card-count-label"><i aria-hidden="true" /> {THERMODYNAMICS_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-4">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/rapid/subject-4">時間制限 即答</Link>
+          <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-4">自動生成問題</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -761,6 +777,18 @@ export default function ThermodynamicsSubjectPage() {
                 <p>表面の問いに答えてから裏返し、公式・意味・使いどころをまとめて確認します。</p>
               </div>
               <TopicFilter legend="カードに含める単元" selected={cardTopics} onChange={changeCardTopics} />
+              <CardDeckSearch
+                items={THERMODYNAMICS_FORMULAS.map((card) => ({
+                  id: card.id,
+                  label: card.title,
+                  description: card.prompt,
+                  meta: topicLabel(card.topic),
+                  searchText: [card.formula, card.explanation, card.cue, card.example],
+                }))}
+                currentId={currentCard?.id}
+                label="熱・流体力学の公式カードを検索"
+                onSelect={jumpToFormulaCard}
+              />
               <div className="generic-progress english-card-progress statistics-card-progress">
                 <div><span>覚えた {cardMastered} / {filteredCards.length}・もう一度 {cardLearning}</span><strong>{cardCompletion}%</strong></div>
                 <progress value={cardCompletion} max="100" aria-label={`公式カード暗記進捗 ${cardCompletion}%`} />
@@ -776,6 +804,7 @@ export default function ThermodynamicsSubjectPage() {
                       : <strong><RichMathText text={currentCard.prompt} /></strong>}
                     <small>{cardFlipped ? currentCard.cue : "頭の中で公式を書いてからタップ"}</small>
                   </button>
+                  {currentCard.diagram && <ThermodynamicsDiagram kind={currentCard.diagram} solution={cardFlipped} title={cardFlipped ? "公式と対応する模式図" : "問題の模式図"} />}
                   {cardFlipped && (
                     <div className="english-guide-tip statistics-card-explanation">
                       <span>WHY / HOW</span><p><RichMathText text={currentCard.explanation} />{currentCard.example ? <><br /><b>例：</b><RichMathText text={currentCard.example} /></> : null}</p>
@@ -867,6 +896,7 @@ export default function ThermodynamicsSubjectPage() {
                           <strong><RichMathText text={question.prompt} /></strong>
                           <p>あなた：<RichMathText text={result?.response || "未回答"} /></p>
                           {!correct && <p>正解：<RichMathText text={question.answer} /></p>}
+                          {question.diagram && <ThermodynamicsDiagram kind={question.diagram} solution title="振り返り用の模範図" />}
                           <details className="result-review-explanation" open={!correct}>
                             <summary>解説を見る</summary>
                             <p><RichMathText text={question.explanation} /></p>

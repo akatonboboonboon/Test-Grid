@@ -170,7 +170,7 @@ function loadAllCards() {
   return Array.from(new Map(result.map((card) => [card.subjectId + ":" + card.id, card])).values());
 }
 
-type SubjectFilter = "all" | SubjectId;
+type SubjectFilter = SubjectId[];
 
 export default function CardSearch({
   initialSubject,
@@ -179,11 +179,11 @@ export default function CardSearch({
   initialSubject: string;
   initialQuery: string;
 }) {
-  const validInitialSubject = RAPID_SUBJECT_IDS.includes(initialSubject as SubjectId)
-    ? initialSubject as SubjectId
-    : "all";
+  const validInitialSubjects: SubjectFilter = RAPID_SUBJECT_IDS.includes(initialSubject as SubjectId)
+    ? [initialSubject as SubjectId]
+    : [];
   const [cards, setCards] = useState<RapidQuestion[]>([]);
-  const [subjectFilter, setSubjectFilter] = useState<SubjectFilter>(validInitialSubject);
+  const [selectedSubjects, setSelectedSubjects] = useState<SubjectFilter>(validInitialSubjects);
   const [query, setQuery] = useState(initialQuery);
   const [currentKey, setCurrentKey] = useState("");
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
@@ -201,10 +201,10 @@ export default function CardSearch({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const subjectCards = useMemo(
-    () => subjectFilter === "all"
+    () => selectedSubjects.length === 0
       ? cards
-      : cards.filter((card) => card.subjectId === subjectFilter),
-    [cards, subjectFilter],
+      : cards.filter((card) => selectedSubjects.includes(card.subjectId)),
+    [cards, selectedSubjects],
   );
 
   const filtered = useMemo(() => {
@@ -295,12 +295,18 @@ export default function CardSearch({
     }
   }
 
-  function changeSubject(nextSubject: SubjectFilter) {
-    setSubjectFilter(nextSubject);
+  function changeSubjects(nextSubjects: SubjectFilter) {
+    setSelectedSubjects(nextSubjects);
     setCurrentKey("");
     setSuggestionsOpen(Boolean(normalizeSearchText(query)));
     setHighlightedSuggestion(0);
     setFlipped(false);
+  }
+
+  function toggleSubject(subject: SubjectId) {
+    changeSubjects(selectedSubjects.includes(subject)
+      ? selectedSubjects.filter((selectedSubject) => selectedSubject !== subject)
+      : RAPID_SUBJECT_IDS.filter((subjectId) => subjectId === subject || selectedSubjects.includes(subjectId)));
   }
 
   function move(amount: number) {
@@ -398,12 +404,13 @@ export default function CardSearch({
           <p aria-live="polite">{searchStatus}</p>
         </section>
 
-        <div className="card-search-subjects" role="group" aria-label="教科で絞り込み">
-          <button type="button" aria-pressed={subjectFilter === "all"} onClick={() => changeSubject("all")}>全教科 <small>{cards.length}</small></button>
+        <div className="card-search-subjects" role="group" aria-label="教科で絞り込み（複数選択可）">
+          <span className="card-search-subjects-label">教科タグ · 複数選択可（いずれかに一致）</span>
+          <button type="button" aria-pressed={selectedSubjects.length === 0} onClick={() => changeSubjects([])}>全教科 <small>{cards.length}</small></button>
           {RAPID_SUBJECTS.map((subject) => {
             const count = cards.filter((card) => card.subjectId === subject.id).length;
             return (
-              <button type="button" key={subject.id} aria-pressed={subjectFilter === subject.id} onClick={() => changeSubject(subject.id)}>
+              <button type="button" key={subject.id} aria-pressed={selectedSubjects.includes(subject.id)} onClick={() => toggleSubject(subject.id)}>
                 {subject.name} <small>{count}</small>
               </button>
             );

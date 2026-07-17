@@ -83,8 +83,8 @@ test("actual past-paper values follow the printed constants and visible solution
   assert.match(leverFrequency.answer, /mr\^2/);
   assert.match(leverFrequency.answer, /cr\^2/);
   assert.match(leverFrequency.answer, /kl\^2/);
-  assert.match(leverFrequency.answer, /l\/r/);
-  assert.match(leverDamping.answer, /cr\/\(2l/);
+  assert.match(leverFrequency.answer, /\\frac\{l\}\{r\}/);
+  assert.match(leverDamping.answer, /\\frac\{cr\}\{2l\\sqrt\{mk\}\}/);
   assert.ok(Math.abs(byId(exam, "md-actual-m6-s3").numericAnswer - 0.50596) < 0.00001);
 
   const pendulum = byId(exam, "md-actual-m7-s1");
