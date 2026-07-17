@@ -47,6 +47,8 @@ test("generated questions are saved to a public, validated, paginated D1 history
   assert.match(route, /MAX_HISTORY_ITEMS = 5_000/);
   assert.match(route, /MAX_QUESTIONS_PER_MINUTE = 500/);
   assert.match(route, /HISTORY_WRITE_RATE_LIMITED/);
+  assert.match(route, /claimFallbackWrite/);
+  assert.match(route, /PERSISTENT_QUOTA_UNAVAILABLE/);
   assert.match(route, /LIMIT -1 OFFSET \?/);
   assert.doesNotMatch(route, /body\.questions/);
   assert.match(route, /INSERT OR IGNORE INTO generated_practice_history/);

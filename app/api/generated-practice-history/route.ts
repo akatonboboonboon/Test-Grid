@@ -51,14 +51,36 @@ function historyUnavailable() {
   return Response.json({ error: "HISTORY_UNAVAILABLE" }, { status: 503 });
 }
 
-async function anonymousClientKey(request: Request) {
-  const forwardedAddress = request.headers.get("cf-connecting-ip")
+const FALLBACK_WRITE_BUCKETS = new Map<string, { minuteBucket: number; questionCount: number }>();
+const MAX_FALLBACK_CLIENTS = 5_000;
+
+function anonymousClientAddress(request: Request) {
+  return request.headers.get("cf-connecting-ip")
     ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     ?? "unknown:" + (request.headers.get("user-agent") ?? "").slice(0, 160);
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(forwardedAddress));
+}
+
+async function anonymousClientKey(address: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address));
   return Array.from(new Uint8Array(digest).slice(0, 16))
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function claimFallbackWrite(address: string, minuteBucket: number, questionCount: number) {
+  const current = FALLBACK_WRITE_BUCKETS.get(address);
+  if (!current && FALLBACK_WRITE_BUCKETS.size >= MAX_FALLBACK_CLIENTS) return false;
+  const nextCount = current?.minuteBucket === minuteBucket
+    ? current.questionCount + questionCount
+    : questionCount;
+  if (nextCount > MAX_QUESTIONS_PER_MINUTE) return false;
+  FALLBACK_WRITE_BUCKETS.set(address, { minuteBucket, questionCount: nextCount });
+  if (FALLBACK_WRITE_BUCKETS.size > 1_000) {
+    for (const [key, value] of FALLBACK_WRITE_BUCKETS) {
+      if (value.minuteBucket < minuteBucket) FALLBACK_WRITE_BUCKETS.delete(key);
+    }
+  }
+  return true;
 }
 
 function parseQuestion(value: unknown): GeneratedPracticeQuestion | null {
@@ -177,23 +199,31 @@ export async function POST(request: Request) {
 
     const createdAt = Date.now();
     const database = getD1();
-    const clientKey = await anonymousClientKey(request);
+    const clientAddress = anonymousClientAddress(request);
     const minuteBucket = Math.floor(createdAt / 60_000);
-    await database.prepare(`
-        DELETE FROM generated_practice_write_limits
-        WHERE updated_at < ?
-      `).bind(createdAt - 3_600_000).run();
-    const quota = await database.prepare(`
-        INSERT INTO generated_practice_write_limits
-          (client_key, bucket, question_count, updated_at)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(client_key, bucket) DO UPDATE SET
-          question_count = question_count + excluded.question_count,
-          updated_at = excluded.updated_at
-        RETURNING question_count
-      `).bind(clientKey, minuteBucket, candidates.length, createdAt)
-      .first<{ question_count: number }>();
-    if (!quota || quota.question_count > MAX_QUESTIONS_PER_MINUTE) {
+    let writeAllowed = false;
+    try {
+      const clientKey = await anonymousClientKey(clientAddress);
+      await database.prepare(`
+          DELETE FROM generated_practice_write_limits
+          WHERE updated_at < ?
+        `).bind(createdAt - 3_600_000).run();
+      const quota = await database.prepare(`
+          INSERT INTO generated_practice_write_limits
+            (client_key, bucket, question_count, updated_at)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT(client_key, bucket) DO UPDATE SET
+            question_count = question_count + excluded.question_count,
+            updated_at = excluded.updated_at
+          RETURNING question_count
+        `).bind(clientKey, minuteBucket, candidates.length, createdAt)
+        .first<{ question_count: number }>();
+      if (!quota) throw new Error("PERSISTENT_QUOTA_UNAVAILABLE");
+      writeAllowed = quota.question_count <= MAX_QUESTIONS_PER_MINUTE;
+    } catch {
+      writeAllowed = claimFallbackWrite(clientAddress, minuteBucket, candidates.length);
+    }
+    if (!writeAllowed) {
       return Response.json({ error: "HISTORY_WRITE_RATE_LIMITED" }, {
         status: 429,
         headers: { "retry-after": "60" },
