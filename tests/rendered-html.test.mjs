@@ -889,7 +889,7 @@ test("ships an authenticated R2-backed anonymous leaderboard without exposing ac
   assert.doesNotMatch(route, /env\.DB|SELECT[^;]*email/is);
   assert.doesNotMatch(route, /Response\.json\([^)]*userKey/);
   assert.match(hosting, /"r2": "STUDY_SNAPSHOTS"/);
-  assert.doesNotMatch(hosting, /"d1"/);
+  assert.match(hosting, /"d1": "DB"/);
   assert.match(rankingData, /test-grid:rapid-rankings:v1/);
   assert.match(accountSync, /mergeRapidHistories/);
 });

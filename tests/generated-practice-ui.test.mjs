@@ -68,6 +68,7 @@ test("statistics formula hints show both sigma and expanded notation", async () 
 test("question regeneration stays pure during React render", async () => {
   const source = await readFile(new URL("../app/generated-practice-client.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(source, /Date\.now\(\)/u);
-  assert.match(source, /question\.seed/u);
+  assert.match(source, /globalThis\.crypto\?\.randomUUID/u);
+  assert.doesNotMatch(source, /nextTemplate \|\| "random",\s*question\.seed/u);
   assert.match(source, /generationCounter\.current/u);
 });

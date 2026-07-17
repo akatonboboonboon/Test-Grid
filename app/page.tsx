@@ -26,6 +26,14 @@ import {
 } from "./study-data";
 
 const SMART_CONTROL_ALL_CARDS = [...SMART_CONTROL_CARDS, ...TEXTBOOK_RESPONSE_CARDS];
+const GENERATED_PRACTICE_SUBJECT_IDS = new Set<SubjectId>([
+  "subject-2",
+  "subject-3",
+  "subject-4",
+  "subject-6",
+  "subject-7",
+  "subject-8",
+]);
 
 type SubjectMetric = { cards: number; mastered: number };
 type SubjectDraft = Pick<StudySubject, "id" | "name" | "testDate" | "memo" | "accent">;
@@ -229,6 +237,7 @@ export default function StudyHub() {
         </Link>
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {configuredCount} / 9 NAMED</span>
+          <Link className="outline-button header-link hub-generated-header-link" href="/generated-practice">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link hub-memory-header-link" href="/cards">全教科の暗記帳検索</Link>
         </div>
       </header>
@@ -259,10 +268,10 @@ export default function StudyHub() {
         <Link className="hub-generated-launch" href="/generated-practice">
           <span>
             <small>ON-DEMAND / SOLVED QUESTIONS</small>
-            <strong>自動生成問題で、もう1問。</strong>
-            <em>プリント問題とは別。範囲内・解答と途中式付きで1問ずつ生成</em>
+            <strong>自動生成問題を、1〜100問連続で。</strong>
+            <em>自動生成問題で、もう1問。範囲内・解答付きで「みんなの履歴」にも保存</em>
           </span>
-          <b aria-hidden="true">作る →</b>
+          <b aria-hidden="true">始める →</b>
         </Link>
 
         <section className="hub-summary" aria-label="全体の学習状況">
@@ -314,6 +323,7 @@ export default function StudyHub() {
               const metric = metrics[subject.id] ?? { cards: 0, mastered: 0 };
               const completion = metric.cards ? Math.round((metric.mastered / metric.cards) * 100) : 0;
               const hasMaterial = subject.module === "network" || subject.id === "subject-3" || subject.id === "subject-4" || subject.id === "subject-6" || subject.id === "subject-7" || subject.id === "subject-8" || metric.cards > 0;
+              const hasGeneratedPractice = GENERATED_PRACTICE_SUBJECT_IDS.has(subject.id);
               const style = { "--subject-accent": subject.accent } as CSSProperties;
               return (
                 <article className={`subject-tile ${subject.configured ? "is-configured" : "is-empty"}`} style={style} key={subject.id}>
@@ -344,6 +354,11 @@ export default function StudyHub() {
                       <>
                         <Link className="subject-primary" href={`/subjects/${subject.id}`}>勉強を始める</Link>
                         <Link className="subject-secondary subject-rapid-link" href={`/rapid/${subject.id}`}>時間制限 即答</Link>
+                        {hasGeneratedPractice && (
+                          <Link className="subject-secondary subject-generated-link" href={"/generated-practice?subject=" + subject.id}>
+                            自動生成問題・共有履歴
+                          </Link>
+                        )}
                       </>
                     ) : (
                       <button className="subject-primary" type="button" onClick={() => beginEdit(subject)}>科目を設定</button>
