@@ -836,11 +836,10 @@ test("ships layer filtering, fuzzy card search, rapid drills, and balanced revie
   assert.match(overallChallenge, /全\{runner\.results\.length\}問の振り返り/);
 });
 
-test("ships an authenticated anonymous leaderboard without exposing account identifiers", async () => {
-  const [route, schema, migration, rankingData, accountSync] = await Promise.all([
+test("ships an authenticated R2-backed anonymous leaderboard without exposing account identifiers", async () => {
+  const [route, hosting, rankingData, accountSync] = await Promise.all([
     readFile(new URL("../app/api/leaderboard/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
-    readFile(new URL("../drizzle/0000_wandering_roughhouse.sql", import.meta.url), "utf8"),
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../app/rapid-ranking-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),
   ]);
@@ -848,11 +847,13 @@ test("ships an authenticated anonymous leaderboard without exposing account iden
   assert.match(route, /SHA-256/);
   assert.match(route, /学習者-/);
   assert.match(route, /SIGN_IN_REQUIRED/);
-  assert.match(route, /ORDER BY correct_count DESC, best_streak DESC, duration_ms ASC/);
-  assert.doesNotMatch(route, /SELECT[^;]*email/is);
+  assert.match(route, /STUDY_SNAPSHOTS\.list/);
+  assert.match(route, /STUDY_SNAPSHOTS\.put/);
+  assert.match(route, /scoreIsBetter/);
+  assert.doesNotMatch(route, /env\.DB|SELECT[^;]*email/is);
   assert.doesNotMatch(route, /Response\.json\([^)]*userKey/);
-  assert.match(schema, /leaderboardEntries/);
-  assert.match(migration, /CREATE TABLE `leaderboard_entries`/);
+  assert.match(hosting, /"r2": "STUDY_SNAPSHOTS"/);
+  assert.doesNotMatch(hosting, /"d1"/);
   assert.match(rankingData, /test-grid:rapid-rankings:v1/);
   assert.match(accountSync, /mergeRapidHistories/);
 });
