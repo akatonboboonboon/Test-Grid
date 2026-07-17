@@ -809,10 +809,10 @@ test("server-renders a generic subject workspace and the all-subject card search
   assert.match(subjectHtml, /まだ教材がありません/);
   const cardsHtml = await legacyCardsResponse.text();
   assert.match(cardsHtml, /CARD SEARCH/);
-  assert.match(cardsHtml, /もしかして？検索/);
+  assert.match(cardsHtml, /aria-autocomplete="list"/);
 });
 
-test("ships layer filtering, fuzzy card search, rapid drills, and balanced review", async () => {
+test("ships layer filtering, autocomplete card search, rapid drills, and balanced review", async () => {
   const [networkCardsPage, globalCardSearch, rapidData, rapidDrill, overallChallenge] = await Promise.all([
     readFile(new URL("../app/subjects/network/cards/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/card-search.tsx", import.meta.url), "utf8"),
@@ -823,9 +823,19 @@ test("ships layer filtering, fuzzy card search, rapid drills, and balanced revie
 
   assert.match(networkCardsPage, /レイヤーで絞り込み/);
   assert.match(networkCardsPage, /cardLayers\(card\)\.includes\(layer\)/);
-  assert.match(networkCardsPage, /もしかして？検索/);
+  assert.match(networkCardsPage, /memory-search-suggestions/);
+  assert.match(networkCardsPage, /aria-autocomplete="list"/);
+  assert.match(networkCardsPage, /exactProtocolScore/);
   assert.match(globalCardSearch, /全教科の暗記帳検索/);
   assert.match(globalCardSearch, /function fuzzyScore/);
+  assert.match(globalCardSearch, /function exactMatchScore/);
+  assert.match(globalCardSearch, /card-search-suggestions/);
+  assert.match(globalCardSearch, /role="combobox"/);
+  assert.match(globalCardSearch, /role="listbox"/);
+  assert.match(globalCardSearch, /handleSearchKeyDown/);
+  assert.match(globalCardSearch, /nativeEvent\.isComposing/);
+  assert.doesNotMatch(globalCardSearch, /const \[fuzzy/);
+  assert.doesNotMatch(globalCardSearch, /card-search-results/);
   assert.doesNotMatch(globalCardSearch, /eval\(|new Function|Function\(/);
   assert.match(rapidDrill, /全問題の振り返り/);
   assert.match(rapidDrill, /間違えた問題の暗記帳へ/);

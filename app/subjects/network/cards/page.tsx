@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   ALL_LAYERS,
   cardLayers,
@@ -72,17 +72,51 @@ function fuzzyScore(card: ProtocolCard, rawQuery: string) {
   return best;
 }
 
-function searchCards(cards: ProtocolCard[], query: string, fuzzy: boolean) {
+function protocolFieldScore(field: string | undefined, query: string, priority: number) {
+  const normalized = normalizeSearchText(field ?? "");
+  if (!normalized || !query) return Number.POSITIVE_INFINITY;
+  if (normalized === query) return priority;
+  if (normalized.startsWith(query)) return 20 + priority;
+  if (normalized.includes(query)) return 40 + priority;
+  return Number.POSITIVE_INFINITY;
+}
+
+function exactProtocolScore(card: ProtocolCard, rawQuery: string) {
+  const query = normalizeSearchText(rawQuery);
+  if (!query) return 0;
+  return Math.min(
+    protocolFieldScore(card.label, query, 0),
+    protocolFieldScore(card.fullName, query, 1),
+    protocolFieldScore(card.description, query, 100),
+    protocolFieldScore(card.note, query, 101),
+  );
+}
+
+function searchCards(cards: ProtocolCard[], query: string) {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return cards;
-  const exact = cards.filter((card) => cardSearchFields(card)
-    .some((field) => normalizeSearchText(field).includes(normalizedQuery)));
-  if (!fuzzy) return exact;
+  return cards
+    .map((card) => ({ card, score: exactProtocolScore(card, normalizedQuery) }))
+    .filter(({ score }) => Number.isFinite(score))
+    .sort((left, right) => left.score - right.score || left.card.label.localeCompare(right.card.label, "ja"))
+    .map(({ card }) => card);
+}
+
+function suggestCards(cards: ProtocolCard[], query: string) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return [];
   const threshold = Math.max(1, Math.min(4, Math.floor(normalizedQuery.length * 0.4)));
   return cards
-    .map((card) => ({ card, score: fuzzyScore(card, normalizedQuery) }))
-    .filter(({ score }) => score <= threshold)
+    .map((card) => {
+      const exactScore = exactProtocolScore(card, normalizedQuery);
+      if (Number.isFinite(exactScore)) return { card, score: exactScore };
+      if (normalizedQuery.length < 2) return null;
+      const distance = fuzzyScore(card, normalizedQuery);
+      return distance <= threshold ? { card, score: 1000 + distance } : null;
+    })
+    .filter((entry): entry is { card: ProtocolCard; score: number } => entry !== null)
     .sort((left, right) => left.score - right.score || left.card.label.localeCompare(right.card.label, "ja"))
+    .slice(0, 8)
     .map(({ card }) => card);
 }
 
@@ -101,7 +135,9 @@ export default function CardsPage() {
   const [deck, setDeck] = useState<ProtocolCard[]>(DEFAULT_CARDS);
   const [selectedLayer, setSelectedLayer] = useState<LayerFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [fuzzySearch, setFuzzySearch] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [highlightedSuggestion, setHighlightedSuggestion] = useState(0);
+  const [isComposing, setIsComposing] = useState(false);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [progress, setProgress] = useState<MemoryProgress>({});
@@ -136,10 +172,22 @@ export default function CardsPage() {
   const currentLayerLabel = currentCard ? cardLayerLabel(currentCard) : "";
   const currentFullName = currentCard?.fullName?.trim() || "正式名称未登録";
   const currentDescription = currentCard?.description?.trim() || "このカードの働きはまだ登録されていません。";
-  const filteredCards = useMemo(
-    () => searchCards(filterCardsByLayer(cards, selectedLayer), searchQuery, fuzzySearch),
-    [cards, selectedLayer, searchQuery, fuzzySearch],
+  const layerCards = useMemo(
+    () => filterCardsByLayer(cards, selectedLayer),
+    [cards, selectedLayer],
   );
+  const filteredCards = useMemo(
+    () => searchCards(layerCards, searchQuery),
+    [layerCards, searchQuery],
+  );
+  const searchSuggestions = useMemo(
+    () => suggestCards(layerCards, searchQuery),
+    [layerCards, searchQuery],
+  );
+  const showSearchSuggestions = hydrated
+    && suggestionsOpen
+    && Boolean(normalizeSearchText(searchQuery))
+    && searchSuggestions.length > 0;
   const layerCounts = useMemo(
     () => Object.fromEntries(ALL_LAYERS.map((layer) => [
       layer,
@@ -195,8 +243,10 @@ export default function CardsPage() {
   }
 
   function changeLayerFilter(nextLayer: LayerFilter) {
-    const nextCards = searchCards(filterCardsByLayer(cards, nextLayer), searchQuery, fuzzySearch);
+    const nextCards = searchCards(filterCardsByLayer(cards, nextLayer), searchQuery);
     setSelectedLayer(nextLayer);
+    setSuggestionsOpen(Boolean(normalizeSearchText(searchQuery)));
+    setHighlightedSuggestion(0);
     setResetArmed(false);
     shuffleDeck(nextCards);
     setAnnouncement(nextLayer === "all"
@@ -204,17 +254,50 @@ export default function CardsPage() {
       : `第${nextLayer}層の${nextCards.length}枚に絞り込みました。`);
   }
 
-  function updateSearch(nextQuery: string, nextFuzzy = fuzzySearch) {
-    const nextCards = searchCards(filterCardsByLayer(cards, selectedLayer), nextQuery, nextFuzzy);
+  function updateSearch(nextQuery: string) {
+    const nextCards = searchCards(filterCardsByLayer(cards, selectedLayer), nextQuery);
     setSearchQuery(nextQuery);
-    setFuzzySearch(nextFuzzy);
+    setSuggestionsOpen(Boolean(normalizeSearchText(nextQuery)));
+    setHighlightedSuggestion(0);
     setDeck(nextCards);
     setIndex(0);
     setFlipped(false);
     setResetArmed(false);
     setAnnouncement(nextQuery.trim()
-      ? `${nextCards.length}枚が見つかりました。${nextFuzzy ? "もしかして検索を使用中です。" : ""}`
+      ? nextCards.length
+        ? `${nextCards.length}枚が見つかりました。先頭のカードを表示します。`
+        : "完全一致はありません。入力欄の「もしかして？」候補を確認してください。"
       : "検索を解除しました。");
+  }
+
+  function selectSearchSuggestion(card: ProtocolCard) {
+    setSearchQuery(card.label);
+    setDeck([card]);
+    setIndex(0);
+    setFlipped(false);
+    setSuggestionsOpen(false);
+    setHighlightedSuggestion(0);
+    setResetArmed(false);
+    setAnnouncement(`${card.label}のカードを表示しました。`);
+    focusCard();
+  }
+
+  function handleSearchInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing || isComposing) return;
+    if (event.key === "ArrowDown" && searchSuggestions.length) {
+      event.preventDefault();
+      setSuggestionsOpen(true);
+      setHighlightedSuggestion((value) => (value + 1) % searchSuggestions.length);
+    } else if (event.key === "ArrowUp" && searchSuggestions.length) {
+      event.preventDefault();
+      setSuggestionsOpen(true);
+      setHighlightedSuggestion((value) => (value - 1 + searchSuggestions.length) % searchSuggestions.length);
+    } else if (event.key === "Enter" && suggestionsOpen && searchSuggestions.length) {
+      event.preventDefault();
+      selectSearchSuggestion(searchSuggestions[Math.min(highlightedSuggestion, searchSuggestions.length - 1)]);
+    } else if (event.key === "Escape") {
+      setSuggestionsOpen(false);
+    }
   }
 
   function reviewUnmastered() {
@@ -294,25 +377,64 @@ export default function CardsPage() {
             <strong id="memory-search-title">カードを検索</strong>
           </label>
           <div className="memory-search-controls">
-            <input
-              id="memory-card-search"
-              type="search"
-              autoComplete="off"
-              value={searchQuery}
-              onChange={(event) => updateSearch(event.target.value)}
-              placeholder="略語・正式名称・働きで検索"
-            />
-            <button
-              type="button"
-              className={fuzzySearch ? "active" : ""}
-              aria-pressed={fuzzySearch}
-              onClick={() => updateSearch(searchQuery, !fuzzySearch)}
-            >
-              <span>うろ覚え対応</span><strong>もしかして？検索</strong>
-            </button>
+            <div className="memory-search-input-wrap">
+              <input
+                id="memory-card-search"
+                type="search"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="memory-search-suggestions"
+                aria-expanded={showSearchSuggestions}
+                aria-activedescendant={showSearchSuggestions ? "memory-search-suggestion-" + highlightedSuggestion : undefined}
+                autoComplete="off"
+                spellCheck={false}
+                value={searchQuery}
+                onChange={(event) => updateSearch(event.target.value)}
+                onFocus={() => setSuggestionsOpen(Boolean(normalizeSearchText(searchQuery)))}
+                onBlur={() => setSuggestionsOpen(false)}
+                onKeyDown={handleSearchInputKeyDown}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
+                placeholder="略語・正式名称・働きで検索"
+              />
+              {showSearchSuggestions && (
+                <div className="memory-search-suggestions" id="memory-search-suggestions">
+                  <span>入力候補 / もしかして？</span>
+                  <ol role="listbox" aria-label="プロトコルカードの入力候補">
+                    {searchSuggestions.map((card, suggestionIndex) => {
+                      const exact = Number.isFinite(exactProtocolScore(card, searchQuery));
+                      return (
+                        <li
+                          id={"memory-search-suggestion-" + suggestionIndex}
+                          role="option"
+                          aria-selected={highlightedSuggestion === suggestionIndex}
+                          key={card.id}
+                        >
+                          <button
+                            type="button"
+                            onPointerDown={(event) => event.preventDefault()}
+                            onClick={() => selectSearchSuggestion(card)}
+                            onMouseEnter={() => setHighlightedSuggestion(suggestionIndex)}
+                          >
+                            <strong>{card.label}</strong>
+                            <small>{card.fullName?.trim() || card.description?.trim() || "説明未登録"}</small>
+                            <em>{exact ? "一致" : "もしかして？"}</em>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              )}
+            </div>
             {searchQuery && <button type="button" className="clear" onClick={() => updateSearch("")}>検索を消す</button>}
           </div>
-          <p><strong>{filteredCards.length}枚</strong>を表示中{fuzzySearch && " · 入力に近い候補も含めます"}</p>
+          <p aria-live="polite">
+            <strong>{filteredCards.length}枚</strong>
+            {searchQuery && !filteredCards.length && searchSuggestions.length
+              ? " · 入力欄に近い候補があります"
+              : "を表示中"}
+          </p>
         </section>
 
         <section className="memory-layer-filter" aria-labelledby="memory-layer-filter-title">

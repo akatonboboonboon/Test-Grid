@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { DisplayMath, RichMathText } from "./statistics-math";
 import { ENGLISH_QUESTIONS } from "./english-data";
 import { MECHANICAL_DYNAMICS_QUESTIONS } from "./mechanical-dynamics-data";
@@ -75,6 +75,38 @@ function fuzzyScore(card: RapidQuestion, rawQuery: string) {
     }
   }
   return best;
+}
+
+function cardKey(card: RapidQuestion) {
+  return card.subjectId + ":" + card.id;
+}
+
+function fieldMatchScore(field: string, query: string, priority: number) {
+  const normalized = normalizeSearchText(field);
+  if (!normalized || !query) return Number.POSITIVE_INFINITY;
+  if (normalized === query) return priority;
+  if (normalized.startsWith(query)) return 20 + priority;
+  if (normalized.includes(query)) return 40 + priority;
+  return Number.POSITIVE_INFINITY;
+}
+
+function exactMatchScore(card: RapidQuestion, rawQuery: string) {
+  const query = normalizeSearchText(rawQuery);
+  if (!query) return 0;
+  const primary = [card.prompt, card.answer, ...card.acceptedOptions, card.topicLabel];
+  const secondary = [rapidSubjectMeta(card.subjectId).name, card.explanation];
+  return Math.min(
+    ...primary.map((field, index) => fieldMatchScore(field, query, index)),
+    ...secondary.map((field, index) => fieldMatchScore(field, query, 100 + index)),
+  );
+}
+
+function suggestionInputValue(card: RapidQuestion, rawQuery: string) {
+  const query = normalizeSearchText(rawQuery);
+  const candidates = [card.prompt, card.answer, ...card.acceptedOptions, card.topicLabel]
+    .map((field, index) => ({ field, score: fieldMatchScore(field, query, index) }))
+    .sort((left, right) => left.score - right.score);
+  return Number.isFinite(candidates[0]?.score) ? candidates[0].field : card.prompt;
 }
 
 type ReviewQuestionSeed = {
@@ -153,8 +185,10 @@ export default function CardSearch({
   const [cards, setCards] = useState<RapidQuestion[]>([]);
   const [subjectFilter, setSubjectFilter] = useState<SubjectFilter>(validInitialSubject);
   const [query, setQuery] = useState(initialQuery);
-  const [fuzzy, setFuzzy] = useState(false);
-  const [currentId, setCurrentId] = useState("");
+  const [currentKey, setCurrentKey] = useState("");
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [highlightedSuggestion, setHighlightedSuggestion] = useState(0);
+  const [isComposing, setIsComposing] = useState(false);
   const [flipped, setFlipped] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -166,45 +200,120 @@ export default function CardSearch({
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const filtered = useMemo(() => {
-    const subjectCards = subjectFilter === "all"
+  const subjectCards = useMemo(
+    () => subjectFilter === "all"
       ? cards
-      : cards.filter((card) => card.subjectId === subjectFilter);
+      : cards.filter((card) => card.subjectId === subjectFilter),
+    [cards, subjectFilter],
+  );
+
+  const filtered = useMemo(() => {
     const normalizedQuery = normalizeSearchText(query);
     if (!normalizedQuery) return subjectCards;
-    if (!fuzzy) {
-      return subjectCards.filter((card) => searchFields(card)
-        .some((field) => normalizeSearchText(field).includes(normalizedQuery)));
-    }
-    const threshold = Math.max(1, Math.min(5, Math.floor(normalizedQuery.length * 0.42)));
     return subjectCards
-      .map((card) => ({ card, score: fuzzyScore(card, normalizedQuery) }))
-      .filter(({ score }) => score <= threshold)
+      .map((card) => ({ card, score: exactMatchScore(card, normalizedQuery) }))
+      .filter(({ score }) => Number.isFinite(score))
       .sort((left, right) => left.score - right.score
         || left.card.prompt.localeCompare(right.card.prompt, "ja"))
       .map(({ card }) => card);
-  }, [cards, subjectFilter, query, fuzzy]);
+  }, [subjectCards, query]);
 
-  const currentIndex = Math.max(0, filtered.findIndex((card) => card.id === currentId));
+  const suggestions = useMemo(() => {
+    const normalizedQuery = normalizeSearchText(query);
+    if (!normalizedQuery) return [];
+    const threshold = Math.max(1, Math.min(5, Math.floor(normalizedQuery.length * 0.42)));
+    return subjectCards
+      .map((card) => {
+        const exactScore = exactMatchScore(card, normalizedQuery);
+        if (Number.isFinite(exactScore)) return { card, score: exactScore };
+        if (normalizedQuery.length < 2) return null;
+        const distance = fuzzyScore(card, normalizedQuery);
+        return distance <= threshold ? { card, score: 1000 + distance } : null;
+      })
+      .filter((entry): entry is { card: RapidQuestion; score: number } => entry !== null)
+      .sort((left, right) => left.score - right.score
+        || left.card.prompt.localeCompare(right.card.prompt, "ja"))
+      .slice(0, 8)
+      .map(({ card }) => card);
+  }, [subjectCards, query]);
+
+  const currentIndex = Math.max(0, filtered.findIndex((card) => cardKey(card) === currentKey));
   const current = filtered[currentIndex];
+  const showSuggestions = hydrated && suggestionsOpen && Boolean(normalizeSearchText(query)) && suggestions.length > 0;
+  const searchStatus = !hydrated
+    ? "暗記帳を読み込み中…"
+    : !normalizeSearchText(query)
+      ? subjectCards.length + "枚から検索できます"
+      : filtered.length
+        ? filtered.length + "件一致。カードを表示しました"
+        : suggestions.length
+          ? "近い候補があります。入力欄から選んでください"
+          : "一致するカードも近い候補もありません";
 
-  function selectCard(card: RapidQuestion) {
-    setCurrentId(card.id);
+  function selectSuggestion(card: RapidQuestion) {
+    setQuery(suggestionInputValue(card, query));
+    setCurrentKey(cardKey(card));
+    setSuggestionsOpen(false);
+    setHighlightedSuggestion(0);
     setFlipped(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.setTimeout(() => {
+      document.getElementById("card-search-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
+  function updateQuery(nextQuery: string) {
+    setQuery(nextQuery);
+    setCurrentKey("");
+    setSuggestionsOpen(Boolean(normalizeSearchText(nextQuery)));
+    setHighlightedSuggestion(0);
+    setFlipped(false);
+  }
+
+  function clearSearch() {
+    setQuery("");
+    setCurrentKey("");
+    setSuggestionsOpen(false);
+    setHighlightedSuggestion(0);
+    setFlipped(false);
+  }
+
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing || isComposing) return;
+    if (event.key === "ArrowDown" && suggestions.length) {
+      event.preventDefault();
+      setSuggestionsOpen(true);
+      setHighlightedSuggestion((value) => (value + 1) % suggestions.length);
+    } else if (event.key === "ArrowUp" && suggestions.length) {
+      event.preventDefault();
+      setSuggestionsOpen(true);
+      setHighlightedSuggestion((value) => (value - 1 + suggestions.length) % suggestions.length);
+    } else if (event.key === "Enter" && suggestionsOpen && suggestions.length) {
+      event.preventDefault();
+      selectSuggestion(suggestions[Math.min(highlightedSuggestion, suggestions.length - 1)]);
+    } else if (event.key === "Escape") {
+      setSuggestionsOpen(false);
+    }
+  }
+
+  function changeSubject(nextSubject: SubjectFilter) {
+    setSubjectFilter(nextSubject);
+    setCurrentKey("");
+    setSuggestionsOpen(Boolean(normalizeSearchText(query)));
+    setHighlightedSuggestion(0);
+    setFlipped(false);
   }
 
   function move(amount: number) {
     if (!filtered.length) return;
     const nextIndex = (currentIndex + amount + filtered.length) % filtered.length;
-    setCurrentId(filtered[nextIndex].id);
+    setCurrentKey(cardKey(filtered[nextIndex]));
     setFlipped(false);
   }
 
   function chooseRandom() {
     if (!filtered.length) return;
     const nextIndex = Math.floor(Math.random() * filtered.length);
-    setCurrentId(filtered[nextIndex].id);
+    setCurrentKey(cardKey(filtered[nextIndex]));
     setFlipped(false);
   }
 
@@ -228,37 +337,73 @@ export default function CardSearch({
 
         <section className="card-search-hero">
           <div><span>SEARCH / MEMORY</span><h1>暗記帳を、<br /><em>すぐ見つける。</em></h1></div>
-          <p>単語・公式・説明の一部から横断検索できます。綴りや名前があやふやなら「もしかして？検索」をオンにしてください。</p>
+          <p>単語や公式を入力すると、一致度が最も高いカードをすぐ表示します。綴りや名前があやふやでも、入力中の「もしかして？」候補から選べます。</p>
         </section>
 
         <section className="card-search-controls" aria-label="暗記カードの検索条件">
-          <label>
-            <span>キーワード</span>
-            <input
-              type="search"
-              value={query}
-              placeholder="例：TCP、平均、運動方程式"
-              onChange={(event) => { setQuery(event.target.value); setFlipped(false); }}
-            />
-          </label>
-          <button
-            type="button"
-            className={fuzzy ? "active" : ""}
-            aria-pressed={fuzzy}
-            onClick={() => { setFuzzy((value) => !value); setFlipped(false); }}
-          >
-            <span>FUZZY</span><strong>もしかして？検索</strong>
-          </button>
-          <button type="button" onClick={() => { setQuery(""); setFuzzy(false); setFlipped(false); }}>検索をクリア</button>
-          <p aria-live="polite">{hydrated ? filtered.length + "件見つかりました" : "暗記帳を読み込み中…"}</p>
+          <div className="card-search-input-wrap">
+            <label className="card-search-input" htmlFor="all-card-search">
+              <span>キーワード</span>
+              <input
+                id="all-card-search"
+                type="search"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="card-search-suggestions"
+                aria-expanded={showSuggestions}
+                aria-activedescendant={showSuggestions ? "card-search-suggestion-" + highlightedSuggestion : undefined}
+                autoComplete="off"
+                spellCheck={false}
+                value={query}
+                placeholder="例：TCP、平均、運動方程式"
+                onChange={(event) => updateQuery(event.target.value)}
+                onFocus={() => setSuggestionsOpen(Boolean(normalizeSearchText(query)))}
+                onBlur={() => setSuggestionsOpen(false)}
+                onKeyDown={handleSearchKeyDown}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
+              />
+            </label>
+            {showSuggestions && (
+              <div className="card-search-suggestions" id="card-search-suggestions">
+                <span>入力候補 / もしかして？</span>
+                <ol role="listbox" aria-label="暗記カードの入力候補">
+                  {suggestions.map((card, suggestionIndex) => {
+                    const exact = Number.isFinite(exactMatchScore(card, query));
+                    return (
+                      <li
+                        id={"card-search-suggestion-" + suggestionIndex}
+                        role="option"
+                        aria-selected={highlightedSuggestion === suggestionIndex}
+                        key={cardKey(card)}
+                      >
+                        <button
+                          type="button"
+                          onPointerDown={(event) => event.preventDefault()}
+                          onClick={() => selectSuggestion(card)}
+                          onMouseEnter={() => setHighlightedSuggestion(suggestionIndex)}
+                        >
+                          <strong><RichMathText text={card.prompt} /></strong>
+                          <small>{rapidSubjectMeta(card.subjectId).name} · {card.topicLabel}</small>
+                          <em>{exact ? "一致" : "もしかして？"}</em>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            )}
+          </div>
+          <button type="button" className="card-search-clear" disabled={!query} onClick={clearSearch}>検索をクリア</button>
+          <p aria-live="polite">{searchStatus}</p>
         </section>
 
         <div className="card-search-subjects" role="group" aria-label="教科で絞り込み">
-          <button type="button" aria-pressed={subjectFilter === "all"} onClick={() => { setSubjectFilter("all"); setFlipped(false); }}>全教科 <small>{cards.length}</small></button>
+          <button type="button" aria-pressed={subjectFilter === "all"} onClick={() => changeSubject("all")}>全教科 <small>{cards.length}</small></button>
           {RAPID_SUBJECTS.map((subject) => {
             const count = cards.filter((card) => card.subjectId === subject.id).length;
             return (
-              <button type="button" key={subject.id} aria-pressed={subjectFilter === subject.id} onClick={() => { setSubjectFilter(subject.id); setFlipped(false); }}>
+              <button type="button" key={subject.id} aria-pressed={subjectFilter === subject.id} onClick={() => changeSubject(subject.id)}>
                 {subject.name} <small>{count}</small>
               </button>
             );
@@ -266,8 +411,7 @@ export default function CardSearch({
         </div>
 
         {current ? (
-          <>
-            <section className="card-search-workspace" aria-live="polite">
+            <section className="card-search-workspace" id="card-search-workspace" aria-live="polite">
               <div className="card-search-meta">
                 <span>{rapidSubjectMeta(current.subjectId).name}</span>
                 <strong>{current.topicLabel}</strong>
@@ -295,32 +439,15 @@ export default function CardSearch({
                 <Link href={"/rapid/" + current.subjectId}>時間制限つき即答へ</Link>
               </div>
             </section>
-
-            <section className="card-search-results" aria-labelledby="card-search-results-title">
-              <div><span>MATCHES</span><h2 id="card-search-results-title">検索候補</h2><p>候補を選ぶと上のカードに移動します。</p></div>
-              <ol>
-                {filtered.slice(0, 80).map((card) => (
-                  <li key={card.subjectId + ":" + card.id}>
-                    <button type="button" className={card.id === current.id ? "active" : ""} onClick={() => selectCard(card)}>
-                      <span>{rapidSubjectMeta(card.subjectId).name}</span>
-                      <strong><RichMathText text={card.prompt} /></strong>
-                      <small>{card.topicLabel}</small>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-              {filtered.length > 80 && <p>先頭80件を表示中です。キーワードか教科でさらに絞り込んでください。</p>}
-            </section>
-          </>
         ) : hydrated ? (
           <section className="card-search-empty">
-            <span>NO MATCH</span><h2>一致する暗記カードがありません。</h2>
-            <p>表記があやふやなら「もしかして？検索」をオンにするか、教科の絞り込みを解除してください。</p>
-            {!fuzzy && query && <button type="button" onClick={() => setFuzzy(true)}>もしかして？検索を試す</button>}
+            <span>{suggestions.length ? "DID YOU MEAN?" : "NO MATCH"}</span>
+            <h2>{suggestions.length ? "入力欄の候補からカードを選んでください。" : "一致する暗記カードがありません。"}</h2>
+            <p>{suggestions.length ? "綴りの近いカードを「もしかして？」として表示しています。" : "別の言葉で入力するか、教科の絞り込みを解除してください。"}</p>
           </section>
         ) : null}
       </main>
-      <footer><span>TEST//GRID</span><p>SEARCH · FUZZY MATCH · MEMORY</p><span>CARDS 01</span></footer>
+      <footer><span>TEST//GRID</span><p>SEARCH · AUTOCOMPLETE · MEMORY</p><span>CARDS 01</span></footer>
     </div>
   );
 }
