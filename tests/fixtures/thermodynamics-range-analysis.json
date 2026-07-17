@@ -1,0 +1,60 @@
+{
+    "source":  {
+                   "kind":  "stable-test-fixture",
+                   "note":  "Seven thermodynamics range images plus the reviewed format-3 overlap contract."
+               },
+    "pages":  [
+                  {
+                      "pageIndex":  1
+                  },
+                  {
+                      "pageIndex":  2
+                  },
+                  {
+                      "pageIndex":  3
+                  },
+                  {
+                      "pageIndex":  4
+                  },
+                  {
+                      "pageIndex":  5
+                  },
+                  {
+                      "pageIndex":  6
+                  },
+                  {
+                      "pageIndex":  7
+                  }
+              ],
+    "recommendedTopicTags":  [
+                                 {
+                                     "id":  "adiabatic"
+                                 },
+                                 {
+                                     "id":  "polytropic"
+                                 },
+                                 {
+                                     "id":  "second-law"
+                                 },
+                                 {
+                                     "id":  "entropy"
+                                 },
+                                 {
+                                     "id":  "otto"
+                                 },
+                                 {
+                                     "id":  "carnot"
+                                 }
+                             ],
+    "format3":  {
+                    "includedQuestionNumbers":  [
+                                                    3,
+                                                    4
+                                                ],
+                    "excludedQuestionNumbers":  [
+                                                    1,
+                                                    2,
+                                                    5
+                                                ]
+                }
+}

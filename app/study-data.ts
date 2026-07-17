@@ -66,7 +66,7 @@ const DEFAULT_TEST_DATES = Object.fromEntries(
 const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "memo">> = [
   { id: "subject-2", name: "英語", module: "generic", memo: "ZIP教材のCh.15・16・18を収録・過去問は形式だけ反映" },
   { id: "network", name: "ネットワーク", module: "network", memo: "①〜⑦の全用語とOSI層を仕上げる" },
-  { id: "subject-3", name: "機械力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
+  { id: "subject-3", name: "機械力学", module: "generic", memo: "範囲ZIP15枚・過去問全体の公式カード、計算演習、実物過去問、A4想定試験を収録" },
   { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "熱力学7枚・6単元の公式カード、計算演習、全範囲予想試験を収録" },
   { id: "subject-5", name: "材料力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
   { id: "subject-6", name: "スマート制御", module: "generic", memo: "逆ラプラス・極・安定性・フィードバック・ブロック線図を収録" },
@@ -113,6 +113,7 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
     const wasOldSmartControlPlaceholder = fallback.id === "subject-6" && savedMemo === "現在資料なし";
     const wasOldAppliedMathPlaceholder = fallback.id === "subject-8" && savedMemo === "教材写真の追加待ち";
     const wasOldThermodynamicsPlaceholder = fallback.id === "subject-4" && savedMemo === "教材写真の追加待ち";
+    const wasOldMechanicalDynamicsPlaceholder = fallback.id === "subject-3" && savedMemo === "教材写真を追加すると暗記カード化できます";
     const wasOldEnglishDescription = fallback.id === "subject-2" && [
       "試験PDF形式＋Ch.15・16・18・19を収録",
       "ZIP教材のCh.15・16・18・19を収録・過去問は形式だけ反映",
@@ -125,7 +126,7 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
       testDate: typeof saved.testDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(saved.testDate)
         ? saved.testDate
         : fallback.testDate,
-      memo: savedMemo && !wasOldStatisticsPlaceholder && !wasOldSmartControlPlaceholder && !wasOldAppliedMathPlaceholder && !wasOldThermodynamicsPlaceholder && !wasOldEnglishDescription
+      memo: savedMemo && !wasOldStatisticsPlaceholder && !wasOldSmartControlPlaceholder && !wasOldAppliedMathPlaceholder && !wasOldThermodynamicsPlaceholder && !wasOldMechanicalDynamicsPlaceholder && !wasOldEnglishDescription
         ? savedMemo.slice(0, 120)
         : fallback.memo,
     };

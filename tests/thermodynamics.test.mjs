@@ -4,7 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 
 const DATA_URL = new URL("../app/thermodynamics-data.ts", import.meta.url);
-const ANALYSIS_URL = new URL("../tmp/pdfs/thermodynamics/range-analysis.json", import.meta.url);
+const ANALYSIS_URL = new URL("./fixtures/thermodynamics-range-analysis.json", import.meta.url);
 const TOPICS = ["adiabatic", "polytropic", "second-law", "entropy", "otto", "carnot"];
 const FORBIDDEN = [/蒸気表/, /飽和(?:水|蒸気|状態)/, /湿り蒸気/, /乾き度/, /ランキン/, /逆カルノー(?:サイクル|冷凍|冷蔵|熱ポンプ)/, /\bCOP\b/i, /成績係数/];
 

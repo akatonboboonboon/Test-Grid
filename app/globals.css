@@ -4880,6 +4880,13 @@ footer p {
   margin-top: 2px;
 }
 
+.mechanical-dynamics-flip-card:not(.is-flipped) {
+  box-shadow: 10px 10px 0 #9da4ad;
+}
+
+.mechanical-dynamics-flip-card.is-flipped {
+  box-shadow: 10px 10px 0 var(--subject-accent);
+}
 .statistics-flip-card.is-flipped strong {
   font-family: var(--mono);
   letter-spacing: -0.045em;

@@ -9,6 +9,7 @@ import { TEXTBOOK_RESPONSE_CARDS } from "./smart-control-textbook-data";
 import { STATISTICS_FORMULAS } from "./statistics-data";
 import { APPLIED_MATH_FORMULAS } from "./applied-math-data";
 import { THERMODYNAMICS_FORMULAS } from "./thermodynamics-data";
+import { MECHANICAL_DYNAMICS_FORMULAS } from "./mechanical-dynamics-data";
 import {
   DEFAULT_SUBJECTS,
   EXAM_SCHEDULE,
@@ -69,6 +70,13 @@ function readMetrics(subjects: StudySubject[]) {
       return [subject.id, {
         cards: ENGLISH_VOCAB.length,
         mastered: ENGLISH_VOCAB.filter((card) => progress[card.id] === "mastered").length,
+      } satisfies SubjectMetric];
+    }
+    if (subject.id === "subject-3") {
+      const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-3"), {});
+      return [subject.id, {
+        cards: MECHANICAL_DYNAMICS_FORMULAS.length,
+        mastered: MECHANICAL_DYNAMICS_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
     }
     if (subject.id === "subject-4") {
@@ -295,7 +303,7 @@ export default function StudyHub() {
             {subjects.map((subject) => {
               const metric = metrics[subject.id] ?? { cards: 0, mastered: 0 };
               const completion = metric.cards ? Math.round((metric.mastered / metric.cards) * 100) : 0;
-              const hasMaterial = subject.module === "network" || subject.id === "subject-4" || subject.id === "subject-6" || subject.id === "subject-7" || subject.id === "subject-8" || metric.cards > 0;
+              const hasMaterial = subject.module === "network" || subject.id === "subject-3" || subject.id === "subject-4" || subject.id === "subject-6" || subject.id === "subject-7" || subject.id === "subject-8" || metric.cards > 0;
               const style = { "--subject-accent": subject.accent } as CSSProperties;
               return (
                 <article className={`subject-tile ${subject.configured ? "is-configured" : "is-empty"}`} style={style} key={subject.id}>

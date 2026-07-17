@@ -263,6 +263,23 @@ test("server-renders the thermodynamics exam lab", async () => {
   assert.match(html, /出題形式/);
   assert.match(html, /形式3の確認済み重複/);
 });
+test("server-renders the mechanical dynamics exam lab", async () => {
+  const response = await render("/subjects/subject-3");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /機械力学・定期テスト演習/);
+  assert.match(html, /MECHANICAL DYNAMICS/);
+  assert.match(html, /今回の試験範囲/);
+  assert.match(html, /範囲ZIP/);
+  assert.match(html, /過去問PDF/);
+  assert.match(html, /公式カード/);
+  assert.match(html, /計算演習/);
+  assert.match(html, /ランダム模試/);
+  assert.match(html, /過去問・想定試験/);
+  assert.match(html, /出題形式/);
+  assert.match(html, /7大問・100点/);
+  assert.doesNotMatch(html, /まだ教材がありません/);
+});
 test("server-renders the applied mathematics exam lab", async () => {
   const response = await render("/subjects/subject-8");
   assert.equal(response.status, 200);
@@ -779,7 +796,7 @@ test("syncs all subject progress through an authenticated account API", async ()
 
 test("server-renders a generic subject workspace and the old cards URL", async () => {
   const [subjectResponse, legacyCardsResponse] = await Promise.all([
-    render("/subjects/subject-3"),
+    render("/subjects/subject-5"),
     render("/cards"),
   ]);
   assert.equal(subjectResponse.status, 200);
