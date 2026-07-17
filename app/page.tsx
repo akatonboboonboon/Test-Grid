@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import ComprehensiveChallenge from "./comprehensive-challenge";
 import { ENGLISH_VOCAB } from "./english-data";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
 import { SMART_CONTROL_CARDS } from "./smart-control-data";
@@ -228,7 +229,7 @@ export default function StudyHub() {
         </Link>
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {configuredCount} / 9 NAMED</span>
-          <Link className="outline-button header-link hub-memory-header-link" href="/subjects/network/cards">暗記帳を開く</Link>
+          <Link className="outline-button header-link hub-memory-header-link" href="/cards">全教科の暗記帳検索</Link>
         </div>
       </header>
 
@@ -246,11 +247,11 @@ export default function StudyHub() {
           </Link>
         </section>
 
-        <Link className="hub-memory-launch" href="/subjects/network/cards">
+        <Link className="hub-memory-launch" href="/cards">
           <span>
-            <small>NETWORK / MEMORY NOTEBOOK</small>
-            <strong>暗記帳はここです。</strong>
-            <em>96語の層・正式名称・働きをカードで確認</em>
+            <small>ALL SUBJECTS / MEMORY SEARCH</small>
+            <strong>暗記帳と検索はここです。</strong>
+            <em>全教科から検索。あやふやなら「もしかして？検索」</em>
           </span>
           <b aria-hidden="true">開く →</b>
         </Link>
@@ -328,9 +329,13 @@ export default function StudyHub() {
                       <>
                         <Link className="subject-primary subject-memory-link" href="/subjects/network/cards">暗記帳を開く</Link>
                         <Link className="subject-secondary" href="/subjects/network">暗算・層即答</Link>
+                        <Link className="subject-secondary subject-rapid-link" href="/rapid/network">時間制限 即答</Link>
                       </>
                     ) : subject.configured ? (
-                      <Link className="subject-primary" href={`/subjects/${subject.id}`}>勉強を始める</Link>
+                      <>
+                        <Link className="subject-primary" href={`/subjects/${subject.id}`}>勉強を始める</Link>
+                        <Link className="subject-secondary subject-rapid-link" href={`/rapid/${subject.id}`}>時間制限 即答</Link>
+                      </>
                     ) : (
                       <button className="subject-primary" type="button" onClick={() => beginEdit(subject)}>科目を設定</button>
                     )}
@@ -343,6 +348,7 @@ export default function StudyHub() {
             })}
           </div>
         </section>
+        <ComprehensiveChallenge subjects={subjects} />
       </main>
 
       <footer><span>TEST//GRID</span><p>9 SUBJECTS · AUTO SAVE · ACCOUNT SYNC</p><span>HUB 01</span></footer>

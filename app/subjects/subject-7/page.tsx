@@ -624,6 +624,8 @@ export default function StatisticsSubjectPage() {
         </Link>
         <div className="header-actions statistics-header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {STATISTICS_QUESTIONS.length} QUESTIONS</span>
+          <Link className="outline-button header-link" href="/cards?subject=subject-7">暗記帳検索</Link>
+          <Link className="outline-button header-link" href="/rapid/subject-7">時間制限 即答</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -801,7 +803,13 @@ export default function StatisticsSubjectPage() {
                         <strong><RichMathText text={result.question.prompt} /></strong>
                         <p>あなた：<RichMathText text={result.response || "未回答"} /></p>
                         {!result.correct && <p>正解：<RichMathText text={result.question.answer} /></p>}
-                        <p>解説：<RichMathText text={result.question.explanation} /></p>
+                        <details className="result-review-explanation" open={!result.correct}>
+                          <summary>解説を見る</summary>
+                          <p><RichMathText text={result.question.explanation} /></p>
+                        </details>
+                        <Link className="result-card-jump" href={"/cards?subject=subject-7&q=" + encodeURIComponent(result.question.prompt)}>
+                          {result.correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}
+                        </Link>
                       </article>
                     ))}
                   </div>

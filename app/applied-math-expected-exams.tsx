@@ -284,7 +284,7 @@ export default function AppliedMathExpectedExams() {
       <section className={styles.selector} id="applied-math-expected-selector" aria-labelledby="applied-math-expected-title">
         <header className={styles.selectorHeader}>
           <div><span>EXPECTED EXAM · 6 SETS</span><h2 id="applied-math-expected-title">応用数学 予想模試</h2></div>
-          <p>全16枚の範囲から6単元を毎回すべて出題。実際の形式に合わせた50分・80点・大問6問のA4問題用紙です。</p>
+          <p>当初範囲16枚と追加範囲6枚の全22枚から、9単元を毎回すべて出題。実際の形式に合わせた50分・80点・大問6問のA4問題用紙です。</p>
         </header>
 
         <div className={styles.introStats} aria-label="予想模試の条件">
@@ -311,7 +311,7 @@ export default function AppliedMathExpectedExams() {
               <h3>{candidate.title}</h3>
               <p>{candidate.subtitle}</p>
               <dl><div><dt>大問</dt><dd>{candidate.sections.length}</dd></div><div><dt>小問</dt><dd>{questionsFor(candidate).length}</dd></div><div><dt>配点</dt><dd>{candidate.totalPoints}</dd></div></dl>
-              <small>内積・外積／ベクトル関数／曲線／曲面／勾配／発散・回転</small>
+              <small>内積・外積／ベクトル関数／曲線・線積分／曲面・面積分／勾配／発散・回転／グリーン</small>
               <button type="button" onClick={() => startExam(candidate.id)}>このセットを始める →</button>
             </article>
           ))}

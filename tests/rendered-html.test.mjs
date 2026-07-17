@@ -156,7 +156,8 @@ test("server-renders the nine-subject study hub", async () => {
   assert.match(html, /9教科を/);
   assert.match(html, /科目別の勉強机/);
   assert.match(html, /ネットワークから始める/);
-  assert.match(html, /暗記帳はここです/);
+  assert.match(html, /暗記帳と検索はここです/);
+  assert.match(html, /9教科総合/);
   assert.match(html, /英語/);
   assert.match(html, /機械力学/);
   assert.match(html, /材料力学/);
@@ -794,7 +795,7 @@ test("syncs all subject progress through an authenticated account API", async ()
   assert.deepEqual(await anonymousWrite.json(), { error: "SIGN_IN_REQUIRED" });
 });
 
-test("server-renders a generic subject workspace and the old cards URL", async () => {
+test("server-renders a generic subject workspace and the all-subject card search", async () => {
   const [subjectResponse, legacyCardsResponse] = await Promise.all([
     render("/subjects/subject-5"),
     render("/cards"),
@@ -806,7 +807,73 @@ test("server-renders a generic subject workspace and the old cards URL", async (
   assert.match(subjectHtml, /暗記カード/);
   assert.match(subjectHtml, /一問一答/);
   assert.match(subjectHtml, /まだ教材がありません/);
-  assert.match(await legacyCardsResponse.text(), /MEMORY CARD DECK/);
+  const cardsHtml = await legacyCardsResponse.text();
+  assert.match(cardsHtml, /CARD SEARCH/);
+  assert.match(cardsHtml, /もしかして？検索/);
+});
+
+test("ships layer filtering, fuzzy card search, rapid drills, and balanced review", async () => {
+  const [networkCardsPage, globalCardSearch, rapidData, rapidDrill, overallChallenge] = await Promise.all([
+    readFile(new URL("../app/subjects/network/cards/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/card-search.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/rapid-quiz-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/rapid-answer-drill.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/comprehensive-challenge.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(networkCardsPage, /レイヤーで絞り込み/);
+  assert.match(networkCardsPage, /cardLayers\(card\)\.includes\(layer\)/);
+  assert.match(networkCardsPage, /もしかして？検索/);
+  assert.match(globalCardSearch, /全教科の暗記帳検索/);
+  assert.match(globalCardSearch, /function fuzzyScore/);
+  assert.doesNotMatch(globalCardSearch, /eval\(|new Function|Function\(/);
+  assert.match(rapidDrill, /全問題の振り返り/);
+  assert.match(rapidDrill, /間違えた問題の暗記帳へ/);
+  assert.match(rapidData, /createBalancedRapidSession/);
+  assert.match(overallChallenge, /normalizeOverallQuestionCount/);
+  assert.match(overallChallenge, /最大999問/);
+  assert.match(overallChallenge, /9教科の得意・不得意/);
+  assert.match(overallChallenge, /全\{runner\.results\.length\}問の振り返り/);
+});
+
+test("ships an authenticated anonymous leaderboard without exposing account identifiers", async () => {
+  const [route, schema, migration, rankingData, accountSync] = await Promise.all([
+    readFile(new URL("../app/api/leaderboard/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0000_wandering_roughhouse.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/rapid-ranking-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(route, /SHA-256/);
+  assert.match(route, /学習者-/);
+  assert.match(route, /SIGN_IN_REQUIRED/);
+  assert.match(route, /ORDER BY correct_count DESC, best_streak DESC, duration_ms ASC/);
+  assert.doesNotMatch(route, /SELECT[^;]*email/is);
+  assert.doesNotMatch(route, /Response\.json\([^)]*userKey/);
+  assert.match(schema, /leaderboardEntries/);
+  assert.match(migration, /CREATE TABLE `leaderboard_entries`/);
+  assert.match(rankingData, /test-grid:rapid-rankings:v1/);
+  assert.match(accountSync, /mergeRapidHistories/);
+});
+
+test("ships the applied-math graph break as a safe, exam-excluded interactive lab", async () => {
+  const [graphLab, appliedPage] = await Promise.all([
+    readFile(new URL("../app/applied-math-graph-lab.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/subjects/subject-8/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(graphLab, /SafeExpressionParser/);
+  assert.match(graphLab, /グラフは今回のテストに出ません/);
+  assert.match(graphLab, /範囲プリセット/);
+  assert.match(graphLab, /自由入力/);
+  assert.match(graphLab, /資料不一致/);
+  assert.match(graphLab, /function-2d/);
+  assert.match(graphLab, /surface-3d/);
+  assert.match(graphLab, /vector-2d/);
+  assert.doesNotMatch(graphLab, /eval\s*\(|new\s+Function|Function\s*\(/);
+  assert.match(appliedPage, /mode === "graph"/);
+  assert.match(appliedPage, /<AppliedMathGraphLab/);
 });
 
 test("ships the study hub without starter artifacts", async () => {

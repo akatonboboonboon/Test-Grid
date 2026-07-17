@@ -3,17 +3,88 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ALL_LAYERS,
+  cardLayers,
   cardLayerLabel,
   DEFAULT_CARDS,
   normalizeCards,
   shuffle,
   storageRead,
   storageWrite,
+  type Layer,
   type ProtocolCard,
 } from "../../../protocols";
 
 type MemoryState = "learning" | "mastered";
 type MemoryProgress = Record<string, MemoryState>;
+type LayerFilter = "all" | Layer;
+
+const LAYER_FILTER_STORAGE_KEY = "layer-sum-memory-filter-v1";
+
+function normalizeLayerFilter(value: unknown): LayerFilter {
+  return value === "all" || (typeof value === "number" && ALL_LAYERS.includes(value as Layer))
+    ? value as LayerFilter
+    : "all";
+}
+
+function filterCardsByLayer(cards: ProtocolCard[], layer: LayerFilter) {
+  return layer === "all" ? cards : cards.filter((card) => cardLayers(card).includes(layer));
+}
+
+function normalizeSearchText(value: string) {
+  return value.normalize("NFKC").toLocaleLowerCase("ja-JP").replace(/[\s\p{P}\p{S}]+/gu, "");
+}
+
+function editDistance(left: string, right: string) {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    let diagonal = previous[0];
+    previous[0] = leftIndex;
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const above = previous[rightIndex];
+      previous[rightIndex] = left[leftIndex - 1] === right[rightIndex - 1]
+        ? diagonal
+        : Math.min(diagonal, above, previous[rightIndex - 1]) + 1;
+      diagonal = above;
+    }
+  }
+  return previous[right.length];
+}
+
+function cardSearchFields(card: ProtocolCard) {
+  return [card.label, card.fullName, card.description, card.note]
+    .filter((value): value is string => Boolean(value?.trim()));
+}
+
+function fuzzyScore(card: ProtocolCard, rawQuery: string) {
+  const query = normalizeSearchText(rawQuery);
+  if (!query) return 0;
+  let best = Number.POSITIVE_INFINITY;
+  for (const field of cardSearchFields(card)) {
+    const normalized = normalizeSearchText(field);
+    if (normalized.includes(query)) return 0;
+    const words = field.normalize("NFKC").toLocaleLowerCase("ja-JP").split(/[\s/・（）()［\][\],、。:：;；]+/u);
+    for (const word of [normalized, ...words.map(normalizeSearchText)].filter(Boolean)) {
+      const candidate = word.length > query.length + 4 ? word.slice(0, query.length + 4) : word;
+      best = Math.min(best, editDistance(query, candidate));
+    }
+  }
+  return best;
+}
+
+function searchCards(cards: ProtocolCard[], query: string, fuzzy: boolean) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return cards;
+  const exact = cards.filter((card) => cardSearchFields(card)
+    .some((field) => normalizeSearchText(field).includes(normalizedQuery)));
+  if (!fuzzy) return exact;
+  const threshold = Math.max(1, Math.min(4, Math.floor(normalizedQuery.length * 0.4)));
+  return cards
+    .map((card) => ({ card, score: fuzzyScore(card, normalizedQuery) }))
+    .filter(({ score }) => score <= threshold)
+    .sort((left, right) => left.score - right.score || left.card.label.localeCompare(right.card.label, "ja"))
+    .map(({ card }) => card);
+}
 
 function normalizeProgress(value: unknown, cards: ProtocolCard[]): MemoryProgress {
   if (!value || typeof value !== "object") return {};
@@ -28,6 +99,9 @@ function normalizeProgress(value: unknown, cards: ProtocolCard[]): MemoryProgres
 export default function CardsPage() {
   const [cards, setCards] = useState<ProtocolCard[]>(DEFAULT_CARDS);
   const [deck, setDeck] = useState<ProtocolCard[]>(DEFAULT_CARDS);
+  const [selectedLayer, setSelectedLayer] = useState<LayerFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [fuzzySearch, setFuzzySearch] = useState(false);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [progress, setProgress] = useState<MemoryProgress>({});
@@ -41,8 +115,10 @@ export default function CardsPage() {
   useEffect(() => {
     const usableCards = normalizeCards(storageRead<unknown>("layer-sum-cards-v1", DEFAULT_CARDS))
       .filter((card) => card.enabled && card.label.trim());
+    const savedLayer = normalizeLayerFilter(storageRead<unknown>(LAYER_FILTER_STORAGE_KEY, "all"));
     setCards(usableCards);
-    setDeck(shuffle(usableCards));
+    setSelectedLayer(savedLayer);
+    setDeck(shuffle(filterCardsByLayer(usableCards, savedLayer)));
     setProgress(normalizeProgress(storageRead<unknown>("layer-sum-memory-v1", {}), usableCards));
     setHydrated(true);
   }, []);
@@ -52,19 +128,34 @@ export default function CardsPage() {
     if (hydrated) storageWrite("layer-sum-memory-v1", progress);
   }, [progress, hydrated]);
 
+  useEffect(() => {
+    if (hydrated) storageWrite(LAYER_FILTER_STORAGE_KEY, selectedLayer);
+  }, [selectedLayer, hydrated]);
+
   const currentCard = deck[index];
   const currentLayerLabel = currentCard ? cardLayerLabel(currentCard) : "";
   const currentFullName = currentCard?.fullName?.trim() || "正式名称未登録";
   const currentDescription = currentCard?.description?.trim() || "このカードの働きはまだ登録されていません。";
+  const filteredCards = useMemo(
+    () => searchCards(filterCardsByLayer(cards, selectedLayer), searchQuery, fuzzySearch),
+    [cards, selectedLayer, searchQuery, fuzzySearch],
+  );
+  const layerCounts = useMemo(
+    () => Object.fromEntries(ALL_LAYERS.map((layer) => [
+      layer,
+      filterCardsByLayer(cards, layer).length,
+    ])) as Record<Layer, number>,
+    [cards],
+  );
   const masteredCount = useMemo(
-    () => cards.filter((card) => progress[card.id] === "mastered").length,
-    [cards, progress],
+    () => filteredCards.filter((card) => progress[card.id] === "mastered").length,
+    [filteredCards, progress],
   );
   const learningCount = useMemo(
-    () => cards.filter((card) => progress[card.id] === "learning").length,
-    [cards, progress],
+    () => filteredCards.filter((card) => progress[card.id] === "learning").length,
+    [filteredCards, progress],
   );
-  const completion = cards.length ? Math.round((masteredCount / cards.length) * 100) : 0;
+  const completion = filteredCards.length ? Math.round((masteredCount / filteredCards.length) * 100) : 0;
 
   function focusCard() {
     window.setTimeout(() => cardRef.current?.focus(), 0);
@@ -89,8 +180,13 @@ export default function CardsPage() {
     focusCard();
   }
 
-  function shuffleDeck(source: ProtocolCard[] = cards) {
-    if (!source.length) return;
+  function shuffleDeck(source: ProtocolCard[] = filteredCards) {
+    if (!source.length) {
+      setDeck([]);
+      setIndex(0);
+      setFlipped(false);
+      return;
+    }
     setDeck(shuffle(source));
     setIndex(0);
     setFlipped(false);
@@ -98,11 +194,34 @@ export default function CardsPage() {
     focusCard();
   }
 
+  function changeLayerFilter(nextLayer: LayerFilter) {
+    const nextCards = searchCards(filterCardsByLayer(cards, nextLayer), searchQuery, fuzzySearch);
+    setSelectedLayer(nextLayer);
+    setResetArmed(false);
+    shuffleDeck(nextCards);
+    setAnnouncement(nextLayer === "all"
+      ? `全レイヤーの${nextCards.length}枚に切り替えました。`
+      : `第${nextLayer}層の${nextCards.length}枚に絞り込みました。`);
+  }
+
+  function updateSearch(nextQuery: string, nextFuzzy = fuzzySearch) {
+    const nextCards = searchCards(filterCardsByLayer(cards, selectedLayer), nextQuery, nextFuzzy);
+    setSearchQuery(nextQuery);
+    setFuzzySearch(nextFuzzy);
+    setDeck(nextCards);
+    setIndex(0);
+    setFlipped(false);
+    setResetArmed(false);
+    setAnnouncement(nextQuery.trim()
+      ? `${nextCards.length}枚が見つかりました。${nextFuzzy ? "もしかして検索を使用中です。" : ""}`
+      : "検索を解除しました。");
+  }
+
   function reviewUnmastered() {
-    const remaining = cards.filter((card) => progress[card.id] !== "mastered");
+    const remaining = filteredCards.filter((card) => progress[card.id] !== "mastered");
     if (!remaining.length) {
-      shuffleDeck(cards);
-      setAnnouncement(`全カード暗記済みです。全${cards.length}枚でもう一周します。`);
+      shuffleDeck(filteredCards);
+      setAnnouncement(`${selectedLayer === "all" ? "全カード" : `第${selectedLayer}層`}は暗記済みです。${filteredCards.length}枚でもう一周します。`);
       return;
     }
     shuffleDeck(remaining);
@@ -118,7 +237,7 @@ export default function CardsPage() {
     setProgress({});
     setResetArmed(false);
     setAnnouncement("暗記進捗をリセットしました。");
-    shuffleDeck(cards);
+    shuffleDeck(filteredCards);
   }
 
   useEffect(() => {
@@ -155,7 +274,7 @@ export default function CardsPage() {
           </span>
         </Link>
         <div className="header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {cards.length} CARDS</span>
+          <span className="card-count-label"><i aria-hidden="true" /> {selectedLayer === "all" ? cards.length : `${filteredCards.length} / ${cards.length}`} CARDS</span>
           <Link className="outline-button header-link" href="/subjects/network">暗算へ戻る</Link>
         </div>
       </header>
@@ -169,10 +288,66 @@ export default function CardsPage() {
           <p>表の略語を見て層番号と正式名称を思い出し、カードをめくって確認。覚えたカードと復習カードは、この端末に記録されます。</p>
         </section>
 
+        <section className="memory-search" aria-labelledby="memory-search-title">
+          <label htmlFor="memory-card-search">
+            <span>SEARCH CARDS</span>
+            <strong id="memory-search-title">カードを検索</strong>
+          </label>
+          <div className="memory-search-controls">
+            <input
+              id="memory-card-search"
+              type="search"
+              autoComplete="off"
+              value={searchQuery}
+              onChange={(event) => updateSearch(event.target.value)}
+              placeholder="略語・正式名称・働きで検索"
+            />
+            <button
+              type="button"
+              className={fuzzySearch ? "active" : ""}
+              aria-pressed={fuzzySearch}
+              onClick={() => updateSearch(searchQuery, !fuzzySearch)}
+            >
+              <span>うろ覚え対応</span><strong>もしかして？検索</strong>
+            </button>
+            {searchQuery && <button type="button" className="clear" onClick={() => updateSearch("")}>検索を消す</button>}
+          </div>
+          <p><strong>{filteredCards.length}枚</strong>を表示中{fuzzySearch && " · 入力に近い候補も含めます"}</p>
+        </section>
+
+        <section className="memory-layer-filter" aria-labelledby="memory-layer-filter-title">
+          <div className="memory-layer-filter-copy">
+            <span>FILTER DECK</span>
+            <h2 id="memory-layer-filter-title">レイヤーで絞り込み</h2>
+            <p>選んだ層のカードだけをシャッフル・復習します。複数層に属するカードは、どちらの層にも表示されます。</p>
+          </div>
+          <div className="memory-layer-filter-buttons" role="group" aria-label="出題するレイヤー">
+            <button
+              type="button"
+              className={selectedLayer === "all" ? "active" : ""}
+              aria-pressed={selectedLayer === "all"}
+              onClick={() => changeLayerFilter("all")}
+            >
+              <strong>全レイヤー</strong><small>{cards.length}枚</small>
+            </button>
+            {ALL_LAYERS.map((layer) => (
+              <button
+                type="button"
+                key={layer}
+                className={selectedLayer === layer ? "active" : ""}
+                aria-pressed={selectedLayer === layer}
+                onClick={() => changeLayerFilter(layer)}
+              >
+                <strong>L{layer}</strong><small>{layerCounts[layer]}枚</small>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section className="memory-progress" aria-label="暗記進捗">
           <div className="memory-progress-copy">
-            <span>MASTERED</span>
-            <strong>{masteredCount}<small> / {cards.length}</small></strong>
+            <span>{selectedLayer === "all" ? "ALL LAYERS" : `LAYER ${selectedLayer}`} · MASTERED</span>
+            <strong>{masteredCount}<small> / {filteredCards.length}</small></strong>
           </div>
           <div className="memory-progress-track" aria-hidden="true"><i style={{ width: `${completion}%` }} /></div>
           <div className="memory-progress-meta"><span>{completion}% 完了</span><span>復習 {learningCount}枚</span></div>
@@ -253,12 +428,13 @@ export default function CardsPage() {
           </section>
         ) : (
           <section className="memory-empty">
-            <span>EMPTY DECK</span><h2>出題できるカードがありません。</h2><p>暗算ページの「カードを編集」で、出題するカードをONにしてください。</p><Link href="/subjects/network">暗算ページへ戻る</Link>
+            <span>EMPTY DECK</span><h2>{selectedLayer === "all" ? "出題できるカードがありません。" : `第${selectedLayer}層に出題できるカードがありません。`}</h2><p>別のレイヤーを選ぶか、暗算ページの「カードを編集」で出題するカードをONにしてください。</p><Link href="/subjects/network">暗算ページへ戻る</Link>
+            {searchQuery && <button type="button" onClick={() => updateSearch("")}>検索を解除して全カードを表示</button>}
           </section>
         )}
 
         <section className="memory-tools" aria-label="暗記デッキ操作">
-          <button type="button" onClick={() => shuffleDeck(cards)}><span>SHUFFLE</span><strong>全カードを混ぜる</strong></button>
+          <button type="button" onClick={() => shuffleDeck(filteredCards)}><span>SHUFFLE</span><strong>選択中のカードを混ぜる</strong></button>
           <button type="button" onClick={reviewUnmastered}><span>REVIEW</span><strong>未暗記だけ復習</strong></button>
           <button type="button" className={resetArmed ? "danger" : ""} onClick={resetProgress}><span>RESET</span><strong>{resetArmed ? "もう一度押して初期化" : "進捗をリセット"}</strong></button>
         </section>

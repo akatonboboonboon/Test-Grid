@@ -71,7 +71,7 @@ const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "m
   { id: "subject-5", name: "材料力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
   { id: "subject-6", name: "スマート制御", module: "generic", memo: "逆ラプラス・極・安定性・フィードバック・ブロック線図を収録" },
   { id: "subject-7", name: "確率統計", module: "generic", memo: "全範囲を毎回扱うA4・50分想定試験を12回収録" },
-  { id: "subject-8", name: "応用数学", module: "generic", memo: "範囲16枚・6単元・公式カード/演習・A4 50分80点の予想試験6回" },
+  { id: "subject-8", name: "応用数学", module: "generic", memo: "範囲22枚・9単元・線積分/面積分/グリーンを含むA4 50分80点の予想試験6回" },
   { id: "subject-9", name: "デジタル回路", module: "generic", memo: "教材写真の追加待ち" },
 ];
 

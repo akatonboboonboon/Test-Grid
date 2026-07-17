@@ -770,6 +770,8 @@ export default function EnglishSubjectPage() {
           <button className="english-header-memory-button" type="button" onClick={openCh18Quiz}>
             <span>実物18点</span> Ch.18小テスト
           </button>
+          <Link className="outline-button header-link" href="/cards?subject=subject-2">暗記帳検索</Link>
+          <Link className="outline-button header-link" href="/rapid/subject-2">時間制限 即答</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -924,7 +926,7 @@ export default function EnglishSubjectPage() {
               {testPhase === "result" && (
                 <div className="english-test-result">
                   <span>MOCK EXAM RESULT</span><h2>{testScore} / {testResults.length}</h2><p>正答率 {testResults.length ? Math.round((testScore / testResults.length) * 100) : 0}%</p>
-                  <div className="english-result-list">{testResults.map((result, index) => <article key={`${result.question.id}-${index}`} className={result.correct ? "is-correct" : "is-wrong"}><span>{result.correct ? "○" : "×"} Q{index + 1}</span><strong>{result.question.prompt}</strong><p>あなた：{result.response || "未回答"}</p>{!result.correct && <p>正解：{result.question.answer}</p>}<details className="english-result-explanation"><summary>詳しい解説を開く</summary><EnglishQuestionExplanation question={result.question} compact /></details></article>)}</div>
+                  <div className="english-result-list">{testResults.map((result, index) => <article key={`${result.question.id}-${index}`} className={result.correct ? "is-correct" : "is-wrong"}><span>{result.correct ? "○" : "×"} Q{index + 1}</span><strong>{result.question.prompt}</strong><p>あなた：{result.response || "未回答"}</p>{!result.correct && <p>正解：{result.question.answer}</p>}<details className="english-result-explanation" open={!result.correct}><summary>詳しい解説を開く</summary><EnglishQuestionExplanation question={result.question} compact /></details><Link className="result-card-jump" href={"/cards?subject=subject-2&q=" + encodeURIComponent(result.question.prompt)}>{result.correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}</Link></article>)}</div>
                   <div className="english-result-actions"><button type="button" onClick={startTest}>同じ設定でもう一度</button><button type="button" onClick={() => setTestPhase("setup")}>設定を変える</button></div>
                 </div>
               )}
@@ -970,7 +972,7 @@ export default function EnglishSubjectPage() {
                   {selectedPassageQuestions.length > 0 && readingFinished && (
                     <div className="english-test-result">
                       <span>READING RESULT</span><h2>{readingScore} / {readingResults.length}</h2><p>正答率 {readingResults.length ? Math.round((readingScore / readingResults.length) * 100) : 0}%</p>
-                      <div className="english-result-list">{readingResults.map((result, index) => <article key={`${result.question.id}-reading-result-${index}`} className={result.correct ? "is-correct" : "is-wrong"}><span>{result.correct ? "○" : "×"} Q{index + 1}</span><strong>{result.question.prompt}</strong><p>正解：{result.question.answer}</p><details className="english-result-explanation"><summary>詳しい解説を開く</summary><EnglishQuestionExplanation question={result.question} compact /></details></article>)}</div>
+                      <div className="english-result-list">{readingResults.map((result, index) => <article key={`${result.question.id}-reading-result-${index}`} className={result.correct ? "is-correct" : "is-wrong"}><span>{result.correct ? "○" : "×"} Q{index + 1}</span><strong>{result.question.prompt}</strong><p>正解：{result.question.answer}</p><details className="english-result-explanation" open={!result.correct}><summary>詳しい解説を開く</summary><EnglishQuestionExplanation question={result.question} compact /></details><Link className="result-card-jump" href={"/cards?subject=subject-2&q=" + encodeURIComponent(result.question.prompt)}>{result.correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}</Link></article>)}</div>
                       <div className="english-result-actions"><button type="button" onClick={() => resetReadingPractice()}>この長文をもう一度解く</button></div>
                     </div>
                   )}

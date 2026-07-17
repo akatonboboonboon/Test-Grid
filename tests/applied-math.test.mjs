@@ -7,8 +7,6 @@ const DATA_URL = new URL("../app/applied-math-data.ts", import.meta.url);
 const PAGE_URL = new URL("../app/subjects/subject-8/page.tsx", import.meta.url);
 const EXAMS_URL = new URL("../app/applied-math-expected-exams.tsx", import.meta.url);
 const EXAMS_CSS_URL = new URL("../app/applied-math-expected-exams.module.css", import.meta.url);
-const ANALYSIS_URL = new URL("../tmp/pdfs/applied-math/analysis.json", import.meta.url);
-
 const TOPIC_IDS = [
   "vectors",
   "vector-functions",
@@ -16,15 +14,14 @@ const TOPIC_IDS = [
   "surfaces",
   "gradient",
   "divergence-curl",
+  "line-integrals",
+  "surface-integrals",
+  "green-theorem",
 ];
 
 const EXCLUDED_CONTENT = [
-  /線積分/,
-  /流束面積分/,
   /ガウス(?:の)?発散定理/,
   /ストークス(?:の)?定理/,
-  /\bline\s+integral\b/i,
-  /\bflux\s+(?:surface\s+)?integral\b/i,
   /\bgauss(?:'s)?\s+(?:divergence\s+)?theorem\b/i,
   /\bstokes(?:'s)?\s+theorem\b/i,
 ];
@@ -91,30 +88,28 @@ function assertCleanMathStrings(value, katex, label) {
 function assertValidSourcePages(items, label) {
   for (const item of items) {
     assert.ok(Array.isArray(item.sourcePages) && item.sourcePages.length > 0, `${label}:${item.id} sourcePages`);
-    assert.ok(item.sourcePages.every((page) => Number.isInteger(page) && page >= 1 && page <= 16), `${label}:${item.id} page range`);
+    assert.ok(item.sourcePages.every((page) => Number.isInteger(page) && page >= 1 && page <= 22), `${label}:${item.id} page range`);
   }
 }
 
-test("analysis contract keeps the 16 range images separate from format-only references", async () => {
-  const analysis = JSON.parse(await readFile(ANALYSIS_URL, "utf8"));
+test("scope contract merges the original 16 images and six additional range images", async () => {
+  const {
+    APPLIED_MATH_EXCLUDED_TOPICS,
+    APPLIED_MATH_RANGE_PAGES,
+    APPLIED_MATH_TOPICS,
+  } = await loadDataModule();
 
-  assert.equal(analysis.scopePolicy.contentSource, "応用数学テスト範囲.zip の16画像のみ");
-  assert.equal(analysis.rangePages.length, 16);
-  assert.deepEqual(analysis.rangePages.map((page) => page.number), Array.from({ length: 16 }, (_, index) => index + 1));
-  assert.deepEqual(analysis.topicGroups.map((topic) => topic.id), TOPIC_IDS);
-  assert.equal(analysis.formatReferences.length, 4);
-  assert.ok(analysis.formatReferences.every((reference) => reference.contentReusable === false));
-  assert.deepEqual(analysis.scopePolicy.excludedFromCurrentRange, [
-    "線積分",
-    "ベクトル場の流束面積分",
+  assert.equal(APPLIED_MATH_RANGE_PAGES.length, 22);
+  assert.deepEqual(APPLIED_MATH_RANGE_PAGES.map((page) => page.number), Array.from({ length: 22 }, (_, index) => index + 1));
+  assert.deepEqual(APPLIED_MATH_TOPICS.map((topic) => topic.id), TOPIC_IDS);
+  assert.deepEqual(APPLIED_MATH_EXCLUDED_TOPICS, [
     "ガウスの発散定理",
     "ストークスの定理",
   ]);
-  assert.match(analysis.scopePolicy.surfaceAreaClarification, /幾何学的表面積/);
-  assert.match(analysis.scopePolicy.surfaceAreaClarification, /流束面積分ではない/);
+  assert.match(APPLIED_MATH_RANGE_PAGES.find((page) => page.number === 19)?.summary ?? "", /問4.*矛盾.*除外/);
 });
 
-test("applied-math cards and exercises cover all six range topics with real TeX", async () => {
+test("applied-math cards and exercises cover all nine range topics with real TeX", async () => {
   const {
     APPLIED_MATH_RANGE_PAGES,
     APPLIED_MATH_TOPICS,
@@ -123,18 +118,40 @@ test("applied-math cards and exercises cover all six range topics with real TeX"
   } = await loadDataModule();
   const katex = await import(new URL("../app/vendor/katex/katex.mjs", import.meta.url));
 
-  assert.equal(APPLIED_MATH_RANGE_PAGES.length, 16);
-  assert.deepEqual(APPLIED_MATH_RANGE_PAGES.map((page) => page.number), Array.from({ length: 16 }, (_, index) => index + 1));
+  assert.equal(APPLIED_MATH_RANGE_PAGES.length, 22);
+  assert.deepEqual(APPLIED_MATH_RANGE_PAGES.map((page) => page.number), Array.from({ length: 22 }, (_, index) => index + 1));
   assert.deepEqual(APPLIED_MATH_TOPICS.map((topic) => topic.id), TOPIC_IDS);
   assert.deepEqual(
     [...new Set(APPLIED_MATH_TOPICS.flatMap((topic) => topic.pages))].sort((left, right) => left - right),
-    Array.from({ length: 16 }, (_, index) => index + 1),
+    Array.from({ length: 22 }, (_, index) => index + 1),
   );
 
-  assert.ok(APPLIED_MATH_FORMULAS.length >= 20, "formula deck should cover definitions and calculation formulas");
-  assert.ok(APPLIED_MATH_QUESTIONS.length >= 30, "practice/random pool should offer repeated mixed practice");
+  assert.ok(APPLIED_MATH_FORMULAS.length >= 47, "formula deck should include the additional-range and high-resolution helper cards");
+  assert.ok(APPLIED_MATH_QUESTIONS.length >= 54, "practice/random pool should include the source-derived and helper questions");
   assert.equal(new Set(APPLIED_MATH_FORMULAS.map((card) => card.id)).size, APPLIED_MATH_FORMULAS.length);
   assert.equal(new Set(APPLIED_MATH_QUESTIONS.map((question) => question.id)).size, APPLIED_MATH_QUESTIONS.length);
+  for (const cardId of [
+    "am-vector-constant-derivative",
+    "am-vector-sum-derivative",
+    "am-vector-chain-rule",
+    "am-scalar-vector-product-rule",
+    "am-source-surface-unit-normal",
+    "am-div-curl-linearity",
+    "am-div-curl-scalar-product",
+    "am-vector-calculus-zero-identities",
+  ]) {
+    assert.ok(APPLIED_MATH_FORMULAS.some((card) => card.id === cardId), `${cardId} helper card`);
+  }
+  for (const questionId of [
+    "am-q-vector-chain-rule",
+    "am-q-scalar-vector-product-rule",
+    "am-q-source-surface-unit-normal",
+    "am-q-div-curl-linearity",
+    "am-q-div-curl-scalar-product",
+    "am-q-vector-calculus-zero-identities",
+  ]) {
+    assert.ok(APPLIED_MATH_QUESTIONS.some((question) => question.id === questionId), `${questionId} helper exercise`);
+  }
   assertValidSourcePages(APPLIED_MATH_FORMULAS, "formula");
   assertValidSourcePages(APPLIED_MATH_QUESTIONS, "question");
 
@@ -165,10 +182,13 @@ test("applied-math cards and exercises cover all six range topics with real TeX"
   assertCleanMathStrings(APPLIED_MATH_QUESTIONS, katex, "practice/random pool");
   assertNoExcludedQuestionContent(APPLIED_MATH_FORMULAS, "formula deck");
   assertNoExcludedQuestionContent(APPLIED_MATH_QUESTIONS, "practice/random pool");
-  assert.match(JSON.stringify(APPLIED_MATH_FORMULAS), /\\iint|幾何学的表面積/);
+  assert.match(JSON.stringify(APPLIED_MATH_FORMULAS), /線積分/);
+  assert.match(JSON.stringify(APPLIED_MATH_FORMULAS), /流束面積分/);
+  assert.match(JSON.stringify(APPLIED_MATH_FORMULAS), /グリーンの定理/);
+  assert.match(JSON.stringify(APPLIED_MATH_QUESTIONS), /基本問題問4.*矛盾.*自動出題しない/);
 });
 
-test("six predicted exams are 50-minute, 80-point, six-topic A4-ready papers", async () => {
+test("six predicted exams are 50-minute, 80-point papers covering all nine topics", async () => {
   const { APPLIED_MATH_EXPECTED_EXAMS } = await loadDataModule();
   const katex = await import(new URL("../app/vendor/katex/katex.mjs", import.meta.url));
 
@@ -180,7 +200,8 @@ test("six predicted exams are 50-minute, 80-point, six-topic A4-ready papers", a
     assert.equal(exam.passPoints, 48, `${exam.id} pass line`);
     assert.equal(exam.sections.length, 6, `${exam.id} major-question count`);
     assert.equal(exam.questions.reduce((sum, question) => sum + question.points, 0), 80, `${exam.id} points sum`);
-    assert.deepEqual(new Set(exam.sections.map((section) => section.topic)), new Set(TOPIC_IDS), `${exam.id} full-range coverage`);
+    assert.deepEqual(new Set(exam.sections.flatMap((section) => section.topicIds)), new Set(TOPIC_IDS), `${exam.id} section coverage`);
+    assert.deepEqual(new Set(exam.questions.map((question) => question.topic)), new Set(TOPIC_IDS), `${exam.id} question coverage`);
     assertValidSourcePages(exam.questions, exam.id);
     for (const question of exam.questions) {
       assert.ok(question.answer?.length > 0, `${question.id} answer`);
@@ -210,10 +231,16 @@ test("subject 8 integrates formula cards, practice, random mock, predicted exams
   assert.match(ui, /APPLIED_MATH_EXPECTED_EXAMS/);
   assert.match(ui, /テスト範囲(?:ZIP|\.zip)/i);
   assert.match(ui, /形式(?:資料|1|2|3).*?(?:レイアウト|形式).*?のみ/s);
-  assert.match(ui, /線積分.*?範囲外/s);
-  assert.match(ui, /流束面積分.*?範囲外/s);
-  assert.match(ui, /ガウス.*?範囲外/s);
-  assert.match(ui, /ストークス.*?範囲外/s);
+  assert.match(ui, /全22枚/);
+  assert.match(ui, /全9単元/);
+  assert.match(ui, /線積分/);
+  assert.match(ui, /流束面積分/);
+  assert.match(ui, /グリーンの定理/);
+  const excludedPolicy = ui.match(/出題しない：<\/b>([^<]+)/)?.[1] ?? "";
+  assert.doesNotMatch(excludedPolicy, /線積分|流束面積分/);
+  assert.match(excludedPolicy, /ガウスの発散定理/);
+  assert.match(excludedPolicy, /ストークスの定理/);
+  assert.match(ui, /問4.*?表記が矛盾.*?自動出題から外/s);
 
   assert.match(studyData, /subject-8[\s\S]*応用数学/);
   assert.match(studyData, /\{ id: "subject-8", name: "応用数学",[^\n]*memo: "(?!教材写真の追加待ち)[^"]+"/);

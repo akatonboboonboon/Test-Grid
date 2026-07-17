@@ -456,6 +456,7 @@ export default function Home() {
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {cards.filter((card) => card.enabled).length} CARDS</span>
           <Link className="outline-button header-link memory-open-button" href="/subjects/network/cards">暗記帳を開く</Link>
+          <Link className="outline-button header-link" href="/rapid/network">ランキング即答</Link>
           <button className="outline-button" type="button" onClick={() => setEditorOpen(true)} disabled={!["idle", "result"].includes(phase)}>
             カードを編集
           </button>
@@ -626,10 +627,20 @@ export default function Home() {
                 </div>
                 <div className="identify-review">
                   {identifyAnswers.map((item, answerIndex) => (
-                    <div key={`${item.card.id}-${answerIndex}`} className={item.correct ? "correct" : "wrong"}>
-                      <span>{item.card.label}</span><strong>{cardLayerLabel(item.card)}</strong>
-                      {!item.correct && <small>{item.timedOut ? "時間切れ" : `回答 L${item.chosen}`}</small>}
-                    </div>
+                    <details key={`${item.card.id}-${answerIndex}`} className={item.correct ? "correct" : "wrong"} open={!item.correct}>
+                      <summary>
+                        <span>{item.card.label}</span><strong>{cardLayerLabel(item.card)}</strong>
+                        {!item.correct && <small>{item.timedOut ? "時間切れ" : `回答 L${item.chosen}`}</small>}
+                      </summary>
+                      <div>
+                        {item.card.fullName && <strong>{item.card.fullName}</strong>}
+                        <p>{item.card.description || "このプロトコルの説明は暗記帳で確認できます。"}</p>
+                        {item.card.note && <p>{item.card.note}</p>}
+                        <Link href={"/cards?subject=network&q=" + encodeURIComponent(item.card.label)}>
+                          {item.correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}
+                        </Link>
+                      </div>
+                    </details>
                   ))}
                 </div>
                 <div className="result-actions">

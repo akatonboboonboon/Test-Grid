@@ -731,6 +731,8 @@ export default function MechanicalDynamicsSubjectPage() {
         </Link>
         <div className="header-actions statistics-header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {MECHANICAL_DYNAMICS_QUESTIONS.length} QUESTIONS</span>
+          <Link className="outline-button header-link" href="/cards?subject=subject-3">暗記帳検索</Link>
+          <Link className="outline-button header-link" href="/rapid/subject-3">時間制限 即答</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -916,7 +918,13 @@ export default function MechanicalDynamicsSubjectPage() {
                           <strong><RichMathText text={question.prompt} /></strong>
                           <p>あなた：<RichMathText text={result?.response || "未回答"} /></p>
                           {!correct && <p>正解：<RichMathText text={question.answer} /></p>}
-                          <p>解説：<RichMathText text={question.explanation} /></p>
+                          <details className="result-review-explanation" open={!correct}>
+                            <summary>解説を見る</summary>
+                            <p><RichMathText text={question.explanation} /></p>
+                          </details>
+                          <Link className="result-card-jump" href={"/cards?subject=subject-3&q=" + encodeURIComponent(question.prompt)}>
+                            {correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}
+                          </Link>
                         </article>
                       );
                     })}

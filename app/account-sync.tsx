@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RAPID_HISTORY_STORAGE_KEY, mergeRapidHistories } from "./rapid-ranking-data";
 
 type AccountUser = {
   displayName: string;
@@ -51,6 +52,13 @@ function mergeProgress(remoteValue: string, localValue: string) {
 }
 
 function mergeRawValue(key: string, remoteValue: string, localValue: string) {
+  if (key === RAPID_HISTORY_STORAGE_KEY) {
+    try {
+      return JSON.stringify(mergeRapidHistories(JSON.parse(remoteValue), JSON.parse(localValue)));
+    } catch {
+      return localValue;
+    }
+  }
   if (key.includes(":progress:") || key.includes("-memory-") || key.includes(":english-memory:")) {
     return mergeProgress(remoteValue, localValue);
   }

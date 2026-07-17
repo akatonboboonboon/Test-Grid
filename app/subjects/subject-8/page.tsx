@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import AppliedMathExpectedExams from "../../applied-math-expected-exams";
+import AppliedMathGraphLab from "../../applied-math-graph-lab";
 import { DisplayMath, RichMathText } from "../../statistics-math";
 import {
   APPLIED_MATH_EXAM_FORMATS,
@@ -13,7 +14,7 @@ import {
   type AppliedMathTopicId,
 } from "../../applied-math-data";
 
-type Mode = "scope" | "cards" | "practice" | "test" | "expected" | "guide";
+type Mode = "scope" | "cards" | "practice" | "test" | "expected" | "guide" | "graph";
 type CardState = "learning" | "mastered";
 type CardProgress = Record<string, CardState>;
 type Feedback = { response: string; correct: boolean };
@@ -624,6 +625,8 @@ export default function AppliedMathSubjectPage() {
         </Link>
         <div className="header-actions statistics-header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {APPLIED_MATH_QUESTIONS.length} QUESTIONS</span>
+          <Link className="outline-button header-link" href="/cards?subject=subject-8">暗記帳検索</Link>
+          <Link className="outline-button header-link" href="/rapid/subject-8">時間制限 即答</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>
@@ -637,7 +640,7 @@ export default function AppliedMathSubjectPage() {
           <div className="english-hero-copy statistics-hero-copy">
             <p><span>SUBJECT 08</span><span>COURSE-RANGE ONLY</span></p>
             <h1 id="statistics-title">応用数学</h1>
-            <small>16枚の範囲だけを数式の形で覚え、演習を反復し、A4・50分・80点満点の全範囲予想試験6回で仕上げます。</small>
+            <small>全22枚（当初16枚＋追加6枚）の範囲を数式の形で覚え、演習を反復し、A4・50分・80点満点の全範囲予想試験6回で仕上げます。</small>
           </div>
           <button className="english-hero-memory-button statistics-hero-card-button" type="button" onClick={() => changeMode("cards")}>
             <span>FORMULAS FIRST</span>
@@ -650,7 +653,7 @@ export default function AppliedMathSubjectPage() {
           <div><span>TOPICS</span><strong>{APPLIED_MATH_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{APPLIED_MATH_FORMULAS.length}</strong><small>枚</small></div>
           <div><span>QUESTIONS</span><strong>{APPLIED_MATH_QUESTIONS.length}</strong><small>問</small></div>
-          <p>テスト範囲ZIPの講義画像16枚だけを学習内容として収録。形式1〜3は紙面・配点・途中式欄の参考だけに使用し、予想試験6回は毎回全6単元を含みます。公式は {totalMastered}枚暗記済み。</p>
+          <p>当初のテスト範囲ZIP 16枚と追加範囲ZIP 6枚の全22枚を学習内容として収録。形式1〜3は紙面・配点・途中式欄の参考だけに使用し、予想試験6回は毎回全9単元を含みます。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
         <section ref={workspaceRef} id="statistics-workspace" className="english-workspace statistics-workspace">
@@ -661,17 +664,18 @@ export default function AppliedMathSubjectPage() {
             <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>④ ランダム模試</button>
             <button type="button" role="tab" aria-selected={mode === "expected"} className={mode === "expected" ? "active" : ""} onClick={() => changeMode("expected")}>⑤ 想定試験</button>
             <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑥ 出題形式</button>
+            <button type="button" role="tab" aria-selected={mode === "graph"} className={mode === "graph" ? "active" : ""} onClick={() => changeMode("graph")}>⑦ グラフ休憩</button>
           </div>
 
           {mode === "scope" && (
             <section className="english-guide-workspace statistics-scope-workspace" aria-labelledby="statistics-scope-title">
               <div className="english-panel-heading statistics-panel-heading">
                 <div><span>COURSE RANGE</span><h2 id="statistics-scope-title">今回の試験範囲</h2></div>
-                <p>テスト範囲ZIPの16枚から整理した6単元です。形式1.pdf・形式2.pdf・形式3.zipは形式把握だけに使っています。</p>
+                <p>当初範囲16枚と追加範囲6枚から整理した全22枚・9単元です。形式1.pdf・形式2.pdf・形式3.zipは形式把握だけに使っています。</p>
               </div>
               <div className="english-guide-tip statistics-source-policy">
                 <span>SOURCE POLICY</span>
-                <p><b>出題する：</b>範囲ZIPの16画像にあるベクトル・曲線・曲面・勾配・発散・回転　／　<b>出題しない：</b>形式資料にしかない線積分・流束面積分・ガウスの発散定理・ストークスの定理<br /><small><RichMathText text={"曲面積は \\(\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv\\) の幾何学的表面積として扱います。"} /></small></p>
+                <p><b>出題する：</b>全22画像にあるベクトル・曲線・曲面・勾配・発散・回転・線積分・スカラー/流束面積分・グリーンの定理　／　<b>出題しない：</b>ガウスの発散定理・ストークスの定理<br /><small><RichMathText text={"幾何学的曲面積 \\(\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv\\)、スカラー面積分、向き付き流束面積分を区別して練習します。"} /></small><br /><small><b>資料注記：</b>追加基本問題の問4は第三成分が \\(v^2\\)、対応する第11回演習は \\(u^2\\) と表記が矛盾するため、その問4は自動出題から外し、演習紙の \\(u^2\\) 版だけを収録しています。</small></p>
               </div>
               <div className="english-guide-grid statistics-topic-grid">
                 {APPLIED_MATH_TOPICS.map((topic) => {
@@ -690,6 +694,7 @@ export default function AppliedMathSubjectPage() {
               <div className="english-result-actions statistics-scope-actions">
                 <button type="button" onClick={() => changeMode("cards")}>公式暗記から始める</button>
                 <button type="button" onClick={() => changeMode("practice")}>計算演習へ進む</button>
+                <button type="button" onClick={() => changeMode("graph")}>試験対象外のグラフで休憩</button>
               </div>
             </section>
           )}
@@ -801,7 +806,13 @@ export default function AppliedMathSubjectPage() {
                         <strong><RichMathText text={result.question.prompt} /></strong>
                         <p>あなた：<RichMathText text={result.response || "未回答"} /></p>
                         {!result.correct && <p>正解：<RichMathText text={result.question.answer} /></p>}
-                        <p>解説：<RichMathText text={result.question.explanation} /></p>
+                        <details className="result-review-explanation" open={!result.correct}>
+                          <summary>解説を見る</summary>
+                          <p><RichMathText text={result.question.explanation} /></p>
+                        </details>
+                        <Link className="result-card-jump" href={"/cards?subject=subject-8&q=" + encodeURIComponent(result.question.prompt)}>
+                          {result.correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}
+                        </Link>
                       </article>
                     ))}
                   </div>
@@ -812,6 +823,8 @@ export default function AppliedMathSubjectPage() {
           )}
 
           {mode === "expected" && <AppliedMathExpectedExams />}
+
+          {mode === "graph" && <AppliedMathGraphLab />}
 
           {mode === "guide" && (
             <section className="english-guide-workspace statistics-guide-workspace" aria-labelledby="statistics-guide-title">
