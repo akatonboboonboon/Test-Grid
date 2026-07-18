@@ -246,7 +246,7 @@ export default function DigitalCircuitSubjectPage() {
       <header className={styles.header}>
         <Link className={styles.back} href="/">← 9教科ホーム</Link>
         <span className={styles.brand}>TEST//GRID · SUBJECT 09</span>
-        <nav><Link className={styles.rapidLink} href="/generated-practice?subject=subject-9">自動生成問題</Link><Link className={styles.rapidLink} href="/subjects/subject-9/rapid">⚡ 時間制限ドリル</Link></nav>
+        <nav><Link className={styles.rapidLink} href="/foundations?subject=subject-9">基礎情報一覧</Link><Link className={styles.rapidLink} href="/generated-practice?subject=subject-9">自動生成問題</Link><Link className={styles.rapidLink} href="/subjects/subject-9/rapid">⚡ 時間制限ドリル</Link></nav>
       </header>
       <main className={styles.main}>
         <section className={styles.hero}>
@@ -286,11 +286,11 @@ export default function DigitalCircuitSubjectPage() {
               <div className={styles.cardMeta}><span>CARD {cardIndex + 1} / {cards.length}</span><span>{topicLabel(card.topic)} · {progress[card.id] ?? "未判定"}</span></div>
               <button className={styles.flipCard} type="button" onClick={() => setFlipped((value) => !value)}>
                 <span className={styles.eyebrow}>{flipped ? card.title : "QUESTION"}</span>
-                {flipped ? <div className={styles.formulaFace}><DisplayMath tex={card.formula} /><p>{card.cue}</p></div> : <strong>{card.prompt}</strong>}
+                {flipped ? <div className={styles.formulaFace}><DisplayMath tex={card.formula} /><p><RichMathText text={card.cue} /></p></div> : <strong><RichMathText text={card.prompt} /></strong>}
                 <small>{flipped ? "もう一度押すと問題へ戻ります" : "タップして答え・理由を見る"}</small>
               </button>
               {card.diagram && <div className={styles.diagram}><DigitalCircuitStudyDiagram kind={card.diagram} solution={flipped} title={flipped ? "模範図" : "思い出すための記入用図"} /></div>}
-              {flipped && <div className={styles.explanation}><b>なぜ：</b>{card.explanation}{card.example && <><br /><b>例：</b><RichMathText text={card.example} /></>}<br /><small>出典：{card.sourceRefs.map((source) => source.filename + " p." + source.page).join(" / ")}</small></div>}
+              {flipped && <div className={styles.explanation}><b>なぜ：</b><RichMathText text={card.explanation} />{card.example && <><br /><b>例：</b><RichMathText text={card.example} /></>}<br /><small>出典：{card.sourceRefs.map((source) => source.filename + " p." + source.page).join(" / ")}</small></div>}
               <div className={styles.actions}><button type="button" onClick={() => { setCardIndex((value) => (value - 1 + cards.length) % cards.length); setFlipped(false); }}>前へ</button><button type="button" disabled={!flipped} onClick={() => markCard("learning")}>もう一度</button><button type="button" disabled={!flipped} onClick={() => markCard("mastered")}>覚えた</button><button type="button" onClick={() => { setCardIndex((value) => (value + 1) % cards.length); setFlipped(false); }}>次へ</button></div>
             </> : <div className={styles.empty}>カード範囲を1つ以上選んでください。</div>}
           </section>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import CardDeckSearch from "../../card-deck-search";
+import { RichMathText } from "../../statistics-math";
 import { shuffle, storageRead, storageWrite } from "../../protocols";
 import {
   DEFAULT_SUBJECTS,
@@ -309,7 +310,7 @@ export default function GenericSubjectPage() {
             <div className="generic-deck-meta"><span>CARD {index + 1} / {deck.length}</span><span>{progress[currentCard.id] === "mastered" ? "覚えた" : progress[currentCard.id] === "learning" ? "復習" : "未判定"}</span></div>
             <button ref={cardRef} type="button" className={`generic-flip-card ${flipped ? "is-flipped" : ""}`} onClick={() => setFlipped((value) => !value)} aria-label={flipped ? "問題に戻る" : "答えを表示"}>
               <span>{flipped ? "ANSWER" : "QUESTION"}</span>
-              <strong>{flipped ? currentCard.answer : currentCard.prompt}</strong>
+              <strong><RichMathText text={flipped ? currentCard.answer : currentCard.prompt} /></strong>
               <small>{flipped ? "覚えていたか判定してください" : "タップして答えを確認"}</small>
             </button>
             <div className="generic-card-controls">
@@ -329,7 +330,7 @@ export default function GenericSubjectPage() {
         {mode === "test" && currentCard && (
           <section className="generic-test-workspace" aria-label="一問一答">
             <div className="generic-deck-meta"><span>QUESTION {index + 1} / {deck.length}</span><span>SELF CHECK</span></div>
-            <div className="generic-test-question"><span>問題</span><h2>{currentCard.prompt}</h2></div>
+            <div className="generic-test-question"><span>問題</span><h2><RichMathText text={currentCard.prompt} /></h2></div>
             {!revealed ? (
               <form onSubmit={(event) => { event.preventDefault(); setRevealed(true); }}>
                 <label htmlFor="typed-answer">頭の中の答えを入力 <small>任意</small></label>
@@ -338,7 +339,7 @@ export default function GenericSubjectPage() {
             ) : (
               <div className="generic-test-answer">
                 {typedAnswer && <p><span>あなたの回答</span>{typedAnswer}</p>}
-                <p><span>正解</span><strong>{currentCard.answer}</strong></p>
+                <p><span>正解</span><strong><RichMathText text={currentCard.answer} /></strong></p>
                 <div><button type="button" className="again" onClick={() => markCard("learning")}>もう一度</button><button type="button" className="mastered" onClick={() => markCard("mastered")}>正解できた</button></div>
               </div>
             )}

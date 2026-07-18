@@ -640,6 +640,7 @@ export default function AppliedMathSubjectPage() {
         <div className="header-actions statistics-header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {APPLIED_MATH_EXAM_LEVEL_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-8">暗記帳検索</Link>
+          <Link className="outline-button header-link" href="/foundations?subject=subject-8">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-8">時間制限 即答</Link>
           <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-8">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
@@ -690,7 +691,7 @@ export default function AppliedMathSubjectPage() {
               </div>
               <div className="english-guide-tip statistics-source-policy">
                 <span>SOURCE POLICY</span>
-                <p><b>出題する：</b>全22画像にあるベクトル・曲線・曲面・勾配・発散・回転・線積分・スカラー/流束面積分・グリーンの定理　／　<b>出題しない：</b>ガウスの発散定理・ストークスの定理<br /><small><RichMathText text={"幾何学的曲面積 \\(\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv\\)、スカラー面積分、向き付き流束面積分を区別して練習します。"} /></small><br /><small><b>資料注記：</b>追加基本問題の問4は第三成分が \\(v^2\\)、対応する第11回演習は \\(u^2\\) と表記が矛盾するため、その問4は自動出題から外し、演習紙の \\(u^2\\) 版だけを収録しています。</small></p>
+                <p><b>出題する：</b>全22画像にあるベクトル・曲線・曲面・勾配・発散・回転・線積分・スカラー/流束面積分・グリーンの定理　／　<b>出題しない：</b>ガウスの発散定理・ストークスの定理<br /><small><RichMathText text={"幾何学的曲面積 \\(\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv\\)、スカラー面積分、向き付き流束面積分を区別して練習します。"} /></small><br /><small><b>資料注記：</b><RichMathText text={"追加基本問題の問4は第三成分が \\(v^2\\)、対応する第11回演習は \\(u^2\\) と表記が矛盾するため、その問4は自動出題から外し、演習紙の \\(u^2\\) 版だけを収録しています。"} /></small></p>
               </div>
               <div className="english-guide-grid statistics-topic-grid">
                 {APPLIED_MATH_TOPICS.map((topic) => {
@@ -746,7 +747,7 @@ export default function AppliedMathSubjectPage() {
                     {cardFlipped
                       ? <DisplayMath tex={currentCard.formula} ariaLabel={currentCard.title + "の公式"} />
                       : <strong><RichMathText text={currentCard.prompt} /></strong>}
-                    <small>{cardFlipped ? currentCard.cue : "頭の中で公式を書いてからタップ"}</small>
+                    <small>{cardFlipped ? <RichMathText text={currentCard.cue} /> : "頭の中で公式を書いてからタップ"}</small>
                   </button>
                   {cardFlipped && (
                     <div className="english-guide-tip statistics-card-explanation">

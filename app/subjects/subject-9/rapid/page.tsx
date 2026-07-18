@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DIGITAL_CIRCUIT_ALL_QUESTIONS, type DigitalCircuitStudyQuestion } from "../../../digital-circuits-extra-data";
 import DigitalCircuitStudyDiagram from "../../../digital-circuits-extra-diagrams";
+import { loadRapidPlayerName, normalizeRapidPlayerName, saveRapidPlayerName } from "../../../rapid-ranking-data";
 import { RichMathText } from "../../../statistics-math";
 import styles from "../../../digital-circuits.module.css";
 
-type Rank = { score: number; streak: number; answered: number; date: number };
+type Rank = { playerName?: string; score: number; streak: number; answered: number; date: number };
 const RANK_KEY = "test-grid:subject-9:rapid-ranking:v1";
 const QUESTIONS = DIGITAL_CIRCUIT_ALL_QUESTIONS.filter((question) => question.format === "choice" || question.format === "sequence");
 function normalize(value: string) {
@@ -33,6 +34,7 @@ function readRanking(): Rank[] {
 export default function DigitalCircuitRapidPage() {
   const [secondsDraft, setSecondsDraft] = useState("10");
   const [limit, setLimit] = useState(10);
+  const [playerName, setPlayerName] = useState("");
   const [remaining, setRemaining] = useState(10);
   const [question, setQuestion] = useState<DigitalCircuitStudyQuestion>(() => QUESTIONS[0]);
   const [answer, setAnswer] = useState("");
@@ -43,6 +45,14 @@ export default function DigitalCircuitRapidPage() {
   const [answered, setAnswered] = useState(0);
   const [ranking, setRanking] = useState<Rank[]>(() => readRanking());
   const rankSorted = useMemo(() => [...ranking].sort((a, b) => b.score - a.score || b.streak - a.streak).slice(0, 5), [ranking]);
+
+  const normalizedPlayerName = normalizeRapidPlayerName(playerName);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- restore the name after hydration */
+  useEffect(() => {
+    setPlayerName(loadRapidPlayerName());
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (status !== "active") return;
@@ -60,7 +70,10 @@ export default function DigitalCircuitRapidPage() {
   }, [question.id, status]);
 
   function start() {
+    const name = normalizeRapidPlayerName(playerName);
+    if (!name) return;
     const parsed = Math.min(60, Math.max(3, Number.parseInt(secondsDraft, 10) || 10));
+    setPlayerName(name); saveRapidPlayerName(name);
     setLimit(parsed); setRemaining(parsed); setQuestion(nextQuestion()); setAnswer(""); setScore(0); setStreak(0); setBestStreak(0); setAnswered(0); setStatus("active");
   }
   function submit() {
@@ -79,7 +92,7 @@ export default function DigitalCircuitRapidPage() {
     setQuestion(nextQuestion(question.id)); setAnswer(""); setRemaining(limit); setStatus("active");
   }
   function finish() {
-    const next = [...ranking, { score, streak: bestStreak, answered, date: Date.now() }].sort((a, b) => b.score - a.score || b.streak - a.streak).slice(0, 20);
+    const next = [...ranking, { playerName: normalizedPlayerName ?? "以前の記録", score, streak: bestStreak, answered, date: Date.now() }].sort((a, b) => b.score - a.score || b.streak - a.streak).slice(0, 20);
     setRanking(next); window.localStorage.setItem(RANK_KEY, JSON.stringify(next)); setStatus("setup");
   }
 
@@ -89,9 +102,9 @@ export default function DigitalCircuitRapidPage() {
         <div className={styles.rapidTop}><Link href="/subjects/subject-9">← デジタル回路へ</Link><strong>⚡ TIMED DRILL</strong></div>
         {status === "setup" ? <>
           <span className={styles.eyebrow}>SUBJECT 09</span><h1>時間制限・即答ドリル</h1>
-          <p>図を見て、ゲート出力・FF状態・カウンタ列・状態遷移を制限時間内に答えます。連続正解と端末内ランキングを記録します。</p>
-          <div className={styles.settings}><label>1問の秒数<input type="number" min="3" max="60" value={secondsDraft} onChange={(event) => setSecondsDraft(event.target.value)} /></label><button className={styles.primary} type="button" onClick={start}>開始</button></div>
-          <div className={styles.rapidRanking}><h2>ランキング</h2>{rankSorted.length ? <ol>{rankSorted.map((rank, index) => <li key={rank.date + "-" + index}>{rank.score}正解 ／ 最大{rank.streak}連続 ／ {new Date(rank.date).toLocaleDateString("ja-JP")}</li>)}</ol> : <p>まだ記録がありません。</p>}</div>
+          <p>図を見て、ゲート出力・FF状態・カウンタ列・状態遷移を制限時間内に答えます。連続正解と名前つき端末内ランキングを記録します。</p>
+          <div className={styles.settings}><label>ランキング表示名<input type="text" maxLength={24} autoComplete="nickname" value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="例：おさと" required /><small>{normalizedPlayerName ? `「${normalizedPlayerName}」として記録` : "1〜24文字・必須"}</small></label><label>1問の秒数<input type="number" min="3" max="60" value={secondsDraft} onChange={(event) => setSecondsDraft(event.target.value)} /></label><button className={styles.primary} type="button" onClick={start} disabled={!normalizedPlayerName}>{normalizedPlayerName ? "開始" : "名前を入力"}</button></div>
+          <div className={styles.rapidRanking}><h2>ランキング</h2>{rankSorted.length ? <ol>{rankSorted.map((rank, index) => <li key={rank.date + "-" + index}><strong>{index + 1}. {rank.playerName || "以前の記録"}</strong><span>{rank.score}正解 ／ 最大{rank.streak}連続 ／ {new Date(rank.date).toLocaleDateString("ja-JP")}</span></li>)}</ol> : <p>まだ記録がありません。</p>}</div>
         </> : <>
           <div className={styles.rapidTop}><span>正解 {score} / {answered}</span><span>連続 {streak}（BEST {bestStreak}）</span><span className={styles.timer}>{remaining}s</span></div>
           <div className={styles.rapidPrompt}><RichMathText text={question.prompt} /></div>

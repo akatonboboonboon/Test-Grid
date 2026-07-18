@@ -712,6 +712,50 @@ test("keeps short math inline and gives every long smart-control/statistics expr
   assert.match(longRendered.props.className, /has-display-math/);
   assert.equal(longRendered.props.children[0].type.name, "ResponsiveMathSegment");
 
+  const bracketedText = String.raw`次の8個のデータについて答えよ。\[12,\quad 16,\quad 18,\quad 20,\quad 22,\quad 24,\quad 26,\quad 30\] 分散は母分散とする。`;
+  const bracketedRendered = mathRenderer.RichMathText({ text: bracketedText });
+  assert.match(bracketedRendered.props.className, /has-display-math/);
+  assert.equal(bracketedRendered.props.children[1].type.name, "ResponsiveMathSegment");
+  assert.equal(bracketedRendered.props.children[1].props.tex, String.raw`12,\quad 16,\quad 18,\quad 20,\quad 22,\quad 24,\quad 26,\quad 30`);
+
+  const arrayCases = [
+    [
+      String.raw`確率変数 \(X\) の分布は次のとおりである。\[\begin{array}{c|cccc}x&0&1&2&3\\\hline P(X=x)&0.5&0.25&0.125&k\end{array}\] 対数は底2とする。`,
+      String.raw`\begin{array}{c|cccc}x&0&1&2&3\\\hline P(X=x)&0.5&0.25&0.125&k\end{array}`,
+    ],
+    [
+      String.raw`次の対応表を用い、分散・共分散は \(n\) で割る。\[\begin{array}{c|ccccc}i&1&2&3&4&5\\\hline X_i&1&2&3&4&5\\Y_i&9&15&18&21&22\end{array}\]`,
+      String.raw`\begin{array}{c|ccccc}i&1&2&3&4&5\\\hline X_i&1&2&3&4&5\\Y_i&9&15&18&21&22\end{array}`,
+    ],
+  ];
+
+  for (const [arrayText, expectedTex] of arrayCases) {
+    const rendered = mathRenderer.RichMathText({ text: arrayText });
+    const children = Array.isArray(rendered.props.children)
+      ? rendered.props.children
+      : [rendered.props.children];
+    const displaySegments = children.filter((child) => child?.type?.name === "ResponsiveMathSegment");
+    assert.equal(displaySegments.length, 1, arrayText);
+    assert.equal(displaySegments[0].props.tex, expectedTex);
+
+    const typesetSegment = displaySegments[0].type(displaySegments[0].props);
+    const html = typesetSegment.props.children.props.dangerouslySetInnerHTML.__html;
+    assert.match(html, /katex-display/);
+    assert.doesNotMatch(html, /\\\\\[/);
+    assert.doesNotMatch(html, /\\\\\]/);
+  }
+  const dollarRendered = mathRenderer.RichMathText({ text: String.raw`$$\sum_{i=1}^{n}x_i$$` });
+  assert.match(dollarRendered.props.className, /has-display-math/);
+  assert.equal(dollarRendered.props.children[0].type.name, "ResponsiveMathSegment");
+
+  assert.equal(mathRenderer.isStandaloneTex(String.raw`\frac{1}{n}\sum_{i=1}^{n}(x_i-\bar{x})^2`), true);
+  assert.equal(mathRenderer.isStandaloneTex(String.raw`\text{禁止}`), true);
+  assert.equal(mathRenderer.isStandaloneTex("stable network protocol"), false);
+  assert.equal(mathRenderer.isStandaloneTex(String.raw`答えは \frac{1}{2}`), false);
+  const bareRendered = mathRenderer.RichMathText({ text: String.raw`\frac{1}{n}\sum_{i=1}^{n}(x_i-\bar{x})^2` });
+  assert.match(bareRendered.props.className, /has-display-math/);
+  assert.equal(bareRendered.props.children.type.name, "ResponsiveMathSegment");
+
   const questionOwners = [
     ...statistics.STATISTICS_QUESTIONS,
     ...smartControl.SMART_CONTROL_QUESTIONS,
@@ -879,7 +923,7 @@ test("ships layer filtering, autocomplete card search, rapid drills, and balance
   assert.match(overallChallenge, /全\{runner\.results\.length\}問の振り返り/);
 });
 
-test("ships an authenticated R2-backed anonymous leaderboard without exposing account identifiers", async () => {
+test("ships a named R2-backed leaderboard with account or device identity and no exposed identifiers", async () => {
   const [route, hosting, rankingData, accountSync] = await Promise.all([
     readFile(new URL("../app/api/leaderboard/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
@@ -888,8 +932,11 @@ test("ships an authenticated R2-backed anonymous leaderboard without exposing ac
   ]);
 
   assert.match(route, /SHA-256/);
-  assert.match(route, /学習者-/);
-  assert.match(route, /SIGN_IN_REQUIRED/);
+  assert.match(route, /RAPID_CLIENT_TOKEN_HEADER/);
+  assert.match(route, /normalizeRankingName/);
+  assert.match(route, /sameSiteWriteAllowed/);
+  assert.match(route, /questionCount > 4_914/);
+  assert.match(route, /existing\.alias !== alias/);
   assert.match(route, /STUDY_SNAPSHOTS\.list/);
   assert.match(route, /STUDY_SNAPSHOTS\.put/);
   assert.match(route, /scoreIsBetter/);
@@ -898,7 +945,10 @@ test("ships an authenticated R2-backed anonymous leaderboard without exposing ac
   assert.match(hosting, /"r2": "STUDY_SNAPSHOTS"/);
   assert.match(hosting, /"d1": "DB"/);
   assert.match(rankingData, /test-grid:rapid-rankings:v1/);
+  assert.match(rankingData, /playerName: string/);
+  assert.match(rankingData, /normalizeRapidPlayerName/);
   assert.match(accountSync, /mergeRapidHistories/);
+  assert.match(accountSync, /mergeRapidRankingProfiles/);
 });
 
 test("ships the applied-math graph break as a safe, exam-excluded interactive lab", async () => {

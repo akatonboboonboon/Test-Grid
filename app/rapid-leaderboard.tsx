@@ -39,8 +39,8 @@ export default function RapidLeaderboard({ boardKey, refreshToken = 0 }: { board
   return (
     <section className="rapid-leaderboard" aria-labelledby="rapid-leaderboard-title">
       <div className="rapid-leaderboard-head">
-        <div><span>ANONYMOUS RANKING</span><h3 id="rapid-leaderboard-title">ランキング</h3></div>
-        <p>同じ問題数どうしで比較。ログイン中は匿名名で自己ベストだけ登録されます。</p>
+        <div><span>PLAYER RANKING</span><h3 id="rapid-leaderboard-title">みんなのランキング</h3></div>
+        <p>同じ問題数どうしで比較。挑戦前に決めた表示名と自己ベストを公開します。</p>
       </div>
       {state === "loading" ? (
         <p className="rapid-leaderboard-note">ランキングを読み込み中…</p>

@@ -2,11 +2,24 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { RAPID_HISTORY_STORAGE_KEY, mergeRapidHistories } from "./rapid-ranking-data";
+import {
+  RAPID_HISTORY_STORAGE_KEY,
+  RAPID_PROFILE_STORAGE_KEY,
+  clearRapidRankingName,
+  loadRapidRankingProfile,
+  mergeRapidHistories,
+  saveRapidRankingName,
+} from "./rapid-ranking-data";
+import {
+  RAPID_CLIENT_STORAGE_KEY,
+  mergeRapidRankingProfiles,
+  normalizeRankingName,
+} from "./rapid-ranking-profile";
 
 type AccountUser = {
   displayName: string;
   email: string;
+  defaultRankingName: string | null;
 };
 
 type StudySnapshot = Record<string, string>;
@@ -19,7 +32,7 @@ function readLocalSnapshot(): StudySnapshot {
   const snapshot: StudySnapshot = {};
   for (let index = 0; index < window.localStorage.length; index += 1) {
     const key = window.localStorage.key(index);
-    if (!key || !STORAGE_KEY_PATTERN.test(key)) continue;
+    if (!key || key === RAPID_CLIENT_STORAGE_KEY || !STORAGE_KEY_PATTERN.test(key)) continue;
     const value = window.localStorage.getItem(key);
     if (value !== null) snapshot[key] = value;
   }
@@ -59,6 +72,14 @@ function mergeRawValue(key: string, remoteValue: string, localValue: string) {
       return localValue;
     }
   }
+  if (key === RAPID_PROFILE_STORAGE_KEY) {
+    try {
+      const merged = mergeRapidRankingProfiles(JSON.parse(remoteValue), JSON.parse(localValue));
+      return merged ? JSON.stringify(merged) : localValue;
+    } catch {
+      return localValue;
+    }
+  }
   if (key.includes(":progress:") || key.includes("-memory-") || key.includes(":english-memory:")) {
     return mergeProgress(remoteValue, localValue);
   }
@@ -88,7 +109,9 @@ function stableSnapshot(snapshot: StudySnapshot) {
 }
 
 function applySnapshot(snapshot: StudySnapshot) {
-  for (const [key, value] of Object.entries(snapshot)) window.localStorage.setItem(key, value);
+  for (const [key, value] of Object.entries(snapshot)) {
+    if (key !== RAPID_CLIENT_STORAGE_KEY) window.localStorage.setItem(key, value);
+  }
 }
 
 export default function AccountSync({
@@ -100,8 +123,11 @@ export default function AccountSync({
   signInPath: string;
   signOutPath: string;
 }) {
+  const defaultRankingName = normalizeRankingName(user?.defaultRankingName) ?? "";
   const [syncState, setSyncState] = useState<SyncState>("idle");
   const [statusText, setStatusText] = useState(user ? "進捗を確認中" : "端末内だけに保存中");
+  const [rankingNameDraft, setRankingNameDraft] = useState(defaultRankingName);
+  const [rankingNameStatus, setRankingNameStatus] = useState("挑戦前に保存するとランキングで使われます");
   const inFlightRef = useRef(false);
   const lastSnapshotRef = useRef("");
 
@@ -145,6 +171,19 @@ export default function AccountSync({
   }, [user]);
 
   useEffect(() => {
+    const refreshRankingName = () => {
+      setRankingNameDraft(loadRapidRankingProfile()?.rankingName ?? defaultRankingName);
+    };
+    refreshRankingName();
+    window.addEventListener("test-grid:sync-complete", refreshRankingName);
+    window.addEventListener("test-grid:ranking-profile-changed", refreshRankingName);
+    return () => {
+      window.removeEventListener("test-grid:sync-complete", refreshRankingName);
+      window.removeEventListener("test-grid:ranking-profile-changed", refreshRankingName);
+    };
+  }, [defaultRankingName]);
+
+  useEffect(() => {
     if (!user) return;
     const hydrationKey = `test-grid:sync-hydrated:${user.email}`;
     const reloadIfPulled = window.sessionStorage.getItem(hydrationKey) !== "1";
@@ -164,21 +203,67 @@ export default function AccountSync({
     };
   }, [syncNow, user]);
 
+  const saveRankingName = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalized = normalizeRankingName(rankingNameDraft);
+    if (!normalized) {
+      if (defaultRankingName && rankingNameDraft.trim() === "") {
+        clearRapidRankingName();
+        setRankingNameDraft(defaultRankingName);
+        setRankingNameStatus("アカウントの氏名を初期表示名として使います");
+        if (user) void syncNow(false);
+        return;
+      }
+      setRankingNameStatus("1〜24文字で入力してください（制御文字は使えません）");
+      return;
+    }
+    saveRapidRankingName(normalized);
+    setRankingNameDraft(normalized);
+    setRankingNameStatus(user ? "保存しました・別端末にも同期します" : "この端末に保存しました");
+    if (user) void syncNow(false);
+  };
+
+  const rankingNameEditor = (
+    <form
+      onSubmit={saveRankingName}
+      aria-label="ランキング表示名"
+      style={{ alignItems: "end", display: "flex", flex: "1 1 280px", gap: 6, minWidth: 0 }}
+    >
+      <label style={{ display: "grid", flex: "1 1 180px", gap: 3, minWidth: 0 }}>
+        <span>ランキング表示名（挑戦前に設定）</span>
+        <input
+          type="text"
+          autoComplete="nickname"
+          maxLength={24}
+          value={rankingNameDraft}
+          onChange={(event) => setRankingNameDraft(event.target.value)}
+          placeholder="1〜24文字"
+          aria-describedby="ranking-name-status"
+          style={{ border: "1px solid currentColor", minHeight: 36, minWidth: 0, padding: "6px 8px" }}
+        />
+      </label>
+      <button type="submit" style={{ minHeight: 36, padding: "6px 10px", whiteSpace: "nowrap" }}>名前を保存</button>
+      <span id="ranking-name-status" role="status" style={{ maxWidth: 180 }}>{rankingNameStatus}</span>
+    </form>
+  );
+
   if (!user) {
     return (
       <aside className="account-sync-bar is-signed-out" aria-label="学習アカウント">
         <div><strong>別のスマホでも続きから</strong><span>アカウントで全科目の進捗を同期できます</span></div>
+        {rankingNameEditor}
         <Link className="account-sign-in" href={signInPath}>アカウント作成・ログイン</Link>
       </aside>
     );
   }
 
   return (
-    <aside className="account-sync-bar is-signed-in" data-state={syncState} aria-label="学習アカウント">
+    <aside className="account-sync-bar is-signed-in" data-state={syncState} data-default-ranking-name={defaultRankingName || undefined} aria-label="学習アカウント">
       <div className="account-identity">
         <strong>{user.displayName}</strong>
         <span><i aria-hidden="true" /> {statusText}</span>
       </div>
+      {rankingNameEditor}
       <div className="account-actions">
         <button type="button" disabled={syncState === "syncing"} onClick={() => void syncNow(true)}>今すぐ同期</button>
         <Link href={signOutPath}>ログアウト</Link>

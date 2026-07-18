@@ -30,6 +30,8 @@ test("rapid answer formatting distinguishes pure TeX from mixed rich text per va
   assert.equal(isPureRapidTex(String.raw`\frac{1}{2}`, true), true);
   assert.equal(isPureRapidTex(String.raw`(3,1,-1)`, true), true);
   assert.equal(isPureRapidTex(String.raw`\(\frac{1}{2}\)`, true), false);
+  assert.equal(isPureRapidTex(String.raw`\[\frac{1}{2}\]`, true), false);
+  assert.equal(isPureRapidTex(String.raw`$$\frac{1}{2}$$`, true), false);
   assert.equal(isPureRapidTex(`\u9762\u7a4d ${String.raw`\(\frac{\sqrt{369}}{2}\)`}`, true), false);
   assert.equal(isPureRapidTex("stable", true), false);
   assert.equal(isPureRapidTex(String.raw`\frac{1}{2}`, false), false);
@@ -50,4 +52,19 @@ test("rapid choices, feedback, and review share the per-value answer renderer", 
     assert.match(source, /<RapidAnswerText value=\{result\.question\.answer\} mathOptions=\{result\.question\.mathOptions\} emphasizeRichText \/>/);
     assert.doesNotMatch(source, /currentQuestion\.mathOptions \? <InlineMath/);
   }
+});
+test("math-capable study surfaces never print source fields directly", async () => {
+  const [digitalExam, digitalSubject, genericSubject] = await Promise.all([
+    readFile(new URL("../app/digital-circuits-expected-exams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/subjects/subject-9/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/subjects/[subjectId]/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(digitalExam, /<RichMathText text=\{section\.context\} \/>/);
+  assert.match(digitalSubject, /<RichMathText text=\{card\.cue\} \/>/);
+  assert.match(digitalSubject, /<RichMathText text=\{card\.prompt\} \/>/);
+  assert.match(digitalSubject, /<RichMathText text=\{card\.explanation\} \/>/);
+  assert.match(genericSubject, /<RichMathText text=\{flipped \? currentCard\.answer : currentCard\.prompt\} \/>/);
+  assert.match(genericSubject, /<RichMathText text=\{currentCard\.prompt\} \/>/);
+  assert.match(genericSubject, /<RichMathText text=\{currentCard\.answer\} \/>/);
 });

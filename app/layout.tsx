@@ -40,7 +40,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang="ja">
       <body>
         <AccountSync
-          user={user ? { displayName: user.displayName, email: user.email } : null}
+          user={user ? {
+            displayName: user.displayName,
+            email: user.email,
+            defaultRankingName: user.fullName,
+          } : null}
           signInPath={chatGPTSignInPath("/")}
           signOutPath={chatGPTSignOutPath("/")}
         />

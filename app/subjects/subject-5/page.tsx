@@ -748,6 +748,7 @@ export default function MaterialMechanicsSubjectPage() {
         <div className="header-actions statistics-header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {MATERIAL_MECHANICS_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-5">暗記帳検索</Link>
+          <Link className="outline-button header-link" href="/foundations?subject=subject-5">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-5">時間制限 即答</Link>
           <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-5">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>

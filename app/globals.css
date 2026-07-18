@@ -172,6 +172,20 @@ button:disabled {
   margin-top: 24px;
 }
 
+.rapid-player-name {
+  grid-column: 1 / -1;
+}
+
+.rapid-settings .rapid-player-name input {
+  font-family: var(--sans);
+  font-size: 16px;
+  letter-spacing: 0.01em;
+}
+
+.rapid-settings .rapid-player-name input::placeholder {
+  color: rgba(11, 14, 19, 0.35);
+}
+
 .rapid-settings label > span,
 .rapid-settings label > small {
   display: block;
@@ -210,6 +224,11 @@ button:disabled {
   min-height: 72px;
   padding: 13px 17px;
   text-align: left;
+}
+
+.rapid-settings > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .rapid-settings > button span,
@@ -684,6 +703,11 @@ button:disabled {
 }
 
 .rapid-leaderboard li > b {
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.rapid-local-ranking li > b {
   font-family: var(--mono);
   font-size: 10px;
 }

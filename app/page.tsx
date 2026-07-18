@@ -36,6 +36,15 @@ const GENERATED_PRACTICE_SUBJECT_IDS = new Set<SubjectId>([
   "subject-9",
 ]);
 
+const FOUNDATION_SUBJECT_IDS = new Set<SubjectId>([
+  "subject-3",
+  "subject-4",
+  "subject-5",
+  "subject-6",
+  "subject-7",
+  "subject-8",
+  "subject-9",
+]);
 type SubjectMetric = { cards: number; mastered: number };
 type SubjectDraft = Pick<StudySubject, "id" | "name" | "testDate" | "memo" | "accent">;
 
@@ -242,6 +251,7 @@ export default function StudyHub() {
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {configuredCount} / 9 NAMED</span>
           <Link className="outline-button header-link hub-generated-header-link" href="/generated-practice">自動生成問題・共有履歴</Link>
+          <Link className="outline-button header-link" href="/foundations?subject=subject-7">基礎公式一覧</Link>
           <Link className="outline-button header-link hub-memory-header-link" href="/cards">全教科の暗記帳検索</Link>
         </div>
       </header>
@@ -328,6 +338,7 @@ export default function StudyHub() {
               const completion = metric.cards ? Math.round((metric.mastered / metric.cards) * 100) : 0;
               const hasMaterial = subject.module === "network" || subject.id === "subject-3" || subject.id === "subject-4" || subject.id === "subject-6" || subject.id === "subject-7" || subject.id === "subject-8" || metric.cards > 0;
               const hasGeneratedPractice = GENERATED_PRACTICE_SUBJECT_IDS.has(subject.id);
+              const hasFoundationReference = FOUNDATION_SUBJECT_IDS.has(subject.id);
               const style = { "--subject-accent": subject.accent } as CSSProperties;
               return (
                 <article className={`subject-tile ${subject.configured ? "is-configured" : "is-empty"}`} style={style} key={subject.id}>
@@ -362,6 +373,9 @@ export default function StudyHub() {
                           <Link className="subject-secondary subject-generated-link" href={"/generated-practice?subject=" + subject.id}>
                             自動生成問題・共有履歴
                           </Link>
+                        )}
+                        {hasFoundationReference && (
+                          <Link className="subject-secondary" href={"/foundations?subject=" + subject.id}>基礎情報・公式一覧</Link>
                         )}
                       </>
                     ) : (

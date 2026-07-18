@@ -1,10 +1,15 @@
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "../../chatgpt-auth";
+import {
+  RAPID_CLIENT_TOKEN_HEADER,
+  RAPID_CLIENT_TOKEN_PATTERN,
+  normalizeRankingName,
+} from "../../rapid-ranking-profile";
 
 export const dynamic = "force-dynamic";
 
-const BOARD_PATTERN = /^rapid:(?:overall|network|subject-[2-9]):q([1-9]\d{0,2})$/;
-const MAX_DURATION_MS = 86_400_000;
+const BOARD_PATTERN = /^rapid:(?:overall|network|subject-[2-9]):q([1-9]\d{0,3})$/;
+const MAX_DURATION_MS = 4_914 * 300_000;
 const MAX_LIST_PAGES = 5;
 
 type ScorePayload = {
@@ -13,6 +18,7 @@ type ScorePayload = {
   questionCount?: unknown;
   bestStreak?: unknown;
   durationMs?: unknown;
+  rankingName?: unknown;
 };
 
 type LeaderboardEntry = {
@@ -24,13 +30,22 @@ type LeaderboardEntry = {
   updatedAt: number;
 };
 
+type RankingIdentity = {
+  userKey: string;
+  defaultRankingName: string | null;
+};
+
 function normalizeBoardKey(value: unknown) {
   if (typeof value !== "string" || value.length > 80) return null;
   const match = value.match(BOARD_PATTERN);
   if (!match) return null;
   const questionCount = Number(match[1]);
-  if (questionCount < 5 || questionCount > 999) return null;
-  if (value.startsWith("rapid:overall:") && (questionCount < 9 || questionCount % 9 !== 0)) return null;
+  const isOverall = value.startsWith("rapid:overall:");
+  if (isOverall) {
+    if (questionCount < 9 || questionCount > 4_914 || questionCount % 9 !== 0) return null;
+  } else if (questionCount < 5 || questionCount > 999) {
+    return null;
+  }
   return { boardKey: value, questionCount };
 }
 
@@ -40,15 +55,34 @@ function boundedInteger(value: unknown, minimum: number, maximum: number) {
     : null;
 }
 
-async function userIdentity() {
+function sameSiteWriteAllowed(request: Request) {
+  const requestUrl = new URL(request.url);
+  const origin = request.headers.get("origin");
+  const fetchSite = request.headers.get("sec-fetch-site");
+  return (!origin || origin === requestUrl.origin)
+    && (!fetchSite || fetchSite === "same-origin" || fetchSite === "same-site");
+}
+
+async function digestIdentity(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function userIdentity(request: Request): Promise<RankingIdentity | null> {
   const user = await getChatGPTUser();
-  if (!user) return null;
-  const normalizedEmail = user.email.trim().toLocaleLowerCase("en-US");
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalizedEmail));
-  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  if (user?.email) {
+    const normalizedEmail = user.email.trim().toLocaleLowerCase("en-US");
+    return {
+      // Keep the original account key format so existing scores remain attached.
+      userKey: await digestIdentity(normalizedEmail),
+      defaultRankingName: normalizeRankingName(user.fullName),
+    };
+  }
+  const clientToken = request.headers.get(RAPID_CLIENT_TOKEN_HEADER)?.trim() ?? "";
+  if (!RAPID_CLIENT_TOKEN_PATTERN.test(clientToken)) return null;
   return {
-    userKey: hex,
-    alias: `学習者-${hex.slice(0, 6).toUpperCase()}`,
+    userKey: await digestIdentity(`device:${clientToken}`),
+    defaultRankingName: null,
   };
 }
 
@@ -75,15 +109,17 @@ function scoreIsBetter(candidate: LeaderboardEntry, current: LeaderboardEntry) {
 function parseStoredEntry(value: unknown): LeaderboardEntry | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const item = value as Record<string, unknown>;
-  if (typeof item.alias !== "string" || item.alias.length > 40) return null;
-  const questionCount = boundedInteger(item.questionCount, 5, 999);
+  if (typeof item.alias !== "string") return null;
+  const alias = normalizeRankingName(item.alias) ?? (item.alias.length <= 40 ? item.alias : null);
+  if (!alias) return null;
+  const questionCount = boundedInteger(item.questionCount, 5, 4_914);
   if (questionCount === null) return null;
   const correctCount = boundedInteger(item.correctCount, 0, questionCount);
   const bestStreak = boundedInteger(item.bestStreak, 0, questionCount);
   const durationMs = boundedInteger(item.durationMs, 1, MAX_DURATION_MS);
   const updatedAt = boundedInteger(item.updatedAt, 1, Number.MAX_SAFE_INTEGER);
   if (correctCount === null || bestStreak === null || durationMs === null || updatedAt === null) return null;
-  return { alias: item.alias, correctCount, questionCount, bestStreak, durationMs, updatedAt };
+  return { alias, correctCount, questionCount, bestStreak, durationMs, updatedAt };
 }
 
 function entryFromMetadata(metadata: Record<string, string> | undefined) {
@@ -95,6 +131,20 @@ function entryFromMetadata(metadata: Record<string, string> | undefined) {
     bestStreak: Number(metadata.bestStreak),
     durationMs: Number(metadata.durationMs),
     updatedAt: Number(metadata.updatedAt),
+  });
+}
+
+async function storeEntry(key: string, entry: LeaderboardEntry) {
+  await env.STUDY_SNAPSHOTS.put(key, JSON.stringify(entry), {
+    httpMetadata: { contentType: "application/json" },
+    customMetadata: {
+      alias: entry.alias,
+      correctCount: String(entry.correctCount),
+      questionCount: String(entry.questionCount),
+      bestStreak: String(entry.bestStreak),
+      durationMs: String(entry.durationMs),
+      updatedAt: String(entry.updatedAt),
+    },
   });
 }
 
@@ -137,17 +187,20 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const identity = await userIdentity();
-  if (!identity) return Response.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
+  if (!sameSiteWriteAllowed(request)) {
+    return Response.json({ error: "CROSS_SITE_WRITE_BLOCKED" }, { status: 403 });
+  }
   if (!request.headers.get("content-type")?.toLocaleLowerCase().startsWith("application/json")) {
     return Response.json({ error: "JSON_REQUIRED" }, { status: 415 });
   }
 
   try {
+    const identity = await userIdentity(request);
+    if (!identity) return Response.json({ error: "RANKING_IDENTITY_REQUIRED" }, { status: 401 });
     const body = await request.json() as ScorePayload;
     const board = normalizeBoardKey(body.boardKey);
     if (!board) return Response.json({ error: "INVALID_BOARD" }, { status: 400 });
-    const questionCount = boundedInteger(body.questionCount, 5, 999);
+    const questionCount = boundedInteger(body.questionCount, 5, 4_914);
     if (questionCount === null || questionCount !== board.questionCount) {
       return Response.json({ error: "QUESTION_COUNT_MISMATCH" }, { status: 400 });
     }
@@ -157,34 +210,33 @@ export async function PUT(request: Request) {
     if (correctCount === null || bestStreak === null || durationMs === null) {
       return Response.json({ error: "INVALID_SCORE" }, { status: 400 });
     }
+    const requestedRankingName = body.rankingName === undefined ? null : normalizeRankingName(body.rankingName);
+    if (body.rankingName !== undefined && !requestedRankingName) {
+      return Response.json({ error: "INVALID_RANKING_NAME" }, { status: 400 });
+    }
+
+    const key = scoreObjectKey(board.boardKey, identity.userKey);
+    const existingObject = await env.STUDY_SNAPSHOTS.get(key);
+    const existing = existingObject ? parseStoredEntry(JSON.parse(await existingObject.text())) : null;
+    const alias = requestedRankingName ?? existing?.alias ?? identity.defaultRankingName;
+    if (!alias) return Response.json({ error: "RANKING_NAME_REQUIRED" }, { status: 400 });
 
     const entry: LeaderboardEntry = {
-      alias: identity.alias,
+      alias,
       correctCount,
       questionCount,
       bestStreak,
       durationMs,
       updatedAt: Date.now(),
     };
-    const key = scoreObjectKey(board.boardKey, identity.userKey);
-    const existingObject = await env.STUDY_SNAPSHOTS.get(key);
-    const existing = existingObject ? parseStoredEntry(JSON.parse(await existingObject.text())) : null;
     if (existing && !scoreIsBetter(entry, existing)) {
-      return Response.json({ saved: true, improved: false, alias: identity.alias });
+      const nameUpdated = existing.alias !== alias;
+      if (nameUpdated) await storeEntry(key, { ...existing, alias });
+      return Response.json({ saved: true, improved: false, nameUpdated, alias });
     }
-    await env.STUDY_SNAPSHOTS.put(key, JSON.stringify(entry), {
-      httpMetadata: { contentType: "application/json" },
-      customMetadata: {
-        alias: entry.alias,
-        correctCount: String(entry.correctCount),
-        questionCount: String(entry.questionCount),
-        bestStreak: String(entry.bestStreak),
-        durationMs: String(entry.durationMs),
-        updatedAt: String(entry.updatedAt),
-      },
-    });
+    await storeEntry(key, entry);
 
-    return Response.json({ saved: true, improved: true, alias: identity.alias });
+    return Response.json({ saved: true, improved: true, nameUpdated: existing?.alias !== alias, alias });
   } catch {
     return storageUnavailable();
   }

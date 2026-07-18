@@ -208,7 +208,7 @@ function ExamPapers({ exam, answers, onAnswer, readOnly = false }: { exam: Exam;
                   <strong>問{question.major}({question.sub})</strong>
                   <span>{section.title} ／ {question.points}点</span>
                 </div>
-                <p className={styles.examContext}>{section.context}</p>
+                <p className={styles.examContext}><RichMathText text={section.context} /></p>
                 <p className={styles.examPrompt}><RichMathText text={question.prompt} /></p>
                 {needsQuestionFigure(question) && question.diagram && (
                   <div className={styles.examQuestionFigure}>

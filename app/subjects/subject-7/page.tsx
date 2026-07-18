@@ -640,6 +640,7 @@ export default function StatisticsSubjectPage() {
         <div className="header-actions statistics-header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {STATISTICS_EXAM_LEVEL_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-7">暗記帳検索</Link>
+          <Link className="outline-button header-link" href="/foundations?subject=subject-7">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-7">時間制限 即答</Link>
           <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-7">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
@@ -744,7 +745,7 @@ export default function StatisticsSubjectPage() {
                     {cardFlipped
                       ? <DisplayMath tex={currentCard.formula} ariaLabel={currentCard.title + "の公式"} />
                       : <strong><RichMathText text={currentCard.prompt} /></strong>}
-                    <small>{cardFlipped ? currentCard.cue : "頭の中で公式を書いてからタップ"}</small>
+                    <small>{cardFlipped ? <RichMathText text={currentCard.cue} /> : "頭の中で公式を書いてからタップ"}</small>
                   </button>
                   {cardFlipped && currentCard.expandedFormula && (
                     <div className="statistics-solution-formula statistics-card-expanded-formula">

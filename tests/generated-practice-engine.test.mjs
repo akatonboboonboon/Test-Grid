@@ -362,6 +362,50 @@ test("English, statistics, and applied-math generators use past-paper calibrated
   assert.ok(direction.sourceReferenceIds.includes("am-gradient"));
   assert.ok(direction.sourceReferenceIds.includes("am-directional"));
 });
+test("statistics and applied-math generators keep numeric work exact and sign-safe across 100 seeds", async () => {
+  const { engine } = await loadModules();
+  const templates = engine.GENERATED_PRACTICE_TEMPLATE_METADATA.filter((template) =>
+    ["subject-7", "subject-8"].includes(template.subjectId),
+  );
+  assert.equal(templates.length, 10);
+
+  for (const template of templates) {
+    for (let seed = 0; seed < 100; seed += 1) {
+      const question = engine.generatePracticeQuestion(
+        template.subjectId,
+        `math-consistency:${template.id}:${seed}`,
+        { templateId: template.id },
+      );
+      const p = question.parameters;
+      let expected;
+      switch (template.id) {
+        case "statistics-symmetric-variance": expected = p.scale ** 2 * 2 * p.spread ** 2; break;
+        case "statistics-z-score": expected = p.zA - p.zB; break;
+        case "statistics-bayes": expected = p.routeC / (p.routeA + p.routeB + p.routeC); break;
+        case "statistics-combination": expected = p.twoFromB + p.threeFromB + p.fourFromB; break;
+        case "applied-vector-norm": expected = Math.hypot(p.cx, p.cy, p.cz); break;
+        case "applied-orthogonal-unknown": expected = Math.hypot(p.a, -(p.a * p.p + p.c * p.q) / p.b, p.c); break;
+        case "applied-directional-derivative": expected = (p.gx * p.ux + p.gy * p.uy + p.gz * p.uz) / Math.hypot(p.ux, p.uy, p.uz); break;
+        case "applied-divergence-point": expected = p.scale * (2 * p.a * p.x + 2 * p.b * p.y + 2 * p.c * p.z); break;
+        case "applied-triangle-area": expected = Math.sqrt(p.normSquared) / 2; break;
+        case "applied-green-rectangle": expected = p.d * p.a ** 2 * p.b + p.c * p.a * p.b ** 2; break;
+        default: throw new Error(`Unhandled template ${template.id}`);
+      }
+      assert.ok(Math.abs(question.evaluation.numericAnswer - expected) <= 1e-10, `${template.id}:${seed}`);
+
+      for (const [, value] of visibleStrings(question)) {
+        for (const tex of inlineMathSegments(value)) {
+          assert.doesNotMatch(tex, /\+\s*-/u, `${template.id}:${seed} contains ambiguous +−: ${tex}`);
+          assert.doesNotMatch(
+            tex,
+            /(?<![({])-\d+(?:\.\d+)?\^2/u,
+            `${template.id}:${seed} squares a negative literal without parentheses: ${tex}`,
+          );
+        }
+      }
+    }
+  }
+});
 test("validator rejects every unsolved/domain-invalid failure mode", async () => {
   const { engine } = await loadModules();
   const base = engine.generatePracticeQuestion("subject-3", "validator", { templateId: "mechanical-log-decrement" });

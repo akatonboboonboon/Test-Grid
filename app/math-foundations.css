@@ -1,0 +1,518 @@
+.math-foundations-main {
+  margin: 0 auto;
+  max-width: 1440px;
+  padding: 34px clamp(18px, 4vw, 64px) 58px;
+}
+
+.math-foundations-breadcrumb {
+  margin-bottom: 24px;
+}
+
+.math-foundations-hero {
+  align-items: end;
+  border: 1px solid var(--line);
+  border-left: 8px solid var(--subject-accent);
+  display: grid;
+  gap: clamp(28px, 5vw, 72px);
+  grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
+  padding: clamp(26px, 4vw, 48px);
+}
+
+.math-foundations-hero > div > p {
+  color: rgba(244, 240, 230, 0.5);
+  display: flex;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+  justify-content: space-between;
+  letter-spacing: 0.13em;
+  margin: 0 0 16px;
+}
+
+.math-foundations-hero h1 {
+  font-size: clamp(42px, 6vw, 82px);
+  letter-spacing: -0.07em;
+  line-height: 0.98;
+  margin: 0;
+}
+
+.math-foundations-hero h1 em {
+  color: var(--subject-accent);
+  font-style: normal;
+}
+
+.math-foundations-hero > p {
+  color: rgba(244, 240, 230, 0.66);
+  font-size: 13px;
+  line-height: 1.9;
+  margin: 0;
+}
+
+.math-foundations-subjects {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin: 22px 0;
+}
+
+.math-foundations-subjects button {
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 16px 14px;
+  text-align: left;
+}
+
+.math-foundations-subjects button:hover,
+.math-foundations-subjects button[aria-pressed="true"] {
+  background: var(--foundation-accent);
+  border-color: var(--foundation-accent);
+  color: var(--ink);
+}
+
+.math-foundations-subjects button[aria-pressed="true"] {
+  box-shadow: inset 0 -4px 0 var(--ink);
+}
+
+.math-foundations-subjects span,
+.math-foundations-subjects small {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  opacity: 0.62;
+}
+
+.math-foundations-subjects strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.math-foundations-workspace {
+  background: var(--paper);
+  color: var(--ink);
+  color-scheme: light;
+  min-width: 0;
+  padding: clamp(22px, 4vw, 48px);
+}
+
+.math-foundations-heading {
+  align-items: end;
+  border-bottom: 2px solid var(--ink);
+  display: grid;
+  gap: 18px 30px;
+  grid-template-columns: minmax(220px, 0.75fr) minmax(320px, 1fr) auto;
+  padding-bottom: 20px;
+}
+
+.math-foundations-heading > div > span,
+.math-foundation-card-heading > span,
+.math-foundation-formulas section > span,
+.math-foundation-example > span,
+.math-foundations-empty > span {
+  color: #087c77;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+.math-foundations-heading h2 {
+  font-size: clamp(28px, 3.7vw, 48px);
+  letter-spacing: -0.055em;
+  margin: 5px 0 0;
+}
+
+.math-foundations-heading > p {
+  color: rgba(11, 14, 19, 0.62);
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0;
+}
+
+.math-foundations-heading > a {
+  background: var(--subject-accent);
+  border: 1px solid var(--ink);
+  font-size: 11px;
+  font-weight: 900;
+  padding: 13px 16px;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.math-foundations-tools {
+  align-items: end;
+  background: #e3ded3;
+  border-left: 6px solid var(--subject-accent);
+  display: grid;
+  gap: 14px 22px;
+  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr) auto;
+  margin: 26px 0;
+  padding: 18px;
+}
+
+.math-foundations-tools label {
+  display: grid;
+  gap: 8px;
+}
+
+.math-foundations-tools label > span {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.math-foundations-tools input {
+  background: #fffdf7;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  min-height: 46px;
+  min-width: 0;
+  padding: 11px 13px;
+  width: 100%;
+}
+
+.math-foundations-tools > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.math-foundations-tools > div button,
+.math-foundations-empty button {
+  background: transparent;
+  border: 1px solid rgba(11, 14, 19, 0.42);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 9px 11px;
+}
+
+.math-foundations-tools > div button[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.math-foundations-tools > p {
+  font-family: var(--mono);
+  font-size: 9px;
+  margin: 0 0 11px;
+  white-space: nowrap;
+}
+
+.math-foundations-tools > p strong {
+  color: #087c77;
+  font-size: 20px;
+}
+
+.math-foundations-list {
+  display: grid;
+  gap: 20px;
+}
+
+.math-foundation-card {
+  border: 1px solid rgba(11, 14, 19, 0.32);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.math-foundation-card-heading {
+  border-left: 7px solid var(--subject-accent);
+  padding: 22px clamp(18px, 3vw, 30px) 18px;
+}
+
+.math-foundation-card-heading h3 {
+  font-size: clamp(24px, 3vw, 36px);
+  letter-spacing: -0.045em;
+  margin: 7px 0;
+}
+
+.math-foundation-card-heading p {
+  color: rgba(11, 14, 19, 0.66);
+  line-height: 1.8;
+  margin: 0;
+}
+
+.math-foundation-formulas {
+  background: var(--ink-soft);
+  color: var(--paper);
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  min-width: 0;
+}
+
+.math-foundation-formulas > section {
+  border: 1px solid rgba(244, 240, 230, 0.17);
+  min-width: 0;
+  padding: clamp(18px, 3vw, 28px);
+}
+
+.math-foundation-formulas .statistics-math-display,
+.math-foundation-formulas .katex-display {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.math-foundation-formulas .katex-display {
+  margin: 18px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 10px;
+  text-align: left;
+}
+
+.math-foundation-formulas .katex-display > .katex {
+  font-size: clamp(1rem, 2vw, 1.45rem);
+  max-width: none;
+}
+
+.math-foundation-formulas section > p {
+  color: rgba(244, 240, 230, 0.64);
+  font-size: 11px;
+  line-height: 1.75;
+  margin: 8px 0 0;
+}
+
+.math-foundation-expanded {
+  border-top: 1px dashed rgba(244, 240, 230, 0.3);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.math-foundation-expanded small {
+  color: var(--subject-accent);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.math-foundation-details {
+  border-top: 1px solid rgba(11, 14, 19, 0.32);
+}
+
+.math-foundation-details > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  list-style-position: inside;
+  padding: 17px clamp(18px, 3vw, 30px);
+}
+
+.math-foundation-details[open] > summary {
+  background: var(--subject-accent);
+  border-bottom: 1px solid var(--ink);
+}
+
+.math-foundation-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.math-foundation-details-grid > section {
+  border-bottom: 1px solid rgba(11, 14, 19, 0.18);
+  border-right: 1px solid rgba(11, 14, 19, 0.18);
+  min-width: 0;
+  padding: 20px clamp(18px, 3vw, 28px);
+}
+
+.math-foundation-details h4 {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  margin: 0 0 12px;
+}
+
+.math-foundation-details ul,
+.math-foundation-details ol {
+  display: grid;
+  gap: 9px;
+  line-height: 1.65;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.math-foundation-details li,
+.math-foundation-details dd {
+  font-size: 12px;
+}
+
+.math-foundation-details dl {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+}
+
+.math-foundation-details dl > div {
+  align-items: center;
+  background: #ebe6db;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(80px, 0.4fr) minmax(0, 1fr);
+  padding: 10px;
+}
+
+.math-foundation-details dt {
+  font-weight: 900;
+  min-width: 0;
+}
+
+.math-foundation-details dd {
+  margin: 0;
+}
+
+.math-foundation-details dd small {
+  color: rgba(11, 14, 19, 0.56);
+  display: block;
+  font-family: var(--mono);
+  margin-top: 3px;
+}
+
+.math-foundation-warning {
+  background: #ffe3dc;
+}
+
+.math-foundation-example {
+  background: #d9f4ef;
+  border-left: 7px solid #087c77;
+  padding: 22px clamp(18px, 3vw, 30px);
+}
+
+.math-foundation-example h4 {
+  font-family: var(--sans);
+  font-size: 17px;
+  letter-spacing: 0;
+  margin-top: 8px;
+}
+
+.math-foundation-example > strong {
+  display: block;
+  margin-top: 16px;
+}
+
+.math-foundations-empty {
+  border: 2px dashed rgba(11, 14, 19, 0.3);
+  padding: clamp(28px, 6vw, 72px);
+  text-align: center;
+}
+
+.math-foundations-empty h3 {
+  font-size: clamp(24px, 4vw, 40px);
+  margin: 8px 0;
+}
+
+.math-foundations-empty p {
+  color: rgba(11, 14, 19, 0.58);
+}
+
+.math-foundations-empty button {
+  background: var(--ink);
+  color: var(--paper);
+  margin-top: 10px;
+}
+
+@media (max-width: 1050px) {
+  .math-foundations-subjects {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .math-foundations-heading {
+    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .math-foundations-heading > a {
+    grid-column: 1 / -1;
+  }
+
+  .math-foundations-tools {
+    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .math-foundations-tools > p {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .math-foundations-topbar .card-count-label {
+    display: none;
+  }
+
+  .math-foundations-main {
+    padding-inline: 14px;
+  }
+
+  .math-foundations-hero {
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 18px;
+  }
+
+  .math-foundations-hero > div > p {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .math-foundations-subjects {
+    display: flex;
+    margin-inline: -14px;
+    overflow-x: auto;
+    padding-inline: 14px;
+    scroll-snap-type: x proximity;
+  }
+
+  .math-foundations-subjects button {
+    flex: 0 0 150px;
+    scroll-snap-align: start;
+  }
+
+  .math-foundations-workspace {
+    margin-inline: -14px;
+    padding: 22px 14px;
+  }
+
+  .math-foundations-heading,
+  .math-foundations-tools,
+  .math-foundation-details-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .math-foundations-heading > a,
+  .math-foundations-tools > p {
+    grid-column: auto;
+  }
+
+  .math-foundations-tools > p {
+    white-space: normal;
+  }
+
+  .math-foundation-details-grid > section {
+    border-right: 0;
+  }
+
+  .math-foundation-details dl > div {
+    grid-template-columns: minmax(70px, 0.35fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .math-foundations-topbar .header-actions .header-link:first-of-type {
+    display: none;
+  }
+
+  .math-foundations-tools {
+    padding: 14px;
+  }
+
+  .math-foundation-formulas > section {
+    padding-inline: 14px;
+  }
+}

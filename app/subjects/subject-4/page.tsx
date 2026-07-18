@@ -699,6 +699,7 @@ export default function ThermodynamicsSubjectPage() {
         <div className="header-actions statistics-header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {THERMODYNAMICS_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-4">暗記帳検索</Link>
+          <Link className="outline-button header-link" href="/foundations?subject=subject-4">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-4">時間制限 即答</Link>
           <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-4">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
@@ -803,7 +804,7 @@ export default function ThermodynamicsSubjectPage() {
                     {cardFlipped
                       ? <DisplayMath tex={currentCard.formula} ariaLabel={currentCard.title + "の公式"} />
                       : <strong><RichMathText text={currentCard.prompt} /></strong>}
-                    <small>{cardFlipped ? currentCard.cue : "頭の中で公式を書いてからタップ"}</small>
+                    <small>{cardFlipped ? <RichMathText text={currentCard.cue} /> : "頭の中で公式を書いてからタップ"}</small>
                   </button>
                   {currentCard.diagram && <ThermodynamicsDiagram kind={currentCard.diagram} solution={cardFlipped} title={cardFlipped ? "公式と対応する模式図" : "問題の模式図"} />}
                   {cardFlipped && (
