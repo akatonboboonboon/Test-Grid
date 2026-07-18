@@ -1099,7 +1099,10 @@ const PASSAGE_ORDER_QUESTIONS: EnglishQuestion[] = [
     tokens: ["The software", "can determine", "which families or genera", "new species", "belong to"],
     answer: "The software can determine which families or genera new species belong to.",
   },
-];
+].map((question) => ({
+  ...question,
+  tokens: question.answer.trim().split(/\s+/u),
+}));
 
 const PASSAGE_TRANSLATION_QUESTIONS: EnglishQuestion[] = ENGLISH_PASSAGES.flatMap((passage) =>
   passage.paragraphs.map((paragraph, index) => ({

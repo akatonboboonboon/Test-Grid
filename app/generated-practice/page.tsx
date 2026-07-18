@@ -7,7 +7,7 @@ import {
 
 export const metadata: Metadata = {
   title: "自動生成問題 — TEST//GRID",
-  description: "英語・機械力学・熱流体・スマート制御・確率統計・応用数学の範囲内問題を、解答と解説付きで1問ずつ生成します。",
+  description: "英語・機械力学・熱流体・材料力学・スマート制御・確率統計・応用数学・デジタル回路の範囲内問題を、解答・解説・必要な図付きで生成します。",
 };
 
 const SUBJECT_IDS = new Set<GeneratedPracticeSubjectId>(

@@ -31,3 +31,18 @@ export const generatedPracticeWriteLimits = sqliteTable(
     index("generated_practice_write_limits_updated_at_idx").on(table.updatedAt),
   ],
 );
+export const generatedPracticeFavorites = sqliteTable(
+  "generated_practice_favorites",
+  {
+    questionId: text("question_id")
+      .notNull()
+      .references(() => generatedPracticeHistory.id, { onDelete: "cascade" }),
+    actorKey: text("actor_key").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.questionId, table.actorKey] }),
+    index("generated_practice_favorites_question_idx").on(table.questionId),
+    index("generated_practice_favorites_created_at_idx").on(table.createdAt),
+  ],
+);

@@ -68,11 +68,11 @@ const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "m
   { id: "network", name: "ネットワーク", module: "network", memo: "①〜⑦の全用語とOSI層を仕上げる" },
   { id: "subject-3", name: "機械力学", module: "generic", memo: "範囲ZIP15枚・過去問全体の公式カード、計算演習、実物過去問、A4想定試験を収録" },
   { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "熱力学7枚・6単元の公式カード、計算演習、全範囲予想試験を収録" },
-  { id: "subject-5", name: "材料力学", module: "generic", memo: "教材写真を追加すると暗記カード化できます" },
+  { id: "subject-5", name: "材料力学", module: "generic", memo: "範囲ZIP9枚・ねじり、軸設計、コイルばね、はりの公式カード・図付き演習・A4想定試験を収録" },
   { id: "subject-6", name: "スマート制御", module: "generic", memo: "逆ラプラス・極・安定性・フィードバック・ブロック線図を収録" },
   { id: "subject-7", name: "確率統計", module: "generic", memo: "全範囲を毎回扱うA4・50分想定試験を12回収録" },
   { id: "subject-8", name: "応用数学", module: "generic", memo: "範囲22枚・9単元・線積分/面積分/グリーンを含むA4 50分80点の予想試験6回" },
-  { id: "subject-9", name: "デジタル回路", module: "generic", memo: "教材写真の追加待ち" },
+  { id: "subject-9", name: "デジタル回路", module: "generic", memo: "範囲ZIP10枚＋追加範囲PDF7ページ・ゲート、FF、カウンタ、状態遷移の図付き演習を収録" },
 ];
 
 export const DEFAULT_SUBJECTS: StudySubject[] = SUBJECT_BLUEPRINTS.map((subject, index) => ({
@@ -114,6 +114,8 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
     const wasOldAppliedMathPlaceholder = fallback.id === "subject-8" && savedMemo === "教材写真の追加待ち";
     const wasOldThermodynamicsPlaceholder = fallback.id === "subject-4" && savedMemo === "教材写真の追加待ち";
     const wasOldMechanicalDynamicsPlaceholder = fallback.id === "subject-3" && savedMemo === "教材写真を追加すると暗記カード化できます";
+    const wasOldMaterialMechanicsPlaceholder = fallback.id === "subject-5" && savedMemo === "教材写真を追加すると暗記カード化できます";
+    const wasOldDigitalCircuitsPlaceholder = fallback.id === "subject-9" && savedMemo === "教材写真の追加待ち";
     const wasOldEnglishDescription = fallback.id === "subject-2" && [
       "試験PDF形式＋Ch.15・16・18・19を収録",
       "ZIP教材のCh.15・16・18・19を収録・過去問は形式だけ反映",
@@ -126,7 +128,7 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
       testDate: typeof saved.testDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(saved.testDate)
         ? saved.testDate
         : fallback.testDate,
-      memo: savedMemo && !wasOldStatisticsPlaceholder && !wasOldSmartControlPlaceholder && !wasOldAppliedMathPlaceholder && !wasOldThermodynamicsPlaceholder && !wasOldMechanicalDynamicsPlaceholder && !wasOldEnglishDescription
+      memo: savedMemo && !wasOldStatisticsPlaceholder && !wasOldSmartControlPlaceholder && !wasOldAppliedMathPlaceholder && !wasOldThermodynamicsPlaceholder && !wasOldMechanicalDynamicsPlaceholder && !wasOldMaterialMechanicsPlaceholder && !wasOldDigitalCircuitsPlaceholder && !wasOldEnglishDescription
         ? savedMemo.slice(0, 120)
         : fallback.memo,
     };

@@ -228,7 +228,7 @@ test("server-renders the separate on-demand generated-practice lab", async () =>
   assert.match(html, /今すぐ1問作る/);
   assert.match(html, /本文一文の並び替え|本文抜粋の和訳|選択問題/);
   assert.doesNotMatch(html, /COMPLETE ANSWER|模範解答/);
-  assert.doesNotMatch(html, /ネットワーク.*自動生成/u);
+  assert.doesNotMatch(html, /<strong>ネットワーク<\/strong>/u);
 });
 
 test("server-renders the probability and statistics exam lab", async () => {
@@ -540,6 +540,10 @@ test("keeps smart-control range data, formulas, saves, and A4 papers internally 
     assert.equal(exam.questions.length, 4);
     assert.equal(exam.questions.reduce((sum, question) => sum + question.points, 0), 100);
     assert.ok(exam.questions.every((question) => question.prompt && question.answer && question.steps.length));
+    assert.ok(exam.questions.every((question) => question.difficulty === 3));
+    assert.ok(exam.questions.every((question) => question.subpartCount >= 3));
+    assert.ok(exam.questions.every((question) => question.prompt.includes("（1）") && question.prompt.includes("（2）")));
+    assert.ok(exam.questions.every((question) => question.sourceBasis?.length === 3));
   }
 
   assert.match(page, /test-grid:subject-6:progress:v1/);
@@ -614,41 +618,42 @@ test("covers all red textbook terms and graph thresholds with dedicated drills",
 });
 
 test("provides twelve balanced A4 predicted exams with 11 major questions and 100 verified points", async () => {
-  const [expectedExams, expectedExamStyles, statisticsPage, mathRenderer] = await Promise.all([
+  const [expectedExams, expectedExamData, expectedExamStyles, statisticsPage, mathRenderer] = await Promise.all([
     readFile(new URL("../app/statistics-expected-exams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/statistics-expected-exams-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/statistics-expected-exams.module.css", import.meta.url), "utf8"),
     readFile(new URL("../app/subjects/subject-7/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/statistics-math.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.equal((expectedExams.match(/id:\s*"expected-\d{2}"/g) ?? []).length, 12);
-  assert.match(expectedExams, /const EXAM_SECONDS\s*=\s*50\s*\*\s*60/);
-  assert.match(expectedExams, /const PASS_SCORE\s*=\s*60/);
-  assert.match(expectedExams, /const TOTAL_POINTS\s*=\s*100/);
-  assert.match(expectedExams, /const EXPECTED_MAJOR_COUNT\s*=\s*11/);
-  assert.match(expectedExams, /const EXPECTED_SUBQUESTION_COUNT\s*=\s*26/);
-  assert.match(expectedExams, /function validateExpectedPaper/);
-  assert.match(expectedExams, /paper\.totalPoints\s*!==\s*TOTAL_POINTS/);
+  assert.match(expectedExamData, /{ length: 12 }/);
+  assert.match(expectedExamData, /const EXAM_SECONDS\s*=\s*50\s*\*\s*60/);
+  assert.match(expectedExamData, /const PASS_SCORE\s*=\s*60/);
+  assert.match(expectedExamData, /const TOTAL_POINTS\s*=\s*100/);
+  assert.match(expectedExamData, /const EXPECTED_MAJOR_COUNT\s*=\s*11/);
+  assert.match(expectedExamData, /const EXPECTED_SUBQUESTION_COUNT\s*=\s*32/);
+  assert.match(expectedExamData, /function validateExpectedPaper/);
+  assert.match(expectedExamData, /paper\.totalPoints\s*!==\s*TOTAL_POINTS/);
 
-  const questionTemplates = [...expectedExams.matchAll(/makeQuestion\(definition,\s*(\d+),\s*(\d+),\s*(\d+),/g)];
-  assert.equal(questionTemplates.length, 26, "each numerical variant should use the same 26 subquestion templates");
+  const questionTemplates = [...expectedExamData.matchAll(/makeQuestion\(definition,\s*(\d+),\s*(\d+),\s*(\d+),/g)];
+  assert.equal(questionTemplates.length, 32, "each numerical variant should use the same 32 subquestion templates");
   assert.equal(questionTemplates.reduce((sum, match) => sum + Number(match[3]), 0), 100, "template points must total exactly 100");
   const questionsByMajor = new Map();
   for (const match of questionTemplates) questionsByMajor.set(Number(match[1]), (questionsByMajor.get(Number(match[1])) ?? 0) + 1);
-  assert.deepEqual([...questionsByMajor.values()], [3, 4, 2, 2, 3, 3, 2, 3, 2, 1, 1]);
+  assert.deepEqual([...questionsByMajor.values()], [6, 2, 4, 2, 3, 4, 3, 2, 2, 3, 1]);
 
-  for (const label of ["記述統計", "相関・回帰・予測", "場合の数", "条件付き確率・Bayes", "離散型確率変数", "連続型確率変数", "正規分布・標準化", "チェビシェフの不等式", "独立と排反の説明"]) {
-    assert.match(expectedExams, new RegExp(label));
+  for (const label of ["記述統計（過去問型）", "2群の平均・標準偏差", "相関・回帰（表データ）", "場合の数と確率（演習PDF2型）", "全確率・Bayes（演習PDF3型）", "離散分布・エントロピー", "算術・幾何・調和平均", "連続型確率変数（演習PDF4型）", "正規分布・チェビシェフ", "順位相関（過去問型）", "平方和の恒等式（証明）"]) {
+    assert.match(expectedExamData, new RegExp(label));
   }
-  assert.doesNotMatch(expectedExams, /counts:\s*\{/);
-  assert.doesNotMatch(expectedExams, /buildExpectedQuestions/);
+  assert.doesNotMatch(expectedExamData, /counts:\s*\{/);
+  assert.doesNotMatch(expectedExamData, /buildExpectedQuestions/);
   assert.match(expectedExams, /test-grid:subject-7:expected-exam:v1/);
   assert.match(expectedExams, /中断して保存/);
   assert.match(expectedExams, /続きから再開/);
   assert.match(expectedExams, /createPortal/);
   assert.match(expectedExams, /window\.print\(\)/);
   assert.match(expectedExams, /A4問題用紙/);
-  assert.match(expectedExams, /大問11題・小問26問/);
+  assert.match(expectedExams, /EXPECTED_SUBQUESTION_COUNT/);
   assert.match(expectedExams, /MODEL ANSWERS/);
   assert.match(expectedExams, /解答・途中式・解説/);
   assert.match(expectedExams, /赤点です（合格ライン60点）/);
@@ -812,7 +817,7 @@ test("syncs all subject progress through an authenticated account API", async ()
   assert.deepEqual(await anonymousWrite.json(), { error: "SIGN_IN_REQUIRED" });
 });
 
-test("server-renders a generic subject workspace and the all-subject card search", async () => {
+test("server-renders the material-mechanics workspace and the all-subject card search", async () => {
   const [subjectResponse, legacyCardsResponse] = await Promise.all([
     render("/subjects/subject-5"),
     render("/cards"),
@@ -820,10 +825,11 @@ test("server-renders a generic subject workspace and the all-subject card search
   assert.equal(subjectResponse.status, 200);
   assert.equal(legacyCardsResponse.status, 200);
   const subjectHtml = await subjectResponse.text();
-  assert.match(subjectHtml, /SUBJECT WORKSPACE/);
-  assert.match(subjectHtml, /暗記カード/);
-  assert.match(subjectHtml, /一問一答/);
-  assert.match(subjectHtml, /まだ教材がありません/);
+  assert.match(subjectHtml, /MATERIAL MECHANICS/);
+  assert.match(subjectHtml, /材料力学/);
+  assert.match(subjectHtml, /公式カード/);
+  assert.match(subjectHtml, /計算演習/);
+  assert.doesNotMatch(subjectHtml, /まだ教材がありません/);
   const cardsHtml = await legacyCardsResponse.text();
   assert.match(cardsHtml, /CARD SEARCH/);
   assert.match(cardsHtml, /aria-autocomplete="list"/);

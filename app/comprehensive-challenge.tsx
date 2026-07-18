@@ -7,11 +7,11 @@ import {
   RAPID_SUBJECT_IDS,
   RAPID_SUBJECTS,
   createBalancedRapidSession,
-  getStaticRapidPool,
+  getComprehensiveRapidPool,
   isRapidAnswerCorrect,
+  unwrapRapidMath,
   networkCardsToRapid,
   normalizeOverallQuestionCount,
-  studyCardsToRapid,
   type RapidQuestion,
   type RapidQuestionInstance,
   type RapidSubjectMeta,
@@ -26,12 +26,7 @@ import {
 } from "./rapid-ranking-data";
 import RapidLeaderboard from "./rapid-leaderboard";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
-import {
-  cardsStorageKey,
-  normalizeStudyCards,
-  type StudySubject,
-  type SubjectId,
-} from "./study-data";
+import { type StudySubject, type SubjectId } from "./study-data";
 
 type OverallAnswerResult = {
   question: RapidQuestionInstance;
@@ -74,7 +69,7 @@ const REVIEW_BATCH_SIZE = 45;
 function initialPools() {
   return Object.fromEntries(RAPID_SUBJECT_IDS.map((subjectId) => [
     subjectId,
-    getStaticRapidPool(subjectId),
+    getComprehensiveRapidPool(subjectId),
   ])) as Record<SubjectId, RapidQuestion[]>;
 }
 
@@ -84,18 +79,12 @@ function loadOverallPools() {
     .filter((card) => card.enabled && card.label.trim());
   pools.network = networkCardsToRapid(networkCards);
 
-  for (const subjectId of ["subject-5", "subject-9"] as const) {
-    const cards = normalizeStudyCards(
-      storageRead<unknown>(cardsStorageKey(subjectId), []),
-      subjectId,
-    ).filter((card) => card.enabled);
-    pools[subjectId] = studyCardsToRapid(subjectId, cards);
-  }
+
   return pools;
 }
 
 function clampLimitSeconds(value: number) {
-  return Math.min(60, Math.max(1, Math.round(Number.isFinite(value) ? value : 8)));
+  return Math.min(300, Math.max(1, Math.round(Number.isFinite(value) ? value : 90)));
 }
 
 function displayDuration(durationMs: number) {
@@ -109,7 +98,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
   const [pools, setPools] = useState<Record<SubjectId, RapidQuestion[]>>(initialPools);
   const [hydrated, setHydrated] = useState(false);
   const [questionCount, setQuestionCount] = useState(18);
-  const [limitSeconds, setLimitSeconds] = useState(8);
+  const [limitSeconds, setLimitSeconds] = useState(90);
   const [runner, setRunner] = useState<OverallRunner>(INITIAL_RUNNER);
   const [history, setHistory] = useState<RapidAttemptSummary[]>([]);
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
@@ -337,8 +326,8 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
             </label>
             <label>
               <span>1問の制限時間</span>
-              <input type="number" min="1" max="60" inputMode="numeric" value={limitSeconds} onChange={(event) => setLimitSeconds(clampLimitSeconds(Number(event.target.value)))} />
-              <small>1〜60秒</small>
+              <input type="number" min="1" max="300" inputMode="numeric" value={limitSeconds} onChange={(event) => setLimitSeconds(clampLimitSeconds(Number(event.target.value)))} />
+              <small>1〜300秒（本番水準は1問90秒推奨）</small>
             </label>
             <button type="button" onClick={start} disabled={!hydrated || missingSubjects.length > 0}>
               <span>START ALL</span><strong>{hydrated ? missingSubjects.length ? "不足教材を追加してください" : "総合問題を始める →" : "教材を確認中…"}</strong>
@@ -355,6 +344,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
               );
             })}
           </div>
+          <p className="rapid-pool-note">出題元は、暗記確認・通常演習・時間制限・実戦／模試の非生成問題です。AI生成問題と公開生成履歴は総合判定へ混ぜません。</p>
 
           {hydrated && missingSubjects.length > 0 && (
             <div className="overall-missing">
@@ -387,7 +377,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
             <progress value={runner.remainingMs} max={limitSeconds * 1000} aria-label={"残り時間 " + (runner.remainingMs / 1000).toFixed(1) + "秒"} />
           </div>
           <article className="rapid-question">
-            <header><span>{currentQuestion.topicLabel}</span><h2><RichMathText text={currentQuestion.prompt} /></h2></header>
+            <header><span>{currentQuestion.topicLabel} · 難度{currentQuestion.difficulty} · 非生成全問題プール</span><h2><RichMathText text={currentQuestion.prompt} /></h2></header>
             <div className="rapid-options" role="group" aria-label="答えを選択">
               {currentQuestion.options.map((option) => {
                 const selected = currentResult?.selected === option;
@@ -397,7 +387,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
                   : "";
                 return (
                   <button type="button" key={option} disabled={runner.phase !== "playing"} className={className} onClick={() => answer(option)}>
-                    {currentQuestion.mathOptions ? <InlineMath tex={option} /> : option}
+                    {currentQuestion.mathOptions ? <InlineMath tex={unwrapRapidMath(option)} /> : option}
                   </button>
                 );
               })}
@@ -408,9 +398,9 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
               <div>
                 <span>{currentResult.correct ? "CORRECT" : currentResult.timedOut ? "TIME UP" : "REVIEW"}</span>
                 <h3>{currentResult.correct ? "正解です。" : currentSubject.name + "を復習しましょう。"}</h3>
-                {!currentResult.correct && <p>正解：{currentQuestion.mathOptions ? <InlineMath tex={currentQuestion.answer} /> : <strong>{currentQuestion.answer}</strong>}</p>}
+                {!currentResult.correct && <p>正解：{currentQuestion.mathOptions ? <InlineMath tex={unwrapRapidMath(currentQuestion.answer)} /> : <strong>{currentQuestion.answer}</strong>}</p>}
               </div>
-              <p><RichMathText text={currentQuestion.explanation} /></p>
+              <div><strong>本番と同じ解法手順</strong><ol>{currentQuestion.steps.map((step) => <li key={step}><RichMathText text={step} /></li>)}</ol><p><RichMathText text={currentQuestion.explanation} /></p><small>出題根拠：{currentQuestion.sourceBasis}</small></div>
               <div>
                 <Link href={currentQuestion.studyHref}>この問題の暗記帳へ</Link>
                 <Link href={currentSubject.href}>{currentSubject.name}へ</Link>
@@ -463,8 +453,8 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
                   <div>
                     <h4><RichMathText text={result.question.prompt} /></h4>
                     <p><span>あなたの回答</span>{result.selected ?? "未回答"}</p>
-                    <p><span>正解</span>{result.question.mathOptions ? <InlineMath tex={result.question.answer} /> : <strong>{result.question.answer}</strong>}</p>
-                    <aside><span>解説</span><RichMathText text={result.question.explanation} /></aside>
+                    <p><span>正解</span>{result.question.mathOptions ? <InlineMath tex={unwrapRapidMath(result.question.answer)} /> : <strong>{result.question.answer}</strong>}</p>
+                    <aside><span>解法・解説</span><ol>{result.question.steps.map((step) => <li key={step}><RichMathText text={step} /></li>)}</ol><RichMathText text={result.question.explanation} /><small>出題根拠：{result.question.sourceBasis}</small></aside>
                     <div className="overall-review-links">
                       <Link href={result.question.studyHref}>{result.correct ? "暗記帳で確認" : "誤答を暗記帳で復習 →"}</Link>
                       <Link href={subject.href}>{subject.name}へ →</Link>

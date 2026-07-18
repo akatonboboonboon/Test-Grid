@@ -121,6 +121,40 @@ test("six expected papers mirror the seven-major, thirteen-field, all-topic cont
   }
 });
 
+test("all six expected papers keep the four-print difficulty with multi-stage calculations and figure reading", async () => {
+  const { MECHANICAL_DYNAMICS_EXPECTED_EXAMS: exams } = await loadData();
+  const requiredDiagrams = new Set([
+    "spring-network",
+    "cantilever-mass",
+    "damped-spring-mass",
+    "amplitude-decay",
+    "pinned-beam",
+    "spring-rigid-rod",
+  ]);
+
+  for (const exam of exams) {
+    assert.match(exam.subtitle, /範囲プリント4枚と同等難度/, `${exam.id} difficulty label`);
+    assert.match(exam.officialConditionsNote, /モデル化・多段階計算・図読解/, `${exam.id} conditions`);
+    assert.ok(exam.questions.every((question) => question.difficulty >= 2), `${exam.id} has no recall-only item`);
+    assert.ok(exam.questions.filter((question) => question.difficulty === 3).length >= 9, `${exam.id} advanced fields`);
+    assert.ok(exam.questions.filter((question) => question.steps.length >= 3).length >= 8, `${exam.id} multi-stage fields`);
+    assert.deepEqual(new Set(exam.questions.map((question) => question.diagram).filter(Boolean)), requiredDiagrams, `${exam.id} figure families`);
+
+    const citedPages = new Set(
+      exam.questions.flatMap((question) => question.sourceRefs)
+        .filter((ref) => ref.kind === "range-zip")
+        .map((ref) => ref.page),
+    );
+    for (const page of [12, 13, 14, 15]) assert.ok(citedPages.has(page), `${exam.id} print page ${page}`);
+
+    assert.match(byId(exam, `${exam.id}-m1-s1`).formula, /k_\{eq\}.*7k/, `${exam.id} spring reduction`);
+    assert.match(byId(exam, `${exam.id}-m2-s1`).formula, /3EI.*\\omega_n/s, `${exam.id} beam chain`);
+    assert.match(byId(exam, `${exam.id}-m3-s3`).formula, /C_2.*v_0.*\\omega_d/s, `${exam.id} initial condition`);
+    assert.match(byId(exam, `${exam.id}-m4-s1`).formula, /\\delta.*\\zeta/s, `${exam.id} exact decrement`);
+    assert.match(byId(exam, `${exam.id}-m5-s1`).formula, /s\(s\+a\)\(s\+b\)/, `${exam.id} step response`);
+    assert.match(byId(exam, `${exam.id}-m7-s1`).formula, /K_\\theta.*J/s, `${exam.id} rigid rod`);
+  }
+});
 test("range, source policy, and practice-only timing stay explicit", async () => {
   const data = await loadData();
   assert.equal(data.MECHANICAL_DYNAMICS_RANGE_PAGES.length, 15);

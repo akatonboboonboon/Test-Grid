@@ -19,6 +19,7 @@ const MAX_SEED_LENGTH = 512;
 const MAX_TEMPLATE_ID_LENGTH = 128;
 const MAX_HISTORY_ITEMS = 5_000;
 const MAX_QUESTIONS_PER_MINUTE = 500;
+const UNFAVORITED_TTL_MS = 3 * 24 * 60 * 60 * 1_000;
 const DEFAULT_PAGE_SIZE = 12;
 const MAX_PAGE_SIZE = 24;
 const MAX_PAGE = 500;
@@ -49,6 +50,21 @@ function boundedInteger(value: string | null, fallback: number, minimum: number,
 
 function historyUnavailable() {
   return Response.json({ error: "HISTORY_UNAVAILABLE" }, { status: 503 });
+}
+
+async function cleanupExpiredUnfavorited(
+  database: ReturnType<typeof getD1>,
+  now = Date.now(),
+) {
+  await database.prepare(`
+      DELETE FROM generated_practice_history
+      WHERE created_at < ?
+        AND NOT EXISTS (
+          SELECT 1
+          FROM generated_practice_favorites
+          WHERE generated_practice_favorites.question_id = generated_practice_history.id
+        )
+    `).bind(now - UNFAVORITED_TTL_MS).run();
 }
 
 const FALLBACK_WRITE_BUCKETS = new Map<string, { minuteBucket: number; questionCount: number }>();
@@ -129,15 +145,17 @@ export async function GET(request: Request) {
   const offset = page * pageSize;
 
   try {
+    const database = getD1();
+    await cleanupExpiredUnfavorited(database);
     const statement = subjectId
-      ? getD1().prepare(`
+      ? database.prepare(`
           SELECT id, subject_id, subject_name, template_id, format, category, title, payload, created_at
           FROM generated_practice_history
           WHERE subject_id = ?
           ORDER BY created_at DESC, id DESC
           LIMIT ? OFFSET ?
         `).bind(subjectId, pageSize + 1, offset)
-      : getD1().prepare(`
+      : database.prepare(`
           SELECT id, subject_id, subject_name, template_id, format, category, title, payload, created_at
           FROM generated_practice_history
           ORDER BY created_at DESC, id DESC
@@ -198,9 +216,11 @@ export async function POST(request: Request) {
       return Response.json({ error: "INVALID_HISTORY_BATCH" }, { status: 400 });
     }
 
-    phase = "quota";
+    phase = "cleanup";
     const createdAt = Date.now();
     const database = getD1();
+    await cleanupExpiredUnfavorited(database, createdAt);
+    phase = "quota";
     const clientAddress = anonymousClientAddress(request);
     const minuteBucket = Math.floor(createdAt / 60_000);
     let writeAllowed = false;
@@ -271,9 +291,14 @@ export async function POST(request: Request) {
     await database.prepare(`
         DELETE FROM generated_practice_history
         WHERE id IN (
-          SELECT id
-          FROM generated_practice_history
-          ORDER BY created_at DESC, id DESC
+          SELECT candidate.id
+          FROM generated_practice_history AS candidate
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM generated_practice_favorites
+            WHERE generated_practice_favorites.question_id = candidate.id
+          )
+          ORDER BY candidate.created_at DESC, candidate.id DESC
           LIMIT -1 OFFSET ?
         )
       `).bind(MAX_HISTORY_ITEMS).run();

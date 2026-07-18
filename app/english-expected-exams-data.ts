@@ -14,7 +14,9 @@ export type EnglishExpectedSectionId =
   | "vocab-ja-en"
   | "vocab-en-ja"
   | "language"
+  | "summary-abstract"
   | "order"
+  | "sentence-ja-en"
   | "true-false"
   | "reading"
   | "translation";
@@ -66,15 +68,21 @@ export type EnglishExpectedSection = {
 export const ENGLISH_EXPECTED_EXAM_STORAGE_KEY = "test-grid:english:expected-exam:v1";
 export const ENGLISH_EXPECTED_EXAM_DURATION_MINUTES = 50;
 export const ENGLISH_EXPECTED_EXAM_TOTAL_POINTS = 100;
+export const ENGLISH_EXPECTED_SCOPE_UNITS: EnglishExpectedUnit[] = ["ch15", "ch16", "ch18"];
+export const ENGLISH_EXPECTED_FORMAT_ONLY_SOURCES = ["英語.pdf", "英語テスト過去問.zip"] as const;
+export const ENGLISH_EXPECTED_SOURCE_POLICY =
+  "英語.pdf・英語テスト過去問.zipは大問構成と難度の参照専用。出題本文・正答根拠は範囲教材Chapter 15・16・18だけから採る。";
 
 export const ENGLISH_EXPECTED_EXAM_SECTIONS: EnglishExpectedSection[] = [
   { id: "vocab-ja-en", number: "I", title: "語彙・熟語｜日→英", instruction: "日本語に対応する教材表現を英語で書きなさい。", page: 1 },
   { id: "vocab-en-ja", number: "II", title: "語彙・熟語｜英→日", instruction: "英語表現の意味を自然な日本語で書きなさい。", page: 1 },
   { id: "language", number: "III", title: "語形・文法・文脈", instruction: "選択肢または空欄に、文法と文脈の両方に合う答えを入れなさい。", page: 1 },
-  { id: "order", number: "IV", title: "本文主要文法｜語句整序", instruction: "提示された語句をすべて一度ずつ使い、本文どおりの英文を完成させなさい。", page: 2 },
-  { id: "true-false", number: "V", title: "本文 True / False", instruction: "Chapter 15・16・18の本文内容と一致すれば T、一致しなければ F を選びなさい。", page: 2 },
-  { id: "reading", number: "VI", title: "本文参照・内容理解", instruction: "本文の該当箇所を根拠に、最も適切なものを1つ選びなさい。", page: 3 },
-  { id: "translation", number: "VII", title: "本文和訳", instruction: "主語・述語・修飾関係を保ち、英文を自然な日本語に訳しなさい。", page: 3 },
+  { id: "summary-abstract", number: "IV", title: "要約穴埋め・Abstract構成", instruction: "本文全体の流れとAbstract各文の役割を判断し、最も適切なものを選びなさい。", page: 1 },
+  { id: "order", number: "V", title: "本文主要文法｜一文整序", instruction: "本文から抜き出した一文を、提示された単語をすべて一度ずつ使って完成させなさい。", page: 2 },
+  { id: "sentence-ja-en", number: "VI", title: "本文主要文｜日→英", instruction: "日本語を、本文で用いられた語彙と文法に沿って英訳しなさい。", page: 2 },
+  { id: "true-false", number: "VII", title: "本文 True / False", instruction: "Chapter 15・16・18の本文内容と一致すれば T、一致しなければ F を選びなさい。", page: 2 },
+  { id: "reading", number: "VIII", title: "本文参照・内容理解", instruction: "本文の該当箇所を根拠に、最も適切なものを1つ選びなさい。", page: 3 },
+  { id: "translation", number: "IX", title: "本文抜粋｜英→日", instruction: "主語・述語・修飾関係を保ち、英文を自然な日本語に訳しなさい。", page: 3 },
 ];
 
 const UNIT_LABELS: Record<EnglishExpectedUnit, string> = {
@@ -204,7 +212,11 @@ function trueFalse(
     prompt,
     answer,
     options: ["T", "F"],
-    explanation: `判定は ${answer}。${reason}\n\n根拠は本文第${paragraph}段落です。${answer === "F" ? "誤っている語句を本文の事実へ直してから覚えます。" : "主語・数値・因果関係まで本文と一致しています。"}`,
+    explanation: [
+      `判定：${answer}。${reason}`,
+      `根拠箇所：本文第${paragraph}段落。主語・数値・因果関係を原文と照合します。`,
+      `反対選択肢「${answer === "T" ? "F" : "T"}」が誤りである理由：${answer === "T" ? "設問文の内容が根拠英文と一致しており、否定できる相違点がないためです。" : `設問文には本文と異なる語句・数値・関係があります。正しくは「${reason}」です。`}`,
+    ].join("\n\n"),
     reference,
   };
 }
@@ -254,6 +266,11 @@ function readingChoice(
   reason: string,
   wrongReasons: string,
 ): BaseQuestion {
+  const optionAnalysis = options.map((option) => (
+    option === answer
+      ? `正答「${option}」：${reason}`
+      : `誤答「${option}」：本文第${paragraph}段落の該当事実と一致しません。${wrongReasons}`
+  )).join("\n");
   return {
     sourceId: id,
     unit,
@@ -262,7 +279,7 @@ function readingChoice(
     prompt,
     options,
     answer,
-    explanation: `${reason}\n\n他の選択肢：${wrongReasons}`,
+    explanation: `根拠の読み取り：${reason}\n\n選択肢別の検討\n${optionAnalysis}`,
     reference: quote(unit, paragraph),
   };
 }
@@ -294,10 +311,149 @@ const READING_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
   ],
 };
 
-const GRAMMAR_POOLS: Record<EnglishExpectedUnit, string[]> = {
-  ch15: ["ch15-prep-1", "ch15-prep-2", "ch15-prep-3", "ch15-prep-4", "ch15-summary-1", "ch15-summary-2", "ch15-summary-3", "ch15-summary-4"],
-  ch16: ["ch16-word-1", "ch16-word-2", "ch16-word-3", "ch16-homepage-1", "ch16-homepage-2", "ch16-homepage-3", "ch16-homepage-4", "ch16-homepage-5"],
-  ch18: ["ch18-relative-1", "ch18-relative-2", "ch18-summary-1", "ch18-summary-2", "ch18-summary-3", "ch18-summary-4", "ch18-interview-1", "ch18-interview-2", "ch18-interview-3", "ch18-interview-4"],
+function detailedChoice(
+  unit: EnglishExpectedUnit,
+  id: string,
+  genre: string,
+  prompt: string,
+  options: string[],
+  answer: string,
+  paragraph: number,
+  correctReason: string,
+  wrongReasons: Partial<Record<string, string>> = {},
+): BaseQuestion {
+  const optionAnalysis = options.map((option) => (
+    option === answer
+      ? `正答「${option}」：${correctReason}`
+      : `誤答「${option}」：${wrongReasons[option] ?? "空欄前後の文法、本文の因果関係、またはAbstract内の文の役割に合いません。"}`
+  )).join("\n");
+  return {
+    sourceId: id,
+    unit,
+    genre,
+    format: "choice",
+    prompt,
+    options,
+    answer,
+    explanation: `正答の理由：${correctReason}\n\n選択肢別の検討\n${optionAnalysis}`,
+    reference: quote(unit, paragraph),
+  };
+}
+
+function summaryFromExisting(id: string, paragraph: number, correctReason: string): BaseQuestion {
+  const base = existingToBase(id);
+  if (!base.options) throw new Error(`Summary choices not found: ${id}`);
+  return detailedChoice(base.unit, id, "要約穴埋め", base.prompt, base.options, base.answer, paragraph, correctReason);
+}
+
+const SUMMARY_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
+  ch15: [
+    summaryFromExisting("ch15-summary-1", 8, "現在完了 has の後は過去分詞 created。本文の『300万を超える生命体を作ってきた』という実績を要約します。"),
+    summaryFromExisting("ch15-summary-2", 8, "has become で『～になった』。創業以来から現在までの変化を現在完了で表します。"),
+    summaryFromExisting("ch15-summary-3", 7, "There has been ... が存在を述べる現在完了。倫理面の批判が生じているという本文の対比に合います。"),
+    summaryFromExisting("ch15-summary-4", 6, "arise は『生じる』という自動詞で、Hope has arisen の過去分詞として使います。"),
+    detailedChoice("ch15", "expected-summary-15-5", "要約穴埋め", "Robotic arms mix compounds ( ___ ) the desired cells.", ["to produce", "produced", "producing", "produce"], "to produce", 2, "to produce は目的を示す不定詞で『目的の細胞を作るために』となります。", { produced: "過去分詞だけでは mix の目的を表せません。", producing: "本文は同時進行ではなく目的を表します。", produce: "mix compounds の直後に原形だけは置けません。" }),
+    detailedChoice("ch15", "expected-summary-15-6", "要約穴埋め", "Unlike traditional engineering, scientists build entire genomes ( ___ ).", ["from scratch", "at scratch", "by scratch", "for scratch"], "from scratch", 9, "from scratch は『ゼロから』という本文の熟語で、新旧の遺伝子工学の違いを要約します。"),
+  ],
+  ch16: [
+    detailedChoice("ch16", "expected-summary-16-1", "要約穴埋め", "The detailed cloud map could help ( ___ ) more accurate forecasts.", ["provide", "provides", "provided", "providing"], "provide", 1, "help + 動詞原形なので provide。地図がより正確な予報に役立つという目的を要約します。"),
+    detailedChoice("ch16", "expected-summary-16-2", "要約穴埋め", "In a cloud map, the Earth's surface is ( ___ ) into square blocks.", ["divided", "dividing", "divide", "division"], "divided", 2, "is divided は受動態で『分けられる』。surface が分割される側です。"),
+    detailedChoice("ch16", "expected-summary-16-3", "要約穴埋め", "Cloud formation is predicted ( ___ ) atmospheric conditions in each block.", ["based on", "because", "apart from", "instead of"], "based on", 2, "based on は『～に基づいて』で、予測の根拠を示します。"),
+    detailedChoice("ch16", "expected-summary-16-4", "要約穴埋め", "Previous attempts narrowed each block ( ___ ) 3.5 kilometers.", ["down to", "up from", "apart by", "into of"], "down to", 4, "narrow A down to B で『AをBまで狭める』という範囲熟語です。"),
+    detailedChoice("ch16", "expected-summary-16-5", "要約穴埋め", "The team split the Earth's surface ( ___ ) about 63 billion hexagonal blocks.", ["into", "from", "at", "with"], "into", 5, "split A into B で『AをBに分割する』。630億個の六角形区画が分割後の形です。"),
+    detailedChoice("ch16", "expected-summary-16-6", "要約穴埋め", "The team will work on ( ___ ) the forecasting system.", ["improving", "improve", "improved", "improvement"], "improving", 7, "work on の on は前置詞なので動名詞 improving を続けます。"),
+  ],
+  ch18: [
+    summaryFromExisting("ch18-summary-1", 1, "plans to の後では start が原形で入り、車椅子開発プロジェクトの開始を表します。"),
+    summaryFromExisting("ch18-summary-2", 6, "recognize はコンピューターが利用者の意図を『認識する』という本文の中心動作です。"),
+    summaryFromExisting("ch18-summary-3", 8, "connect A using networks で複数の車椅子をネットワーク接続する計画を要約します。"),
+    summaryFromExisting("ch18-summary-4", 8, "enable A to share B の share が、障害物や路面情報を『共有する』働きを表します。"),
+    detailedChoice("ch18", "expected-summary-18-5", "要約穴埋め", "Sensors detect users' intentions by ( ___ ) brain waves and nervous system activity.", ["analyzing", "analyze", "analyzed", "analysis"], "analyzing", 4, "前置詞 by の後は動名詞 analyzing。検知の手段を表します。"),
+    detailedChoice("ch18", "expected-summary-18-6", "要約穴埋め", "The latest information helps users choose routes that ( ___ ) danger.", ["avoid", "avoids", "avoided", "avoiding"], "avoid", 10, "先行詞 routes が複数なので関係節の動詞は avoid。情報共有の目的を要約します。"),
+  ],
+};
+
+const ABSTRACT_ROLE_OPTIONS = [
+  "① 研究の背景・目的",
+  "② 実験・分析の方法",
+  "③ 結果",
+  "④ 結論・意義",
+];
+
+const ABSTRACT_ROLE_GUIDE: Record<string, string> = {
+  "① 研究の背景・目的": "研究を行う理由・課題・目的を示す部分で、操作手順や得られた数値ではありません。",
+  "② 実験・分析の方法": "何を用い、どのように調べたかを示す部分で、成果そのものや将来への評価ではありません。",
+  "③ 結果": "実験・開発で実際に得られた事実や数値を示す部分で、研究目的や手順ではありません。",
+  "④ 結論・意義": "結果から言えること、実用上の意味、今後への示唆を述べる部分で、単なる手順や観測値ではありません。",
+};
+
+function abstractChoice(
+  unit: EnglishExpectedUnit,
+  id: string,
+  sentence: string,
+  answer: string,
+  paragraph: number,
+  reason: string,
+): BaseQuestion {
+  const wrongReasons = Object.fromEntries(ABSTRACT_ROLE_OPTIONS.map((option) => [option, ABSTRACT_ROLE_GUIDE[option]]));
+  return detailedChoice(
+    unit,
+    id,
+    "Abstract構成",
+    `次のAbstract中の一文は、どの役割に当たるか。\n${sentence}`,
+    ABSTRACT_ROLE_OPTIONS,
+    answer,
+    paragraph,
+    `${reason} ${ABSTRACT_ROLE_GUIDE[answer]}`,
+    wrongReasons,
+  );
+}
+
+const ABSTRACT_BANK: BaseQuestion[] = [
+  abstractChoice("ch15", "expected-abstract-01", "This study examines how a biotechnology company creates new organisms with computers and robots.", "① 研究の背景・目的", 1, "examines how ... は、この研究が何を明らかにするかを宣言しています。"),
+  abstractChoice("ch15", "expected-abstract-02", "DNA sequences were entered into computers, and robotic arms mixed compounds to produce desired cells.", "② 実験・分析の方法", 2, "入力と混合作業という具体的な工程を過去形・受動態で述べています。"),
+  abstractChoice("ch15", "expected-abstract-03", "The company has created more than three million new organisms since it was founded.", "③ 結果", 8, "300万を超えるという実績値は、実際に得られた成果です。"),
+  abstractChoice("ch16", "expected-abstract-04", "The team divided the Earth's surface into about 63 billion hexagonal blocks and simulated cloud movement.", "② 実験・分析の方法", 5, "区画分割とシミュレーションという分析手順を述べています。"),
+  abstractChoice("ch16", "expected-abstract-05", "The simulation produced a detailed picture of clouds across the entire globe.", "③ 結果", 6, "シミュレーション後に得られた雲画像という観測結果です。"),
+  abstractChoice("ch18", "expected-abstract-06", "Networked robot wheelchairs may reduce danger and support nursing care in an aging society.", "④ 結論・意義", 10, "技術が社会で持つ価値と実用上の意味をまとめています。"),
+];
+function languageChoice(
+  unit: EnglishExpectedUnit,
+  id: string,
+  prompt: string,
+  options: string[],
+  answer: string,
+  paragraph: number,
+  reason: string,
+): BaseQuestion {
+  return detailedChoice(unit, id, "語形・文法・文脈", prompt, options, answer, paragraph, reason);
+}
+
+const LANGUAGE_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
+  ch15: [
+    existingToBase("ch15-prep-1"),
+    existingToBase("ch15-prep-2"),
+    existingToBase("ch15-prep-3"),
+    existingToBase("ch15-prep-4"),
+    languageChoice("ch15", "expected-language-15-perfect", "Since it was founded a decade ago, Amyris ( ___ ) a legend in the field.", ["has become", "became", "becomes", "had become"], "has become", 8, "since + 過去形が起点を示し、現在までの変化なので現在完了 has become を使います。"),
+    languageChoice("ch15", "expected-language-15-unlike", "( ___ ) traditional genetic engineering, the scientists are building entire genomes from scratch.", ["Unlike", "Like", "Because", "During"], "Unlike", 9, "従来方式と新方式を対比するため『～と異なり』の Unlike が入ります。"),
+  ],
+  ch16: [
+    existingToBase("ch16-word-1"),
+    existingToBase("ch16-word-2"),
+    existingToBase("ch16-word-3"),
+    existingToBase("ch16-homepage-1"),
+    existingToBase("ch16-homepage-2"),
+    existingToBase("ch16-homepage-3"),
+  ],
+  ch18: [
+    existingToBase("ch18-relative-1"),
+    existingToBase("ch18-relative-2"),
+    existingToBase("ch18-interview-1"),
+    existingToBase("ch18-interview-2"),
+    existingToBase("ch18-interview-3"),
+    existingToBase("ch18-interview-4"),
+  ],
 };
 
 const ORDER_POOLS: Record<EnglishExpectedUnit, string[]> = {
@@ -306,6 +462,96 @@ const ORDER_POOLS: Record<EnglishExpectedUnit, string[]> = {
   ch18: ["passage-order-ch18-1", "passage-order-ch18-2", "passage-order-ch18-3", "passage-order-ch18-4"],
 };
 
+const ORDER_PARAGRAPHS: Record<string, number> = {
+  "passage-order-ch15-1": 4,
+  "passage-order-ch15-2": 6,
+  "passage-order-ch15-3": 8,
+  "passage-order-ch15-4": 9,
+  "passage-order-ch16-1": 2,
+  "passage-order-ch16-2": 4,
+  "passage-order-ch16-3": 5,
+  "passage-order-ch16-4": 7,
+  "passage-order-ch18-1": 2,
+  "passage-order-ch18-2": 4,
+  "passage-order-ch18-3": 6,
+  "passage-order-ch18-4": 8,
+};
+
+const ORDER_GRAMMAR_NOTES: Record<string, string> = {
+  "passage-order-ch15-1": "主語 Others の後に動詞 create、目的語 moisturizers、先行詞を修飾する関係節 that can be used ... を続けます。",
+  "passage-order-ch15-2": "believe の目的語となる節では this kind of work が主語、marks が三人称単数の動詞です。",
+  "passage-order-ch15-3": "Since + 過去形で起点を示し、主節は現在完了 has become で現在までの変化を表します。",
+  "passage-order-ch15-4": "現在進行形 are building の目的語 entire genomes に、起点を示す熟語 from scratch が続きます。",
+  "passage-order-ch16-1": "主語 Cloud formation and movements と動詞 are predicted の間へ、非制限用法の which 節を挿入します。",
+  "passage-order-ch16-2": "have been able to + 原形と、narrow A down to B の二つの型を崩さず並べます。",
+  "passage-order-ch16-3": "be able to split A into B の順で、Aが地球表面、Bが630億個の六角形区画です。",
+  "passage-order-ch16-4": "work on の後は動名詞 improving、for の後へ目的となる forecasting を置きます。",
+  "passage-order-ch18-1": "expects の目的語となる that 節内で、robot wheelchairs を受動態 will be put to practical use が説明します。",
+  "passage-order-ch18-2": "sensors を主格の関係代名詞 that と動詞 detect で後置修飾します。",
+  "passage-order-ch18-3": "a system の後に前置詞＋関係代名詞 in which を置き、その内部を computers recognize ... の語順にします。",
+  "passage-order-ch18-4": "受動態 will be connected の後に手段 by networks、目的 so that S will be able to ... を続けます。",
+};
+
+function passageOrderBase(id: string): BaseQuestion {
+  const base = existingToBase(id);
+  const paragraph = ORDER_PARAGRAPHS[id];
+  if (!paragraph) throw new Error(`Order paragraph not found: ${id}`);
+  return {
+    ...base,
+    genre: "本文主要文法・一文整序",
+    tokens: base.answer.trim().split(/\s+/u),
+    explanation: `模範語順：${base.answer}\n\n語順の理由：${ORDER_GRAMMAR_NOTES[id]}\n\n各語を一語ずつ確認し、主語→動詞→目的語・補語→修飾語の骨格を先に作ります。`,
+    reference: quote(base.unit, paragraph),
+  };
+}
+
+function sentenceJaEn(
+  unit: EnglishExpectedUnit,
+  id: string,
+  prompt: string,
+  answer: string,
+  paragraph: number,
+  grammar: string,
+): BaseQuestion {
+  return {
+    sourceId: id,
+    unit,
+    genre: "本文抜粋・日→英",
+    format: "input",
+    prompt,
+    answer,
+    accepted: [answer.replace(/[.!?]$/u, "")],
+    explanation: `模範解答：${answer}\n\n文法・語彙：${grammar}\n\n日本語だけを直訳するのではなく、本文の主語・時制・態・修飾関係を再現します。`,
+    reference: quote(unit, paragraph),
+  };
+}
+
+const SENTENCE_JA_EN_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
+  ch15: [
+    sentenceJaEn("ch15", "expected-ja-en-15-1", "目的の細胞を作るために、ロボットアームがいくつかの化合物を混ぜ始める。", "Robotic arms start to mix together some compounds to produce the desired cells.", 2, "start to + 動詞原形、目的の不定詞 to produce、desired cells の語順を使います。"),
+    sentenceJaEn("ch15", "expected-ja-en-15-2", "他のものは、化粧品に使える保湿剤を作る。", "Others create moisturizers that can be used in cosmetics.", 4, "moisturizers を関係代名詞 that 以下の受動態 can be used が修飾します。"),
+    sentenceJaEn("ch15", "expected-ja-en-15-3", "この種の仕事が第三次産業革命の始まりを示すと考える人もいる。", "Some believe this kind of work marks the beginning of a third industrial revolution.", 6, "believe の後は that が省略された目的語節。work は単数なので marks です。"),
+    sentenceJaEn("ch15", "expected-ja-en-15-4", "10年前の創業以来、Amyrisはその分野で伝説的な存在になった。", "Since it was founded a decade ago, Amyris has become a legend in the field.", 8, "Since節は過去形 was founded、主節は現在完了 has become を使います。"),
+    sentenceJaEn("ch15", "expected-ja-en-15-5", "科学者たちはゲノム全体をゼロから構築している。", "The scientists are building entire genomes from scratch.", 9, "進行中の動作は are building、from scratch は『ゼロから』です。"),
+    sentenceJaEn("ch15", "expected-ja-en-15-6", "砂糖を医薬品に変換するものもある。", "Some convert sugar into medicines.", 4, "convert A into B の型で、A=sugar、B=medicines とします。"),
+  ],
+  ch16: [
+    sentenceJaEn("ch16", "expected-ja-en-16-1", "科学者グループは、『京』を使って地球表面の詳細な雲地図を作った。", "A group of scientists have created a detailed cloud map of the Earth’s surface using the K computer.", 1, "現在完了 have created と、手段を示す分詞句 using the K computer を使います。"),
+    sentenceJaEn("ch16", "expected-ja-en-16-2", "雲地図では、地球表面は正方形の区画に分けられる。", "With a cloud map, the Earth’s surface is divided into square blocks.", 2, "surface は分けられる側なので受動態 is divided into を使います。"),
+    sentenceJaEn("ch16", "expected-ja-en-16-3", "通常、気象機関のコンピューターは各区画を20km四方に分割する。", "Typically, computers at meteorological institutions divide each block into squares measuring 20 km by 20 km.", 3, "divide A into B と、squares を後ろから説明する measuring ... を使います。"),
+    sentenceJaEn("ch16", "expected-ja-en-16-4", "従来の高性能スーパーコンピューターでは、各区画を3.5kmまで狭めることができた。", "Previous attempts to use high-tech supercomputers have been able to narrow each block down to 3.5 kilometers.", 4, "have been able to と narrow A down to B を組み合わせます。"),
+    sentenceJaEn("ch16", "expected-ja-en-16-5", "『京』を使い、チームは地球表面を約630億個の六角形区画に分けることができた。", "By using the K computer, the team were able to split the Earth’s surface into some 63 billion hexagonal blocks.", 5, "By + 動名詞で手段、were able to で達成、split A into B で分割を表します。"),
+    sentenceJaEn("ch16", "expected-ja-en-16-6", "チームは、より正確な台風・大雨予報に向けてシステム改善に取り組む。", "The team will work on improving the system for more accurate typhoon and heavy rain forecasting.", 7, "未来の計画 will work on と、前置詞 on の後の動名詞 improving を使います。"),
+  ],
+  ch18: [
+    sentenceJaEn("ch18", "expected-ja-en-18-1", "総務省は、ロボット車椅子が介護施設で実用化されると見込んでいる。", "The ministry expects that robot wheelchairs will be put to practical use in nursing care facilities.", 2, "expects that S V の目的語節内で、will be put の受動態を使います。"),
+    sentenceJaEn("ch18", "expected-ja-en-18-2", "計画中のロボット車椅子は、利用者の意図を検知するセンサーを備える。", "The planned robot wheelchairs will have sensors that detect users’ intentions.", 4, "sensors を主格の関係代名詞 that と detect で後置修飾します。"),
+    sentenceJaEn("ch18", "expected-ja-en-18-3", "その技術には、コンピューターが利用者の意図を認識するシステムが含まれる。", "They include a system in which computers recognize users’ intentions.", 6, "a system in which ... の前置詞＋関係代名詞を使います。"),
+    sentenceJaEn("ch18", "expected-ja-en-18-4", "複数の車椅子は、利用者が情報を共有できるようネットワークで接続される。", "Multiple wheelchairs will be connected by networks so that their users will be able to share information.", 8, "受動態 will be connected、手段 by、目的 so that S will be able to ... の順です。"),
+    sentenceJaEn("ch18", "expected-ja-en-18-5", "計画中のシステムでは、車椅子が現在地と目的地までの経路を計算する。", "Under the planned system, wheelchairs will calculate current locations and routes to destinations.", 9, "Under ... で条件を示し、calculate A and B の並列を作ります。"),
+    sentenceJaEn("ch18", "expected-ja-en-18-6", "危険な場所を通過した車椅子からの最新情報は、危険を避ける経路選びを助けるため、ほかの車椅子に送られる。", "The latest information from wheelchairs that have passed through dangerous places will be sent to other wheelchairs to help them choose routes that avoid danger.", 10, "主語 information を二つの that 節が修飾し、主節は受動態 will be sent、目的は to help で表します。"),
+  ],
+};
 const TRANSLATION_PARAGRAPHS: Record<EnglishExpectedUnit, number[]> = {
   ch15: [1, 4, 6, 7, 8, 9],
   ch16: [1, 2, 4, 5, 6, 7],
@@ -331,63 +577,66 @@ function scored(
 function buildExam(number: number): EnglishExpectedExam {
   const index = number - 1;
   const examId = `english-expected-${String(number).padStart(2, "0")}`;
-  const vocab15 = vocabularySequence("ch15");
-  const vocab16 = vocabularySequence("ch16");
-  const vocab18 = vocabularySequence("ch18");
-
+  const units = ENGLISH_EXPECTED_SCOPE_UNITS;
+  const vocabSequences: Record<EnglishExpectedUnit, EnglishVocabCard[]> = {
+    ch15: vocabularySequence("ch15"),
+    ch16: vocabularySequence("ch16"),
+    ch18: vocabularySequence("ch18"),
+  };
+  const vocabStarts: Record<EnglishExpectedUnit, number> = { ch15: index * 3, ch16: index * 4, ch18: index * 3 };
+  const pickVocab = (unit: EnglishExpectedUnit, offset: number) => (
+    vocabSequences[unit][(vocabStarts[unit] + offset) % vocabSequences[unit].length]
+  );
+  const jaExtraUnit = units[index % units.length];
+  const enExtraUnit = units[(index + 1) % units.length];
   const jaEnCards = [
-    ...cyclePick(vocab15, index * 3, 2),
-    ...cyclePick(vocab16, index * 4, 2),
-    ...cyclePick(vocab18, index * 3, 1),
+    ...units.map((unit) => pickVocab(unit, 0)),
+    pickVocab(jaExtraUnit, 2),
   ];
   const enJaCards = [
-    ...cyclePick(vocab15, index * 3 + 2, 1),
-    ...cyclePick(vocab16, index * 4 + 2, 2),
-    ...cyclePick(vocab18, index * 3 + 1, 2),
+    ...units.map((unit) => pickVocab(unit, 1)),
+    pickVocab(enExtraUnit, 3),
   ];
-  const language = [
-    existingToBase(GRAMMAR_POOLS.ch15[index % GRAMMAR_POOLS.ch15.length]),
-    existingToBase(GRAMMAR_POOLS.ch16[index % GRAMMAR_POOLS.ch16.length]),
-    ...cyclePick(GRAMMAR_POOLS.ch18, index * 2, 2).map(existingToBase),
+
+  const language = units.map((unit) => LANGUAGE_BANK[unit][index]);
+  const languageExtraUnit: EnglishExpectedUnit = index % 2 === 0 ? "ch15" : "ch18";
+  language.push(LANGUAGE_BANK[languageExtraUnit][(index + 3) % LANGUAGE_BANK[languageExtraUnit].length]);
+
+  const summaryAbstract = [
+    ...units.map((unit) => SUMMARY_BANK[unit][index]),
+    ABSTRACT_BANK[index],
   ];
-  const order = (["ch15", "ch16", "ch18"] as EnglishExpectedUnit[]).map((unit) => (
-    existingToBase(ORDER_POOLS[unit][index % ORDER_POOLS[unit].length])
-  ));
-  const trueFalseQuestions = (["ch15", "ch16", "ch18"] as EnglishExpectedUnit[]).flatMap((unit) => (
-    cyclePick(TRUE_FALSE_BANK[unit], index * 2, 2)
-  ));
-  const reading = (["ch15", "ch16", "ch18"] as EnglishExpectedUnit[]).map((unit) => (
-    READING_BANK[unit][index % READING_BANK[unit].length]
-  ));
-  const translationUnits = ["ch15", "ch16", "ch18"] as EnglishExpectedUnit[];
-  const translation = translationUnits.map((unit) => (
-    translationBase(unit, TRANSLATION_PARAGRAPHS[unit][index])
-  ));
-  const translationPoints = translationUnits.map((_, unitIndex) => unitIndex === index % 3 ? 6 : 7);
+  const order = units.map((unit) => passageOrderBase(ORDER_POOLS[unit][index % ORDER_POOLS[unit].length]));
+  const sentenceJaEn = units.map((unit) => SENTENCE_JA_EN_BANK[unit][index]);
+  const trueFalseQuestions = units.flatMap((unit) => cyclePick(TRUE_FALSE_BANK[unit], index * 2, 2));
+  const reading = units.map((unit) => READING_BANK[unit][index % READING_BANK[unit].length]);
+  const translation = units.map((unit) => translationBase(unit, TRANSLATION_PARAGRAPHS[unit][index]));
 
   const staged: Array<{ base: BaseQuestion; section: EnglishExpectedSectionId; points: number }> = [
     ...jaEnCards.map((card) => ({ base: vocabularyBase(card, "ja-en"), section: "vocab-ja-en" as const, points: 2 })),
     ...enJaCards.map((card) => ({ base: vocabularyBase(card, "en-ja"), section: "vocab-en-ja" as const, points: 2 })),
     ...language.map((base) => ({ base, section: "language" as const, points: 3 })),
+    ...summaryAbstract.map((base) => ({ base, section: "summary-abstract" as const, points: 3 })),
     ...order.map((base) => ({ base, section: "order" as const, points: 5 })),
-    ...trueFalseQuestions.map((base) => ({ base, section: "true-false" as const, points: 3 })),
-    ...reading.map((base) => ({ base, section: "reading" as const, points: 5 })),
-    ...translation.map((base, unitIndex) => ({ base, section: "translation" as const, points: translationPoints[unitIndex] })),
+    ...sentenceJaEn.map((base) => ({ base, section: "sentence-ja-en" as const, points: 3 })),
+    ...trueFalseQuestions.map((base) => ({ base, section: "true-false" as const, points: 2 })),
+    ...reading.map((base) => ({ base, section: "reading" as const, points: 4 })),
+    ...translation.map((base) => ({ base, section: "translation" as const, points: 4 })),
   ];
   const questions = staged.map((item, questionIndex) => scored(item.base, item.section, item.points, examId, questionIndex));
   const total = questions.reduce((sum, question) => sum + question.points, 0);
   if (total !== ENGLISH_EXPECTED_EXAM_TOTAL_POINTS) throw new Error(`${examId} has ${total} points`);
-  if (questions.some((question) => !(["ch15", "ch16", "ch18"] as string[]).includes(question.unit))) {
+  if (questions.some((question) => !ENGLISH_EXPECTED_SCOPE_UNITS.includes(question.unit))) {
     throw new Error(`${examId} includes an out-of-range chapter`);
   }
 
   const focuses = [
-    "基本語彙から本文根拠までを均等配分",
-    "数値・受動態・関係詞を重点確認",
-    "語源語彙と主要構文を横断",
-    "紛らわしいT/Fと数値の照合",
-    "本文の因果・対比・目的表現を確認",
-    "3章総仕上げ・未出段落中心",
+    "本文の骨格と語彙をつなぐ総合回",
+    "時制・態・関係詞を根拠から確認",
+    "要約とAbstract構成を含む実戦回",
+    "数値・単位・因果関係を精査",
+    "日英双方向と本文参照を横断",
+    "3章総仕上げ・全大問形式",
   ];
   return {
     id: examId,
@@ -399,8 +648,37 @@ function buildExam(number: number): EnglishExpectedExam {
     questions,
   };
 }
-
 export const ENGLISH_EXPECTED_EXAMS: EnglishExpectedExam[] = Array.from(
   { length: 6 },
   (_, index) => buildExam(index + 1),
+);
+
+const PASSAGE_ID_BY_UNIT: Record<EnglishExpectedUnit, string> = {
+  ch15: "passage-amyris",
+  ch16: "passage-weather",
+  ch18: "passage-wheelchair",
+};
+
+/**
+ * 本番と同じ大問比率で作った、通常確認テスト向けの実戦問題プール。
+ * 単語だけに偏らず、文法・要約・一文整序・本文参照・和訳を毎回含む
+ * 予想模試6回分を、そのまま自動採点可能な EnglishQuestion へ変換する。
+ */
+export const ENGLISH_EXAM_LEVEL_QUESTIONS: EnglishQuestion[] = ENGLISH_EXPECTED_EXAMS.flatMap(
+  (exam) => exam.questions.map((question) => ({
+    id: `exam-level-${question.id}`,
+    unit: question.unit,
+    group: question.genre,
+    format: question.format,
+    grading: question.semantic ? "japanese-semantic" as const : undefined,
+    prompt: question.prompt,
+    answer: question.answer,
+    accepted: question.accepted,
+    options: question.options,
+    tokens: question.tokens,
+    explanation: `${question.explanation}\n\n出典・根拠：${question.reference.label}${question.reference.quote ? `\n本文：${question.reference.quote}` : ""}${question.reference.translation ? `\n和訳：${question.reference.translation}` : ""}`,
+    passageId: ["order", "sentence-ja-en", "true-false", "reading", "translation"].includes(question.section)
+      ? PASSAGE_ID_BY_UNIT[question.unit]
+      : undefined,
+  })),
 );

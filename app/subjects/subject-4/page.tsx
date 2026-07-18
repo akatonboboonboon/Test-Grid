@@ -11,6 +11,7 @@ import {
   THERMODYNAMICS_EXAM_SPEC,
   THERMODYNAMICS_EXPECTED_EXAMS,
   THERMODYNAMICS_FORMULAS,
+  THERMODYNAMICS_EXAM_LEVEL_QUESTIONS,
   THERMODYNAMICS_QUESTIONS,
   THERMODYNAMICS_RANGE_PAGES,
   THERMODYNAMICS_TOPICS,
@@ -44,7 +45,7 @@ const PROGRESS_KEY = "test-grid:subject-4:progress:v1";
 const TEST_SESSION_KEY = "test-grid:subject-4:mock-test:v1";
 const ALL_TOPIC_IDS = THERMODYNAMICS_TOPICS.map((topic) => topic.id);
 const KNOWN_TOPIC_IDS = new Set<ThermodynamicsTopicId>(ALL_TOPIC_IDS);
-const KNOWN_QUESTION_IDS = new Set(THERMODYNAMICS_QUESTIONS.map((question) => question.id));
+const KNOWN_QUESTION_IDS = new Set([...THERMODYNAMICS_QUESTIONS, ...THERMODYNAMICS_EXAM_LEVEL_QUESTIONS].map((question) => question.id));
 
 function randomize<T>(items: readonly T[]) {
   const copy = [...items];
@@ -464,7 +465,7 @@ export default function ThermodynamicsSubjectPage() {
 
   const currentPracticeQuestion = practiceDeck[practiceIndex];
   const availableTestQuestions = useMemo(
-    () => THERMODYNAMICS_QUESTIONS.filter((question) => testTopics.includes(question.topic)),
+    () => THERMODYNAMICS_EXAM_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic)),
     [testTopics],
   );
   const currentTestQuestion = testQuestions[testIndex];
@@ -655,7 +656,7 @@ export default function ThermodynamicsSubjectPage() {
   function resumeSavedTest() {
     if (!savedTestSession) return;
     const questions = savedTestSession.questionIds.flatMap((id) => {
-      const found = THERMODYNAMICS_QUESTIONS.find((question) => question.id === id);
+      const found = THERMODYNAMICS_EXAM_LEVEL_QUESTIONS.find((question) => question.id === id) ?? THERMODYNAMICS_QUESTIONS.find((question) => question.id === id);
       return found ? [found] : [];
     });
     if (!questions.length) {
@@ -663,7 +664,7 @@ export default function ThermodynamicsSubjectPage() {
       return;
     }
     const results = savedTestSession.results.flatMap((savedResult) => {
-      const question = THERMODYNAMICS_QUESTIONS.find((item) => item.id === savedResult.questionId);
+      const question = THERMODYNAMICS_EXAM_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId) ?? THERMODYNAMICS_QUESTIONS.find((item) => item.id === savedResult.questionId);
       return question ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
     });
     setTestTopics(savedTestSession.selectedTopics);

@@ -252,6 +252,61 @@ test("six predicted exams are 50-minute, 80-point papers covering all nine topic
   }
 });
 
+test("predicted exams mirror the print level with linked calculations and no graph questions", async () => {
+  const { APPLIED_MATH_EXPECTED_EXAMS } = await loadDataModule();
+  const conceptPatterns = [
+    /外積/,
+    /勾配/,
+    /方向微分/,
+    /発散/,
+    /回転/,
+    /線積分/,
+    /Green/,
+  ];
+
+  for (const exam of APPLIED_MATH_EXPECTED_EXAMS) {
+    assert.equal(exam.paper, "A4 portrait", exam.id + " paper");
+    assert.equal(exam.durationMinutes, 50, exam.id + " duration");
+    assert.equal(exam.passPercent, 60, exam.id + " pass percent");
+    assert.equal(exam.passPoints, exam.totalPoints * 0.6, exam.id + " raw pass line");
+    assert.equal(exam.questions.length, 19, exam.id + " sub-question count");
+    assert.deepEqual(
+      exam.sections.map((section) => section.questions.length),
+      [3, 2, 3, 3, 4, 4],
+      exam.id + " print blueprint",
+    );
+
+    const easy = exam.questions.filter((question) => question.difficulty === 1);
+    const advanced = exam.questions.filter((question) => question.difficulty === 3);
+    assert.ok(easy.length <= 2, exam.id + " has too many one-step questions");
+    assert.ok(advanced.length >= 5, exam.id + " needs at least five advanced questions");
+    assert.ok(
+      advanced.every((question) => question.steps.length >= 3),
+      exam.id + " advanced questions need a three-stage worked solution",
+    );
+
+    const linked = exam.questions.filter((question) =>
+      /前問|前2問|同じ曲線|同じ曲面|端点差|一致/.test(
+        [question.prompt, question.explanation, ...question.steps].join(" "),
+      ));
+    assert.ok(linked.length >= 8, exam.id + " should reuse earlier results across each major question");
+
+    const serialized = JSON.stringify(exam);
+    for (const pattern of conceptPatterns) {
+      assert.match(serialized, pattern, exam.id + " missing " + pattern);
+    }
+    assert.doesNotMatch(serialized, /グラフ|作図|\bplot\b/i, exam.id + " must not contain graph questions");
+
+    for (const question of exam.questions) {
+      if (question.numericAnswer !== undefined) {
+        assert.ok(Number.isFinite(question.numericAnswer), question.id + " numeric answer");
+      }
+      if (question.tolerance !== undefined) {
+        assert.ok(Number.isFinite(question.tolerance) && question.tolerance >= 0, question.id + " tolerance");
+      }
+    }
+  }
+});
 test("subject 8 integrates formula cards, practice, random mock, predicted exams, and format guide", async () => {
   const [page, exams, studyData] = await Promise.all([
     readFile(PAGE_URL, "utf8"),
@@ -266,7 +321,7 @@ test("subject 8 integrates formula cards, practice, random mock, predicted exams
   assert.match(page, /DisplayMath/);
   assert.match(page, /RichMathText/);
   assert.match(ui, /APPLIED_MATH_FORMULAS/);
-  assert.match(ui, /APPLIED_MATH_QUESTIONS/);
+  assert.match(ui, /APPLIED_MATH_EXAM_LEVEL_QUESTIONS/);
   assert.match(ui, /APPLIED_MATH_EXPECTED_EXAMS/);
   assert.match(ui, /テスト範囲(?:ZIP|\.zip)/i);
   assert.match(ui, /形式(?:資料|1|2|3).*?(?:レイアウト|形式).*?のみ/s);

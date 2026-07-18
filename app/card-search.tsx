@@ -10,21 +10,18 @@ import { SMART_CONTROL_QUESTIONS } from "./smart-control-data";
 import { TEXTBOOK_RESPONSE_QUESTIONS } from "./smart-control-textbook-data";
 import { STATISTICS_QUESTIONS } from "./statistics-data";
 import { APPLIED_MATH_QUESTIONS } from "./applied-math-data";
+import { DIGITAL_CIRCUIT_ALL_QUESTIONS } from "./digital-circuits-extra-data";
+import { MATERIAL_MECHANICS_QUESTIONS } from "./material-mechanics-data";
 import {
   RAPID_SUBJECTS,
   RAPID_SUBJECT_IDS,
   getStaticRapidPool,
   networkCardsToRapid,
   rapidSubjectMeta,
-  studyCardsToRapid,
   type RapidQuestion,
 } from "./rapid-quiz-data";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
-import {
-  cardsStorageKey,
-  normalizeStudyCards,
-  type SubjectId,
-} from "./study-data";
+import { type SubjectId } from "./study-data";
 
 function normalizeSearchText(value: string) {
   return value
@@ -147,14 +144,7 @@ function loadAllCards() {
       result.push(...networkCardsToRapid(cards));
       continue;
     }
-    if (subjectId === "subject-5" || subjectId === "subject-9") {
-      const cards = normalizeStudyCards(
-        storageRead<unknown>(cardsStorageKey(subjectId), []),
-        subjectId,
-      ).filter((card) => card.enabled);
-      result.push(...studyCardsToRapid(subjectId, cards));
-      continue;
-    }
+
     result.push(...getStaticRapidPool(subjectId));
   }
 
@@ -162,9 +152,11 @@ function loadAllCards() {
     ...reviewQuestionsToCards("subject-2", ENGLISH_QUESTIONS.filter((question) => question.unit !== "exam-sample" && question.unit !== "ch19")),
     ...reviewQuestionsToCards("subject-3", MECHANICAL_DYNAMICS_QUESTIONS),
     ...reviewQuestionsToCards("subject-4", THERMODYNAMICS_QUESTIONS),
+    ...reviewQuestionsToCards("subject-5", MATERIAL_MECHANICS_QUESTIONS),
     ...reviewQuestionsToCards("subject-6", [...SMART_CONTROL_QUESTIONS, ...TEXTBOOK_RESPONSE_QUESTIONS]),
     ...reviewQuestionsToCards("subject-7", STATISTICS_QUESTIONS),
     ...reviewQuestionsToCards("subject-8", APPLIED_MATH_QUESTIONS),
+    ...reviewQuestionsToCards("subject-9", DIGITAL_CIRCUIT_ALL_QUESTIONS),
   );
 
   return Array.from(new Map(result.map((card) => [card.subjectId + ":" + card.id, card])).values());

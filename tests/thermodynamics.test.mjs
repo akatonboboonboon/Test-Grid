@@ -198,6 +198,40 @@ test("six expected exams are 5-major, 22-subquestion, full-range practice papers
   }
 });
 
+test("expected exams match the supplied print difficulty with chained calculations and diagram reading", async () => {
+  const { THERMODYNAMICS_EXPECTED_EXAMS: exams } = await loadData();
+
+  for (const exam of exams) {
+    const easyCount = exam.questions.filter((item) => item.difficulty === 1).length;
+    const advancedCount = exam.questions.filter((item) => item.difficulty === 3).length;
+    const multiStageCount = exam.questions.filter((item) => item.steps.length >= 3).length;
+
+    assert.ok(easyCount <= 5, exam.id + " recall-only fields");
+    assert.ok(advancedCount >= 8, exam.id + " advanced fields");
+    assert.ok(multiStageCount >= 10, exam.id + " multi-stage solutions");
+    assert.ok(exam.sections.every((section) => section.questions.some((item) => item.difficulty === 3)), exam.id + " every major has an advanced field");
+    assert.match(exam.subtitle, /範囲ZIP・形式1\/2\/3の実難度/, exam.id + " difficulty basis");
+    assert.match(exam.officialConditionsNote, /単位換算・図読解・前問結果を使う複合計算/, exam.id + " practice policy");
+
+    const byField = new Map(exam.questions.map((item) => [item.major + "." + item.sub, item]));
+    assert.equal(byField.get("1.3").diagram, "pv", exam.id + " polytropic P-V");
+    assert.equal(byField.get("1.4").diagram, "pv", exam.id + " chained polytropic temperature");
+    assert.match(byField.get("1.4").prompt, /前問.*絶対温度/, exam.id + " polytropic chain");
+    assert.match(byField.get("1.4").formula, /P_2.*V_2/, exam.id + " state equation");
+    assert.equal(byField.get("2.1").diagram, "pv", exam.id + " adiabatic P-V");
+    assert.match(byField.get("2.3").prompt, /前問.*P2/, exam.id + " adiabatic chain");
+    assert.match(byField.get("3.2").steps.join(" "), /\\mathrm J=.*\\mathrm\{kJ\}/, exam.id + " entropy unit conversion");
+    assert.match(byField.get("3.4").prompt, /前二問/, exam.id + " entropy chain");
+    assert.match(byField.get("4.4").prompt, /前二問/, exam.id + " Otto chain");
+    assert.match(byField.get("5.4").prompt, /前問まで.*二通り/, exam.id + " Carnot chain");
+    assert.match(byField.get("5.4").steps.join(" "), /W=Q_1-Q_2.*W=\\eta_cQ_1/s, exam.id + " Carnot cross-check");
+
+    for (const item of exam.questions.filter((question) => question.format === "number")) {
+      assert.ok(Number.isFinite(item.numericAnswer), item.id + " finite answer");
+      assert.ok(item.tolerance > 0, item.id + " positive tolerance");
+    }
+  }
+});
 test("exam spec distinguishes adjustable practice defaults from unknown official conditions", async () => {
   const { THERMODYNAMICS_EXAM_SPEC: spec } = await loadData();
   assert.equal(spec.defaultMinutes, 50);

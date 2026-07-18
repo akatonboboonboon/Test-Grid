@@ -7,9 +7,9 @@ import {
   createRapidSession,
   getStaticRapidPool,
   isRapidAnswerCorrect,
+  unwrapRapidMath,
   networkCardsToRapid,
   rapidSubjectMeta,
-  studyCardsToRapid,
   type RapidQuestionInstance,
 } from "./rapid-quiz-data";
 import {
@@ -22,11 +22,7 @@ import {
 } from "./rapid-ranking-data";
 import RapidLeaderboard from "./rapid-leaderboard";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
-import {
-  cardsStorageKey,
-  normalizeStudyCards,
-  type SubjectId,
-} from "./study-data";
+import { type SubjectId } from "./study-data";
 
 type AnswerResult = {
   question: RapidQuestionInstance;
@@ -126,21 +122,16 @@ function loadSubjectPool(subjectId: SubjectId) {
       .filter((card) => card.enabled && card.label.trim());
     return networkCardsToRapid(cards);
   }
-  if (subjectId === "subject-5" || subjectId === "subject-9") {
-    const cards = normalizeStudyCards(
-      storageRead<unknown>(cardsStorageKey(subjectId), []),
-      subjectId,
-    ).filter((card) => card.enabled);
-    return studyCardsToRapid(subjectId, cards);
-  }
+
   return getStaticRapidPool(subjectId);
 }
 
 export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }) {
   const meta = rapidSubjectMeta(subjectId);
+  const defaultLimitSeconds = subjectId === "network" ? 8 : subjectId === "subject-2" ? 60 : 90;
   const [pool, setPool] = useState(() => getStaticRapidPool(subjectId));
   const [questionCount, setQuestionCount] = useState(10);
-  const [limitSeconds, setLimitSeconds] = useState(8);
+  const [limitSeconds, setLimitSeconds] = useState(defaultLimitSeconds);
   const [state, dispatch] = useRunnerState();
   const [history, setHistory] = useState<RapidAttemptSummary[]>([]);
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
@@ -181,7 +172,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
 
   function start() {
     const count = Math.min(100, Math.max(5, Math.round(questionCount)));
-    const seconds = Math.min(60, Math.max(1, Math.round(limitSeconds)));
+    const seconds = Math.min(300, Math.max(1, Math.round(limitSeconds)));
     const session = createRapidSession(pool, count);
     if (!session.length) return;
     setQuestionCount(count);
@@ -266,7 +257,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
               <>
                 <div className="rapid-settings">
                   <label><span>問題数</span><input type="number" min="5" max="100" step="5" value={questionCount} onChange={(event) => setQuestionCount(Number(event.target.value))} /><small>5〜100問</small></label>
-                  <label><span>1問の制限時間</span><input type="number" min="1" max="60" value={limitSeconds} onChange={(event) => setLimitSeconds(Number(event.target.value))} /><small>1〜60秒</small></label>
+                  <label><span>1問の制限時間</span><input type="number" min="1" max="300" value={limitSeconds} onChange={(event) => setLimitSeconds(Number(event.target.value))} /><small>1〜300秒（本番水準は60〜90秒推奨）</small></label>
                   <button type="button" onClick={start}><span>START</span><strong>即答を始める →</strong></button>
                 </div>
                 <p className="rapid-pool-note">{pool.length}問の問題バンクを、足りない場合は重複を離して再抽選します。</p>
@@ -294,7 +285,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
               <progress value={state.remainingMs} max={limitSeconds * 1000} aria-label={"残り時間 " + (state.remainingMs / 1000).toFixed(1) + "秒"} />
             </div>
             <article className="rapid-question">
-              <header><span>{currentQuestion.topicLabel}</span><h2><RichMathText text={currentQuestion.prompt} /></h2></header>
+              <header><span>{currentQuestion.topicLabel} · 難度{currentQuestion.difficulty} · 推奨{currentQuestion.recommendedSeconds}秒</span><h2><RichMathText text={currentQuestion.prompt} /></h2></header>
               <div className="rapid-options" role="group" aria-label="答えを選択">
                 {currentQuestion.options.map((option) => {
                   const selected = currentResult?.selected === option;
@@ -304,7 +295,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
                     : "";
                   return (
                     <button type="button" key={option} disabled={state.phase !== "playing"} className={className} onClick={() => answer(option)}>
-                      {currentQuestion.mathOptions ? <InlineMath tex={option} /> : option}
+                      {currentQuestion.mathOptions ? <InlineMath tex={unwrapRapidMath(option)} /> : option}
                     </button>
                   );
                 })}
@@ -315,9 +306,9 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
                 <div>
                   <span>{currentResult.correct ? "CORRECT" : currentResult.timedOut ? "TIME UP" : "REVIEW"}</span>
                   <h3>{currentResult.correct ? "正解です。" : "ここを暗記し直しましょう。"}</h3>
-                  {!currentResult.correct && <p>正解：{currentQuestion.mathOptions ? <InlineMath tex={currentQuestion.answer} /> : <strong>{currentQuestion.answer}</strong>}</p>}
+                  {!currentResult.correct && <p>正解：{currentQuestion.mathOptions ? <InlineMath tex={unwrapRapidMath(currentQuestion.answer)} /> : <strong>{currentQuestion.answer}</strong>}</p>}
                 </div>
-                <p><RichMathText text={currentQuestion.explanation} /></p>
+                <div><strong>本番と同じ解法手順</strong><ol>{currentQuestion.steps.map((step) => <li key={step}><RichMathText text={step} /></li>)}</ol><p><RichMathText text={currentQuestion.explanation} /></p><small>出題根拠：{currentQuestion.sourceBasis}</small></div>
                 <div><Link href={currentQuestion.studyHref}>この問題の暗記帳へ</Link><button type="button" onClick={next}>{state.index === state.session.length - 1 ? "結果を見る →" : "次の問題 →"}</button></div>
               </aside>
             )}
@@ -345,7 +336,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
                   <div>
                     <h4><RichMathText text={result.question.prompt} /></h4>
                     <p><span>あなたの回答</span>{result.selected ?? "未回答"}</p>
-                    <p><span>正解</span>{result.question.mathOptions ? <InlineMath tex={result.question.answer} /> : <strong>{result.question.answer}</strong>}</p>
+                    <p><span>正解</span>{result.question.mathOptions ? <InlineMath tex={unwrapRapidMath(result.question.answer)} /> : <strong>{result.question.answer}</strong>}</p>
                     <aside><span>解説</span><RichMathText text={result.question.explanation} /></aside>
                     <Link href={result.question.studyHref}>{result.correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}</Link>
                   </div>

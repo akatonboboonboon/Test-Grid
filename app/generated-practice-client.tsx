@@ -20,6 +20,10 @@ import {
   type GeneratedPracticeSubjectId,
 } from "./generated-practice-engine";
 import { DisplayMath, RichMathText } from "./statistics-math";
+import MaterialMechanicsDiagram from "./material-mechanics-diagrams";
+import MechanicalDynamicsDiagram from "./mechanical-dynamics-diagrams";
+import ThermodynamicsDiagram from "./thermodynamics-diagrams";
+import DigitalCircuitStudyDiagram from "./digital-circuits-extra-diagrams";
 
 type Props = {
   initialSubject: GeneratedPracticeSubjectId;
@@ -42,6 +46,8 @@ type SharedHistoryItem = {
   title: string;
   createdAt: number;
   question: GeneratedPracticeQuestion;
+  favoriteCount?: number;
+  viewerFavorited?: boolean;
 };
 
 type SharedHistoryResponse = {
@@ -57,16 +63,63 @@ type HistoryGenerationRequest = {
   templateId?: string;
 };
 
+type FavoriteStateResponse = {
+  favorites?: Record<string, {
+    favoriteCount?: number;
+    viewerFavorited?: boolean;
+  }>;
+};
+
+type FavoriteMutationResponse = {
+  id?: string;
+  deleted?: boolean;
+  favoriteCount?: number;
+  viewerFavorited?: boolean;
+  error?: string;
+};
+
 const MAX_SESSION_QUESTIONS = 100;
 const HISTORY_PAGE_SIZE = 12;
+const FAVORITE_CLIENT_STORAGE_KEY = "test-grid-generated-favorite-client-v1";
+let fallbackFavoriteClientToken = "";
+
+function createFavoriteClientToken() {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return "favorite_" + uuid.replaceAll("-", "_");
+  const entropy = typeof globalThis.crypto?.getRandomValues === "function"
+    ? Array.from(globalThis.crypto.getRandomValues(new Uint32Array(4)), (value) => value.toString(36)).join("_")
+    : new Date().getTime().toString(36) + "_" + Math.random().toString(36).slice(2) + "_" + Math.random().toString(36).slice(2);
+  return "favorite_" + entropy;
+}
+
+function getFavoriteClientToken() {
+  if (fallbackFavoriteClientToken) return fallbackFavoriteClientToken;
+  if (typeof window === "undefined") return "";
+  try {
+    const stored = window.localStorage.getItem(FAVORITE_CLIENT_STORAGE_KEY);
+    if (stored && /^[A-Za-z0-9_-]{20,160}$/u.test(stored)) {
+      fallbackFavoriteClientToken = stored;
+      return stored;
+    }
+    const token = createFavoriteClientToken();
+    window.localStorage.setItem(FAVORITE_CLIENT_STORAGE_KEY, token);
+    fallbackFavoriteClientToken = token;
+    return token;
+  } catch {
+    fallbackFavoriteClientToken = createFavoriteClientToken();
+    return fallbackFavoriteClientToken;
+  }
+}
 
 const SUBJECT_ACCENTS: Record<GeneratedPracticeSubjectId, string> = {
   "subject-2": "#19c7b4",
   "subject-3": "#ff5c35",
   "subject-4": "#1687ff",
+  "subject-5": "#d9a800",
   "subject-6": "#a05cff",
   "subject-7": "#f04f8a",
   "subject-8": "#ef9a20",
+  "subject-9": "#ef7138",
 };
 
 const FORMAT_LABELS: Record<GeneratedPracticeQuestion["format"], string> = {
@@ -74,6 +127,7 @@ const FORMAT_LABELS: Record<GeneratedPracticeQuestion["format"], string> = {
   choice: "選択問題",
   order: "本文一文の並び替え",
   translation: "本文抜粋の和訳",
+  text: "回路・状態列の入力",
 };
 
 function initialQuestion(subjectId: GeneratedPracticeSubjectId) {
@@ -93,6 +147,58 @@ function sourceLocation(question: GeneratedPracticeQuestion) {
     parts.push("p." + question.source.pages.join("・"));
   }
   return parts.join(" / ");
+}
+
+function GeneratedQuestionVisual({
+  question,
+  solution = false,
+}: {
+  question: GeneratedPracticeQuestion;
+  solution?: boolean;
+}) {
+  if (!question.visual) return null;
+  if (question.visual.type === "material-mechanics") {
+    return (
+      <div className="generated-practice-visual">
+        <MaterialMechanicsDiagram
+          kind={question.visual.kind}
+          solution={solution}
+          title={solution ? "模範図・注記" : "問題図"}
+        />
+      </div>
+    );
+  }
+  if (question.visual.type === "mechanical-dynamics") {
+    return (
+      <div className="generated-practice-visual">
+        <MechanicalDynamicsDiagram
+          kind={question.visual.kind}
+          solution={solution}
+          title={solution ? "模範図・モデル化" : "問題図・与条件"}
+        />
+      </div>
+    );
+  }
+  if (question.visual.type === "thermodynamics") {
+    return (
+      <div className="generated-practice-visual">
+        <ThermodynamicsDiagram
+          kind={question.visual.kind}
+          solution={solution}
+          title={solution ? "模範線図・状態番号" : "問題線図・状態変化"}
+        />
+      </div>
+    );
+  }
+  return (
+    <div className="generated-practice-visual">
+      <DigitalCircuitStudyDiagram
+        kind={question.visual.kind}
+        solution={solution}
+        title={solution ? "模範図・状態遷移" : "解答用の回路・波形図"}
+      />
+    </div>
+  );
 }
 
 function formatHistoryDate(value: number) {
@@ -128,6 +234,7 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
   const [historyHasMore, setHistoryHasMore] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState("");
+  const [favoriteBusyIds, setFavoriteBusyIds] = useState<string[]>([]);
   const generationCounter = useRef(0);
   const initialHistorySaveStarted = useRef(false);
 
@@ -166,7 +273,37 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
       const response = await fetch("/api/generated-practice-history?" + params.toString(), { cache: "no-store" });
       const body = await response.json() as SharedHistoryResponse;
       if (!response.ok || !Array.isArray(body.items)) throw new Error(body.error || "HISTORY_READ_FAILED");
-      setHistoryItems((current) => replace ? body.items ?? [] : [...current, ...(body.items ?? [])]);
+      const loadedItems = body.items ?? [];
+      let decoratedItems = loadedItems.map((item) => ({
+        ...item,
+        favoriteCount: 0,
+        viewerFavorited: false,
+      }));
+      if (loadedItems.length) {
+        try {
+          const favoriteParams = new URLSearchParams();
+          for (const item of loadedItems) favoriteParams.append("id", item.id);
+          const clientToken = getFavoriteClientToken();
+          const favoriteResponse = await fetch(
+            "/api/generated-practice-favorites?" + favoriteParams.toString(),
+            {
+              cache: "no-store",
+              headers: clientToken ? { "x-generated-favorite-client": clientToken } : {},
+            },
+          );
+          const favoriteBody = await favoriteResponse.json() as FavoriteStateResponse;
+          if (favoriteResponse.ok && favoriteBody.favorites) {
+            decoratedItems = loadedItems.map((item) => ({
+              ...item,
+              favoriteCount: favoriteBody.favorites?.[item.id]?.favoriteCount ?? 0,
+              viewerFavorited: favoriteBody.favorites?.[item.id]?.viewerFavorited ?? false,
+            }));
+          }
+        } catch {
+          // Favorite state is supplementary; the shared questions remain usable.
+        }
+      }
+      setHistoryItems((current) => replace ? decoratedItems : [...current, ...decoratedItems]);
       setHistoryPage(page);
       setHistoryHasMore(Boolean(body.hasMore));
     } catch {
@@ -354,6 +491,42 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
     void loadHistory(0, true, filter);
   }
 
+  async function toggleFavorite(item: SharedHistoryItem) {
+    if (favoriteBusyIds.includes(item.id)) return;
+    setFavoriteBusyIds((current) => [...current, item.id]);
+    setHistoryError("");
+    try {
+      const clientToken = getFavoriteClientToken();
+      const response = await fetch("/api/generated-practice-favorites", {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          ...(clientToken ? { "x-generated-favorite-client": clientToken } : {}),
+        },
+        body: JSON.stringify({ id: item.id, favorite: !item.viewerFavorited }),
+      });
+      const body = await response.json() as FavoriteMutationResponse;
+      if (!response.ok) throw new Error(body.error || "FAVORITE_WRITE_FAILED");
+      if (body.deleted) {
+        setHistoryItems((current) => current.filter((historyItem) => historyItem.id !== item.id));
+        setAnnouncement("お気に入りを外したため、3日を過ぎた問題を共有履歴から整理しました。");
+        return;
+      }
+      setHistoryItems((current) => current.map((historyItem) => historyItem.id === item.id
+        ? {
+            ...historyItem,
+            favoriteCount: body.favoriteCount ?? historyItem.favoriteCount ?? 0,
+            viewerFavorited: body.viewerFavorited ?? !item.viewerFavorited,
+          }
+        : historyItem));
+      setAnnouncement(body.viewerFavorited ? "問題をお気に入りに登録しました。" : "お気に入りを解除しました。");
+    } catch {
+      setHistoryError("お気に入りを更新できませんでした。少し待ってからもう一度お試しください。");
+    } finally {
+      setFavoriteBusyIds((current) => current.filter((id) => id !== item.id));
+    }
+  }
+
   function addToken(index: number) {
     if (revealed || selectedTokenIndexes.includes(index)) return;
     setSelectedTokenIndexes((current) => [...current, index]);
@@ -400,7 +573,7 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
         <section className="generated-practice-subjects" aria-labelledby="generated-subject-title">
           <div className="generated-practice-section-head">
             <div><span>01 / SUBJECT</span><h2 id="generated-subject-title">教科を選ぶ</h2></div>
-            <p>生成対象は教材を読み込み済みの6教科だけです。</p>
+            <p>生成対象は教材を読み込み済みの8教科です。ネットワーク以外は全教科に対応しています。</p>
           </div>
           <div className="generated-practice-subject-tabs" role="tablist" aria-label="自動生成する教科">
             {GENERATED_PRACTICE_SUBJECTS.map((item) => (
@@ -466,8 +639,8 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
         <section className="generated-practice-workspace" aria-labelledby="generated-question-title">
           <header className="generated-practice-question-meta">
             <div>
-              <span>{FORMAT_LABELS[question.format]}</span>
-              <strong>{question.category}</strong>
+              <span>{FORMAT_LABELS[question.format]} · 本番水準 難度{question.difficulty ?? 3}</span>
+              <strong>{question.category} · {question.subpartCount ?? question.steps.length}段階</strong>
             </div>
             <div className="generated-practice-progress" aria-label={"全" + sessionTotal + "問中" + sessionNumber + "問目"}>
               <span>PROGRESS</span>
@@ -481,6 +654,7 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
             <h2 id="generated-question-title">{question.title}</h2>
             {question.context && <p className="generated-practice-context"><RichMathText text={question.context} /></p>}
             <div className="generated-practice-prompt"><RichMathText text={question.prompt} /></div>
+            <GeneratedQuestionVisual question={question} />
             {question.formula && (
               <details className="generated-practice-formula">
                 <summary>使う公式をヒントとして見る</summary>
@@ -500,7 +674,8 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
             <span>SOURCE</span>
             <strong>{question.source.label}</strong>
             {location && <small>{location}</small>}
-            <p>この範囲情報から生成。正答と出典抜粋は解答表示後に確認できます。</p>
+            {question.sourceBasis?.length ? <ul>{question.sourceBasis.map((basis) => <li key={basis}>{basis}</li>)}</ul> : null}
+            <p>読み込み済み範囲と過去問の計算量へ校正済み。正答と出典抜粋は解答表示後に確認できます。</p>
           </aside>
 
           <form className="generated-practice-answer-form" onSubmit={submitAnswer}>
@@ -568,6 +743,18 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
               />
             )}
 
+            {question.format === "text" && (
+              <input
+                value={typedAnswer}
+                onChange={(event) => setTypedAnswer(event.target.value)}
+                readOnly={revealed}
+                placeholder="状態列・論理値・式を入力"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="回路・状態問題の解答"
+              />
+            )}
+
             {question.format === "number" && (
               <input
                 value={typedAnswer}
@@ -605,6 +792,8 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
                 <h2 id="generated-solution-title">模範解答</h2>
                 <div><RichMathText text={question.answer} /></div>
               </div>
+
+              <GeneratedQuestionVisual question={question} solution />
 
               {question.subjectId === "subject-2" && question.source.excerpt && (
                 <div className="generated-practice-excerpt">
@@ -675,6 +864,7 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
                     <summary>模範解答と解説を振り返る</summary>
                     <h3>模範解答</h3>
                     <p><RichMathText text={result.question.answer} /></p>
+                    <GeneratedQuestionVisual question={result.question} solution />
                     <h3>解説</h3>
                     <p><RichMathText text={result.question.explanation} /></p>
                     <small>{result.feedback}</small>
@@ -691,7 +881,7 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
         <section id="generated-history" className="generated-practice-history" aria-labelledby="generated-history-title">
           <div className="generated-practice-section-head">
             <div><span>04 / SHARED HISTORY</span><h2 id="generated-history-title">みんなの生成履歴</h2></div>
-            <p>このページで生成された解答付き問題を全員で共有。問題を開いて、そのまま解き直せます。</p>
+            <p>このページで生成された解答付き問題を全員で共有。お気に入りが0件の問題は生成から3日で自動整理され、1件以上なら残ります。</p>
           </div>
           <div className="generated-practice-history-tools">
             <label>
@@ -731,12 +921,26 @@ export default function GeneratedPracticeClient({ initialSubject }: Props) {
                   {item.question.context && <p><RichMathText text={item.question.context} /></p>}
                   <h4>模範解答</h4>
                   <p><RichMathText text={item.question.answer} /></p>
+                  <GeneratedQuestionVisual question={item.question} solution />
                   <h4>答えになる理由</h4>
                   <p><RichMathText text={item.question.reason} /></p>
                   <h4>解説</h4>
                   <p><RichMathText text={item.question.explanation} /></p>
                 </details>
-                <button type="button" onClick={() => retryHistoryQuestion(item.question)}>この問題を解き直す →</button>
+                <div className="generated-practice-history-actions">
+                  <button
+                    className={"generated-practice-favorite-button" + (item.viewerFavorited ? " is-active" : "")}
+                    type="button"
+                    aria-pressed={Boolean(item.viewerFavorited)}
+                    disabled={favoriteBusyIds.includes(item.id)}
+                    onClick={() => toggleFavorite(item)}
+                  >
+                    <span aria-hidden="true">{item.viewerFavorited ? "★" : "☆"}</span>
+                    {item.viewerFavorited ? "お気に入り済み" : "お気に入り"}
+                    <b aria-label={"お気に入り" + (item.favoriteCount ?? 0) + "件"}>{item.favoriteCount ?? 0}</b>
+                  </button>
+                  <button type="button" onClick={() => retryHistoryQuestion(item.question)}>この問題を解き直す →</button>
+                </div>
               </article>
             ))}
           </div>

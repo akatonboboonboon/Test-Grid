@@ -28,6 +28,10 @@ async function loadStatisticsData() {
   return import(toDataUrl(mainJavascript));
 }
 
+async function loadExpectedExamData() {
+  const source = await readFile(new URL("../app/statistics-expected-exams-data.ts", import.meta.url), "utf8");
+  return import(toDataUrl(compile(source)));
+}
 test("every taught Sigma formula keeps Sigma and adds a Sigma-free expansion", async () => {
   const [data, katex] = await Promise.all([
     loadStatisticsData(),
@@ -61,9 +65,11 @@ test("every taught Sigma formula keeps Sigma and adds a Sigma-free expansion", a
 });
 
 test("formula cards, practice feedback, and predicted answers label both notations", async () => {
-  const [page, expectedExams] = await Promise.all([
+  const [page, expectedExams, expectedExamSource, expectedData] = await Promise.all([
     readFile(new URL("../app/subjects/subject-7/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/statistics-expected-exams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/statistics-expected-exams-data.ts", import.meta.url), "utf8"),
+    loadExpectedExamData(),
   ]);
 
   assert.match(page, /CardDeckSearch/);
@@ -73,12 +79,15 @@ test("formula cards, practice feedback, and predicted answers label both notatio
   assert.match(page, /currentCard\.expandedFormula/);
   assert.match(page, /question\.expandedFormula/);
 
-  const sigmaTemplates = expectedExams.match(/formula:\s*"[^"\n]*\\\\sum[^"\n]*"/g) ?? [];
-  const pairedTemplates = expectedExams.match(/formula:\s*"[^"\n]*\\\\sum[^"\n]*",\s*expandedFormula:/g) ?? [];
-  assert.equal(sigmaTemplates.length, 5);
-  assert.equal(pairedTemplates.length, sigmaTemplates.length);
+  const expectedQuestions = [...expectedData.EXPECTED_PAPERS_BY_ID.values()].flatMap((paper) => paper.questions);
+  const sigmaTemplates = expectedQuestions.filter((question) => question.formula?.includes("\\sum"));
+  assert.equal(sigmaTemplates.length, 120);
+  for (const question of sigmaTemplates) {
+    assert.equal(typeof question.expandedFormula, "string", `${question.id} needs a Sigma-free expansion`);
+    assert.doesNotMatch(question.expandedFormula, /\\sum|Σ/, `${question.id} expansion must not use Sigma`);
+  }
   assert.match(expectedExams, /function SigmaAwareFormula/);
   assert.match(expectedExams, /Σを使う書き方/);
   assert.match(expectedExams, /Σなしで書くと/);
-  assert.match(expectedExams, /every Sigma formula requires a Sigma-free expandedFormula/);
+  assert.match(expectedExamSource, /every Sigma formula requires a Sigma-free expandedFormula/);
 });

@@ -303,32 +303,29 @@ function examQuestion(
   };
 }
 
-function signed(value: number) {
-  return value >= 0 ? `+${value}` : String(value);
-}
-
 function buildAppliedMathExam(variant: number): AppliedMathExpectedExam {
-  const id = `applied-expected-${String(variant).padStart(2, "0")}`;
-  const ax = variant + 1;
-  const ay = (variant % 3) + 1;
-  const az = 2;
-  const normSquared = ax ** 2 + ay ** 2 + az ** 2;
-  const orthogonalP = variant + 2;
-  const orthogonalK = variant + 3;
-  const crossA = [variant + 1, 1, 2];
-  const crossB = [1, 2, variant % 2 === 0 ? 1 : -1];
-  const cross = [
-    crossA[1] * crossB[2] - crossA[2] * crossB[1],
-    crossA[2] * crossB[0] - crossA[0] * crossB[2],
-    crossA[0] * crossB[1] - crossA[1] * crossB[0],
+  const id = "applied-expected-" + String(variant).padStart(2, "0");
+
+  const origin = [variant, 0, 1];
+  const sideU = [variant + 1, 1, 0];
+  const sideV = [1, (variant % 3) + 2, 2];
+  const pointB = origin.map((value, index) => value + sideU[index]);
+  const pointC = origin.map((value, index) => value + sideV[index]);
+  const triangleCross = [
+    sideU[1] * sideV[2] - sideU[2] * sideV[1],
+    sideU[2] * sideV[0] - sideU[0] * sideV[2],
+    sideU[0] * sideV[1] - sideU[1] * sideV[0],
   ];
+  const triangleCrossNormSquared = triangleCross.reduce((sum, value) => sum + value ** 2, 0);
 
   const vectorCoefficient = variant + 1;
-  const vectorSpeedSquared = 13 + vectorCoefficient ** 2;
+  const vectorSpeedSquared = vectorCoefficient ** 2 + 13;
+  const squaredDistanceDerivative = 2 * vectorCoefficient ** 2 + 10;
 
-  const helixA = variant + 1;
-  const helixB = (variant % 3) + 1;
+  const helixA = (variant % 3) + 1;
+  const helixB = ((variant + 1) % 3) + 1;
   const helixSpeedSquared = helixA ** 2 + helixB ** 2;
+  const helixScalarIntegralCoefficient = 2 * helixA ** 2;
 
   const surfaceP = (variant % 3) + 1;
   const surfaceQ = ((variant + 1) % 3) + 1;
@@ -336,55 +333,144 @@ function buildAppliedMathExam(variant: number): AppliedMathExpectedExam {
   const surfaceVSpan = 2;
   const surfaceNormSquared = surfaceP ** 2 + surfaceQ ** 2 + 1;
   const surfaceDomainArea = surfaceUSpan * surfaceVSpan;
+  const surfaceFlux =
+    -(surfaceP ** 2 + 4) * surfaceUSpan ** 2
+    + 2 * surfaceP * surfaceQ * surfaceUSpan;
 
   const gradientC = variant + 1;
   const gradientAtPoint = [2, 2 * gradientC, 2];
   const directionalNumerator = 2 + 2 * gradientC;
   const gradientNormSquared = gradientAtPoint.reduce((sum, value) => sum + value ** 2, 0);
+  const gradientLineIntegral = gradientC + 2;
 
   const fieldA = variant + 1;
   const fieldB = (variant % 3) + 1;
   const fieldC = (variant % 2) + 1;
   const divergence = 2 * fieldA + fieldC;
   const curlZ = 2 * fieldB;
-
-  const lineRadius = (variant % 3) + 1;
-  const lineIntegralCoefficient = lineRadius ** 3;
-  const scalarSurfaceRadius = ((variant + 1) % 3) + 1;
-  const scalarSurfaceHeight = (variant % 2) + 1;
-  const scalarSurfaceCoefficient = scalarSurfaceRadius ** 3 * scalarSurfaceHeight;
-  const potentialIntegral = 1 + gradientC;
-  const fluxRadius = 2 + (variant % 2);
-  const fluxHeight = 1 + (variant % 3);
-  const fluxFieldCoefficient = 2 * variant + 3;
-  const fluxValue = fluxHeight * (variant + 1) * fluxRadius ** 2;
-  const greenRadius = (variant % 3) + 1;
-  const greenCoefficient = 2 * greenRadius ** 2;
+  const greenRadius = ((variant + 1) % 3) + 1;
+  const circulationCoefficient = 2 * fieldB * greenRadius ** 2;
 
   const sections: AppliedMathExamSection[] = [
     {
       number: 1,
-      title: "ベクトル・内積・外積",
+      title: "ベクトル・外積・三角形",
       topic: "vectors",
       topicIds: ["vectors"],
       points: 14,
-      context: `\\(\\mathbf a=(${ax},${ay},${az})\\), \\(\\mathbf p=(2,k,1)\\), \\(\\mathbf q=(${orthogonalP},-2,2)\\) とする。`,
+      context:
+        "\\(A=(" + origin.join(",") + ")\\)、\\(B=(" + pointB.join(",")
+        + ")\\)、\\(C=(" + pointC.join(",") + ")\\) とする。",
       questions: [
-        examQuestion(id, 1, 1, 4, { topic: "vectors", genre: "ノルム", difficulty: 1, format: "text", prompt: "\\(|\\mathbf a|\\) を求めよ。", answer: `\\(\\sqrt{${normSquared}}\\)`, accepted: [`sqrt(${normSquared})`, `√${normSquared}`], keywords: [String(normSquared)], minKeywords: 1, formula: "|\\mathbf a|=\\sqrt{a_x^2+a_y^2+a_z^2}", steps: [`\\(|\\mathbf a|=\\sqrt{${ax}^2+${ay}^2+${az}^2}\\)`, `\\(=\\sqrt{${normSquared}}\\)`], explanation: "3成分の二乗和の正の平方根を取る。" }),
-        examQuestion(id, 1, 2, 4, { topic: "vectors", genre: "直交", difficulty: 2, format: "number", prompt: "\\(\\mathbf p\\perp\\mathbf q\\) となる \\(k\\) を求めよ。", answer: String(orthogonalK), numericAnswer: orthogonalK, formula: "\\mathbf p\\cdot\\mathbf q=0", steps: [`\\(2\\cdot${orthogonalP}-2k+2=0\\)`, `\\(k=${orthogonalK}\\)`], explanation: "直交を内積0に置き換える。" }),
-        examQuestion(id, 1, 3, 6, { topic: "vectors", genre: "外積", difficulty: 2, format: "text", prompt: `\\((${crossA.join(",")})\\times(${crossB.join(",")})\\) を求めよ。`, answer: `\\((${cross.join(",")})\\)`, accepted: [`(${cross.join(",")})`, cross.join(",")], keywords: cross.map(String), minKeywords: 3, formula: "\\mathbf a\\times\\mathbf b=(a_yb_z-a_zb_y,a_zb_x-a_xb_z,a_xb_y-a_yb_x)", steps: [`第1成分は \\(${crossA[1]}(${crossB[2]})-${crossA[2]}(${crossB[1]})=${cross[0]}\\)`, `第2成分は \\(${crossA[2]}(${crossB[0]})-${crossA[0]}(${crossB[2]})=${cross[1]}\\)`, `第3成分は \\(${crossA[0]}(${crossB[1]})-${crossA[1]}(${crossB[0]})=${cross[2]}\\)`], explanation: "外積は順序を逆にすると全成分の符号が反転する。" }),
+        examQuestion(id, 1, 1, 4, {
+          topic: "vectors",
+          genre: "位置ベクトル",
+          difficulty: 1,
+          format: "text",
+          prompt: "\\(\\overrightarrow{AB}\\) と \\(\\overrightarrow{AC}\\) を求めよ。",
+          answer: "\\(\\overrightarrow{AB}=(" + sideU.join(",") + "),\\ \\overrightarrow{AC}=(" + sideV.join(",") + ")\\)",
+          accepted: ["(" + sideU.join(",") + "),(" + sideV.join(",") + ")"],
+          keywords: [...sideU.map(String), ...sideV.map(String)],
+          minKeywords: 5,
+          formula: "\\overrightarrow{AB}=\\mathbf B-\\mathbf A",
+          steps: [
+            "\\(\\overrightarrow{AB}=B-A=(" + sideU.join(",") + ")\\)",
+            "\\(\\overrightarrow{AC}=C-A=(" + sideV.join(",") + ")\\)",
+          ],
+          explanation: "各終点の座標から共通の始点Aの座標を成分ごとに引く。以後の外積と面積は、この2本の辺ベクトルを使う。",
+        }),
+        examQuestion(id, 1, 2, 4, {
+          topic: "vectors",
+          genre: "外積",
+          difficulty: 2,
+          format: "text",
+          prompt: "前問の結果を用いて \\(\\overrightarrow{AB}\\times\\overrightarrow{AC}\\) を求めよ。",
+          answer: "\\((" + triangleCross.join(",") + ")\\)",
+          accepted: ["(" + triangleCross.join(",") + ")", triangleCross.join(",")],
+          keywords: triangleCross.map(String),
+          minKeywords: 3,
+          formula: "\\mathbf a\\times\\mathbf b=(a_yb_z-a_zb_y,\\ a_zb_x-a_xb_z,\\ a_xb_y-a_yb_x)",
+          steps: [
+            "第1成分は \\(" + sideU[1] + "\\cdot" + sideV[2] + "-" + sideU[2] + "\\cdot" + sideV[1] + "=" + triangleCross[0] + "\\)",
+            "第2成分は \\(" + sideU[2] + "\\cdot" + sideV[0] + "-" + sideU[0] + "\\cdot" + sideV[2] + "=" + triangleCross[1] + "\\)",
+            "第3成分は \\(" + sideU[0] + "\\cdot" + sideV[1] + "-" + sideU[1] + "\\cdot" + sideV[0] + "=" + triangleCross[2] + "\\)",
+          ],
+          explanation: "AB、ACの順に外積を取る。順序を逆にすると法線の向きが反転するため、成分の符号まで採点対象になる。",
+        }),
+        examQuestion(id, 1, 3, 6, {
+          topic: "vectors",
+          genre: "面積と単位法線",
+          difficulty: 3,
+          format: "text",
+          prompt: "前問の外積から、三角形ABCの面積と、z成分が正の単位法線ベクトルを求めよ。",
+          answer:
+            "面積 \\(\\frac{\\sqrt{" + triangleCrossNormSquared + "}}{2}\\)、単位法線 \\(\\frac{1}{\\sqrt{"
+            + triangleCrossNormSquared + "}}(" + triangleCross.join(",") + ")\\)",
+          accepted: [
+            "sqrt(" + triangleCrossNormSquared + ")/2,(" + triangleCross.join(",") + ")/sqrt(" + triangleCrossNormSquared + ")",
+          ],
+          keywords: [String(triangleCrossNormSquared), ...triangleCross.map(String)],
+          minKeywords: 4,
+          formula: "S=\\frac12|\\overrightarrow{AB}\\times\\overrightarrow{AC}|",
+          steps: [
+            "前問の外積の大きさは \\(\\sqrt{" + triangleCrossNormSquared + "}\\)",
+            "三角形なので平行四辺形の面積の半分を取り、\\(S=\\frac{\\sqrt{" + triangleCrossNormSquared + "}}{2}\\)",
+            "外積をその大きさで割り、\\(\\mathbf n=\\frac{1}{\\sqrt{" + triangleCrossNormSquared + "}}(" + triangleCross.join(",") + ")\\)",
+          ],
+          explanation: "外積は面に垂直で、その大きさは2辺が張る平行四辺形の面積になる。同じ計算結果を面積と法線の両方へつなげる問題である。",
+        }),
       ],
     },
     {
       number: 2,
-      title: "ベクトル関数の微分と速さ",
+      title: "ベクトル関数の微分・速さ",
       topic: "vector-functions",
       topicIds: ["vector-functions"],
       points: 12,
-      context: `\\(\\mathbf r(t)=(t^2,${vectorCoefficient}t,t^3)\\) とする。`,
+      context: "\\(\\mathbf r(t)=(t^2," + vectorCoefficient + "t,t^3)\\) とする。",
       questions: [
-        examQuestion(id, 2, 1, 6, { topic: "vector-functions", genre: "成分微分", difficulty: 1, format: "text", prompt: "\\(\\mathbf r'(t)\\) と \\(\\mathbf r'(1)\\) を求めよ。", answer: `\\(\\mathbf r'(t)=(2t,${vectorCoefficient},3t^2),\\ \\mathbf r'(1)=(2,${vectorCoefficient},3)\\)`, accepted: [`(2t,${vectorCoefficient},3t^2),(2,${vectorCoefficient},3)`], keywords: ["2t", String(vectorCoefficient), "3t", "2", "3"], minKeywords: 4, formula: "\\mathbf r'(t)=(x'(t),y'(t),z'(t))", steps: [`各成分を微分して \\(\\mathbf r'(t)=(2t,${vectorCoefficient},3t^2)\\)`, `\\(t=1\\) を代入して \\((2,${vectorCoefficient},3)\\)`], explanation: "ベクトル関数は成分ごとに微分する。" }),
-        examQuestion(id, 2, 2, 6, { topic: "vector-functions", genre: "速さ", difficulty: 2, format: "text", prompt: "\\(t=1\\) における速さを求めよ。", answer: `\\(\\sqrt{${vectorSpeedSquared}}\\)`, accepted: [`sqrt(${vectorSpeedSquared})`, `√${vectorSpeedSquared}`], keywords: [String(vectorSpeedSquared)], minKeywords: 1, formula: "v=|\\mathbf r'(t)|", steps: [`\\(\\mathbf r'(1)=(2,${vectorCoefficient},3)\\)`, `\\(v=\\sqrt{2^2+${vectorCoefficient}^2+3^2}=\\sqrt{${vectorSpeedSquared}}\\)`], explanation: "導関数は速度ベクトル、その大きさが速さ。" }),
+        examQuestion(id, 2, 1, 6, {
+          topic: "vector-functions",
+          genre: "速度と加速度",
+          difficulty: 2,
+          format: "text",
+          prompt: "\\(\\mathbf r'(t)\\)、\\(\\mathbf r''(t)\\) と、それぞれの \\(t=1\\) における値を求めよ。",
+          answer:
+            "\\(\\mathbf r'(t)=(2t," + vectorCoefficient + ",3t^2),\\ \\mathbf r'(1)=(2," + vectorCoefficient
+            + ",3)\\)、\\(\\mathbf r''(t)=(2,0,6t),\\ \\mathbf r''(1)=(2,0,6)\\)",
+          accepted: [
+            "(2t," + vectorCoefficient + ",3t^2),(2," + vectorCoefficient + ",3),(2,0,6t),(2,0,6)",
+          ],
+          keywords: ["2t", String(vectorCoefficient), "3t", "6t", "2", "6"],
+          minKeywords: 5,
+          formula: "\\mathbf v=\\mathbf r'(t),\\qquad\\mathbf a=\\mathbf r''(t)",
+          steps: [
+            "各成分を1回微分して \\(\\mathbf r'(t)=(2t," + vectorCoefficient + ",3t^2)\\)",
+            "さらに微分して \\(\\mathbf r''(t)=(2,0,6t)\\)",
+            "\\(t=1\\) を代入して \\(\\mathbf r'(1)=(2," + vectorCoefficient + ",3)\\)、\\(\\mathbf r''(1)=(2,0,6)\\)",
+          ],
+          explanation: "ベクトル関数は成分ごとに微分する。1回微分が速度、2回微分が加速度で、次問では速度ベクトルを再利用する。",
+        }),
+        examQuestion(id, 2, 2, 6, {
+          topic: "vector-functions",
+          genre: "速さと内積の微分",
+          difficulty: 3,
+          format: "text",
+          prompt: "前問を用い、\\(t=1\\) の速さと \\(\\left.\\frac{d}{dt}(\\mathbf r\\cdot\\mathbf r)\\right|_{t=1}\\) を求めよ。",
+          answer:
+            "速さ \\(\\sqrt{" + vectorSpeedSquared + "}\\)、\\(\\left.\\frac{d}{dt}(\\mathbf r\\cdot\\mathbf r)\\right|_{t=1}="
+            + squaredDistanceDerivative + "\\)",
+          accepted: ["sqrt(" + vectorSpeedSquared + ")," + squaredDistanceDerivative],
+          keywords: [String(vectorSpeedSquared), String(squaredDistanceDerivative)],
+          minKeywords: 2,
+          formula: "\\frac{d}{dt}(\\mathbf r\\cdot\\mathbf r)=2\\mathbf r\\cdot\\mathbf r'",
+          steps: [
+            "前問より \\(\\mathbf r'(1)=(2," + vectorCoefficient + ",3)\\) なので、速さは \\(\\sqrt{" + vectorSpeedSquared + "}\\)",
+            "\\(\\mathbf r(1)=(1," + vectorCoefficient + ",1)\\)",
+            "\\(2\\mathbf r(1)\\cdot\\mathbf r'(1)=2(2+" + vectorCoefficient ** 2 + "+3)=" + squaredDistanceDerivative + "\\)",
+          ],
+          explanation: "速さは速度の大きさである。内積の微分は積の微分則を使うと、成分を展開してから微分するより短く処理できる。",
+        }),
       ],
     },
     {
@@ -393,11 +479,70 @@ function buildAppliedMathExam(variant: number): AppliedMathExpectedExam {
       topic: "curves",
       topicIds: ["curves", "line-integrals"],
       points: 14,
-      context: `\\(\\mathbf r(t)=(${helixA}\\cos t,${helixA}\\sin t,${helixB}t),\\ 0\\le t\\le2\\pi\\) とする。`,
+      context:
+        "\\(\\mathbf r(t)=(" + helixA + "\\cos t," + helixA + "\\sin t," + helixB
+        + "t),\\ 0\\le t\\le2\\pi\\) が表す曲線Cを考える。",
       questions: [
-        examQuestion(id, 3, 1, 4, { topic: "curves", genre: "単位接ベクトル", difficulty: 2, format: "text", prompt: "単位接ベクトル \\(\\mathbf T(t)\\) を求めよ。", answer: `\\(\\mathbf T(t)=\\frac{1}{\\sqrt{${helixSpeedSquared}}}(-${helixA}\\sin t,${helixA}\\cos t,${helixB})\\)`, accepted: [`(-${helixA}sin t,${helixA}cos t,${helixB})/sqrt(${helixSpeedSquared})`], keywords: [String(helixA), String(helixB), String(helixSpeedSquared)], minKeywords: 3, formula: "\\mathbf T=\\frac{\\mathbf r'}{|\\mathbf r'|}", steps: [`\\(\\mathbf r'=(-${helixA}\\sin t,${helixA}\\cos t,${helixB})\\)`, `\\(|\\mathbf r'|=\\sqrt{${helixA}^2(\\sin^2t+\\cos^2t)+${helixB}^2}=\\sqrt{${helixSpeedSquared}}\\)`, "接ベクトルをその大きさで割る"], explanation: "正規化して長さ1にする。" }),
-        examQuestion(id, 3, 2, 6, { topic: "curves", genre: "弧長", difficulty: 2, format: "text", prompt: "曲線の長さを求めよ。", answer: `\\(2\\pi\\sqrt{${helixSpeedSquared}}\\)`, accepted: [`2pi sqrt(${helixSpeedSquared})`, `2π√${helixSpeedSquared}`], keywords: ["2", String(helixSpeedSquared)], minKeywords: 2, formula: "s=\\int_0^{2\\pi}|\\mathbf r'(t)|\\,dt", steps: [`速さは一定で \\(\\sqrt{${helixSpeedSquared}}\\)`, `\\(s=\\int_0^{2\\pi}\\sqrt{${helixSpeedSquared}}\\,dt=2\\pi\\sqrt{${helixSpeedSquared}}\\)`], explanation: "速さをパラメータ区間で積分する。" }),
-        examQuestion(id, 3, 3, 4, { topic: "line-integrals", genre: "スカラー線積分", difficulty: 2, format: "number", prompt: `曲線 \\(\\mathbf c(t)=(${lineRadius}\\cos t,${lineRadius}\\sin t,0)\\), \\(0\\le t\\le\\pi\\) に沿う \\(\\int_C(x^2+y^2)\\,ds\\) を \\(\\pi\\) の係数で答えよ。`, answer: `\\(${lineIntegralCoefficient}\\pi\\)（係数${lineIntegralCoefficient}）`, numericAnswer: lineIntegralCoefficient, formula: "\\int_C\\phi\\,ds=\\int_a^b\\phi(\\mathbf c(t))|\\mathbf c'(t)|dt", steps: [`\\(x^2+y^2=${lineRadius ** 2}\\)`, `\\(|\\mathbf c'(t)|=${lineRadius}\\)`, `\\(\\int_0^\\pi ${lineRadius ** 3}\\,dt=${lineIntegralCoefficient}\\pi\\)`], explanation: "スカラー場の値に曲線の速さを掛けて積分する。入力欄にはπの係数を入れる。" }),
+        examQuestion(id, 3, 1, 4, {
+          topic: "curves",
+          genre: "単位接ベクトル",
+          difficulty: 2,
+          format: "text",
+          prompt: "\\(\\mathbf r'(t)\\)、\\(|\\mathbf r'(t)|\\) と単位接ベクトル \\(\\mathbf T(t)\\) を求めよ。",
+          answer:
+            "\\(\\mathbf r'=(-" + helixA + "\\sin t," + helixA + "\\cos t," + helixB
+            + ")\\)、\\(|\\mathbf r'|=\\sqrt{" + helixSpeedSquared + "}\\)、\\(\\mathbf T=\\frac{1}{\\sqrt{"
+            + helixSpeedSquared + "}}(-" + helixA + "\\sin t," + helixA + "\\cos t," + helixB + ")\\)",
+          accepted: [
+            "(-" + helixA + "sin t," + helixA + "cos t," + helixB + "),sqrt(" + helixSpeedSquared + ")",
+          ],
+          keywords: [String(helixA), String(helixB), String(helixSpeedSquared)],
+          minKeywords: 3,
+          formula: "\\mathbf T(t)=\\frac{\\mathbf r'(t)}{|\\mathbf r'(t)|}",
+          steps: [
+            "成分ごとに微分して \\(\\mathbf r'=(-" + helixA + "\\sin t," + helixA + "\\cos t," + helixB + ")\\)",
+            "\\(\\sin^2t+\\cos^2t=1\\) より \\(|\\mathbf r'|=\\sqrt{" + helixSpeedSquared + "}\\)",
+            "接ベクトルを速さで割って単位接ベクトルにする",
+          ],
+          explanation: "らせんでは速さが一定になる。ここで得た速さを、続く弧長と線積分でも使う。",
+        }),
+        examQuestion(id, 3, 2, 6, {
+          topic: "curves",
+          genre: "弧長",
+          difficulty: 2,
+          format: "text",
+          prompt: "前問の速さを用いて、曲線Cの長さを求めよ。",
+          answer: "\\(2\\pi\\sqrt{" + helixSpeedSquared + "}\\)",
+          accepted: ["2pi sqrt(" + helixSpeedSquared + ")", "2π√" + helixSpeedSquared],
+          keywords: ["2", String(helixSpeedSquared)],
+          minKeywords: 2,
+          formula: "s=\\int_0^{2\\pi}|\\mathbf r'(t)|\\,dt",
+          steps: [
+            "前問より速さは一定で \\(\\sqrt{" + helixSpeedSquared + "}\\)",
+            "\\(s=\\int_0^{2\\pi}\\sqrt{" + helixSpeedSquared + "}\\,dt\\)",
+            "\\(s=2\\pi\\sqrt{" + helixSpeedSquared + "}\\)",
+          ],
+          explanation: "曲線の長さは速さの積分である。定数を積分区間の長さ \\(2\\pi\\) 倍すればよい。",
+        }),
+        examQuestion(id, 3, 3, 4, {
+          topic: "line-integrals",
+          genre: "スカラー線積分",
+          difficulty: 3,
+          format: "text",
+          prompt: "同じ曲線Cに沿う \\(\\int_C(x^2+y^2)\\,ds\\) を、前2問の結果を使って求めよ。",
+          answer: "\\(" + helixScalarIntegralCoefficient + "\\pi\\sqrt{" + helixSpeedSquared + "}\\)",
+          accepted: [helixScalarIntegralCoefficient + "pi sqrt(" + helixSpeedSquared + ")"],
+          keywords: [String(helixScalarIntegralCoefficient), String(helixSpeedSquared)],
+          minKeywords: 2,
+          formula: "\\int_C\\phi\\,ds=\\int_a^b\\phi(\\mathbf r(t))|\\mathbf r'(t)|\\,dt",
+          steps: [
+            "曲線上では \\(x^2+y^2=" + helixA ** 2 + "(\\cos^2t+\\sin^2t)=" + helixA ** 2 + "\\)",
+            "前問までより \\(ds=\\sqrt{" + helixSpeedSquared + "}\\,dt\\)",
+            "\\(\\int_0^{2\\pi}" + helixA ** 2 + "\\sqrt{" + helixSpeedSquared + "}\\,dt="
+              + helixScalarIntegralCoefficient + "\\pi\\sqrt{" + helixSpeedSquared + "}\\)",
+          ],
+          explanation: "スカラー場の値と曲線の速さを同時に代入する。別の曲線を解くのではなく、接ベクトルと弧長の計算を線積分へ接続する構成である。",
+        }),
       ],
     },
     {
@@ -406,57 +551,270 @@ function buildAppliedMathExam(variant: number): AppliedMathExpectedExam {
       topic: "surfaces",
       topicIds: ["surfaces", "surface-integrals"],
       points: 14,
-      context: `\\(\\mathbf r(u,v)=(u,v,${surfaceP}u${signed(-surfaceQ)}v),\\ 0\\le u\\le${surfaceUSpan},\\ 0\\le v\\le${surfaceVSpan}\\) とする。`,
+      context:
+        "\\(\\mathbf r(u,v)=(u,v," + surfaceP + "u-" + surfaceQ + "v),\\ 0\\le u\\le"
+        + surfaceUSpan + ",\\ 0\\le v\\le" + surfaceVSpan + "\\) が表す曲面Sを考える。",
       questions: [
-        examQuestion(id, 4, 1, 4, { topic: "surfaces", genre: "単位法線", difficulty: 2, format: "text", prompt: "\\(\\mathbf r_u\\times\\mathbf r_v\\) と単位法線の1つを求めよ。", answer: `\\(\\mathbf r_u\\times\\mathbf r_v=(-${surfaceP},${surfaceQ},1),\\ \\mathbf n=\\frac{(-${surfaceP},${surfaceQ},1)}{\\sqrt{${surfaceNormSquared}}}\\)`, accepted: [`(-${surfaceP},${surfaceQ},1)/sqrt(${surfaceNormSquared})`], keywords: [`-${surfaceP}`, String(surfaceQ), String(surfaceNormSquared)], minKeywords: 3, formula: "\\mathbf n=\\pm\\frac{\\mathbf r_u\\times\\mathbf r_v}{|\\mathbf r_u\\times\\mathbf r_v|}", steps: [`\\(\\mathbf r_u=(1,0,${surfaceP}),\\ \\mathbf r_v=(0,1,-${surfaceQ})\\)`, `\\(\\mathbf r_u\\times\\mathbf r_v=(-${surfaceP},${surfaceQ},1)\\)`, `大きさ \\(\\sqrt{${surfaceNormSquared}}\\) で割る`], explanation: "逆向きの単位法線も正しい。" }),
-        examQuestion(id, 4, 2, 6, { topic: "surfaces", genre: "幾何学的表面積", difficulty: 3, format: "text", prompt: "この曲面の幾何学的表面積を求めよ。", answer: `\\(${surfaceDomainArea}\\sqrt{${surfaceNormSquared}}\\)`, accepted: [`${surfaceDomainArea}sqrt(${surfaceNormSquared})`, `${surfaceDomainArea}√${surfaceNormSquared}`], keywords: [String(surfaceDomainArea), String(surfaceNormSquared)], minKeywords: 2, formula: "S=\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv", steps: [`\\(|\\mathbf r_u\\times\\mathbf r_v|=\\sqrt{${surfaceNormSquared}}\\)`, `パラメータ領域の面積は \\(${surfaceUSpan}\\times${surfaceVSpan}=${surfaceDomainArea}\\)`, `\\(S=${surfaceDomainArea}\\sqrt{${surfaceNormSquared}}\\)`], explanation: "これは曲面そのものの面積であり、流束面積分ではない。" }),
-        examQuestion(id, 4, 3, 4, { topic: "surface-integrals", genre: "スカラー面積分", difficulty: 2, format: "number", prompt: `半径 \\(${scalarSurfaceRadius}\\)、高さ \\(${scalarSurfaceHeight}\\) の円柱側面上で \\(\\phi=x^2\\) を面積分した値を \\(\\pi\\) の係数で答えよ。`, answer: `\\(${scalarSurfaceCoefficient}\\pi\\)（係数${scalarSurfaceCoefficient}）`, numericAnswer: scalarSurfaceCoefficient, formula: "\\int_S\\phi\\,dS=\\iint_D\\phi(\\mathbf r)|\\mathbf r_u\\times\\mathbf r_v|dudv", steps: [`円柱側面では \\(|\\mathbf r_u\\times\\mathbf r_v|=${scalarSurfaceRadius}\\)`, `\\(x^2=${scalarSurfaceRadius ** 2}\\cos^2u\\)`, `積分値は \\(\\pi r^3h=${scalarSurfaceCoefficient}\\pi\\)`], explanation: "追加基本問題の円柱側面のスカラー面積分を、半径と高さを変えて出題している。" }),
+        examQuestion(id, 4, 1, 4, {
+          topic: "surfaces",
+          genre: "偏微分ベクトルと単位法線",
+          difficulty: 2,
+          format: "text",
+          prompt: "\\(\\mathbf r_u\\)、\\(\\mathbf r_v\\)、\\(\\mathbf r_u\\times\\mathbf r_v\\) と、z成分が正の単位法線を求めよ。",
+          answer:
+            "\\(\\mathbf r_u=(1,0," + surfaceP + ")\\)、\\(\\mathbf r_v=(0,1,-" + surfaceQ
+            + ")\\)、\\(\\mathbf r_u\\times\\mathbf r_v=(-" + surfaceP + "," + surfaceQ
+            + ",1)\\)、\\(\\mathbf n=\\frac{1}{\\sqrt{" + surfaceNormSquared + "}}(-"
+            + surfaceP + "," + surfaceQ + ",1)\\)",
+          accepted: [
+            "(1,0," + surfaceP + "),(0,1,-" + surfaceQ + "),(-" + surfaceP + "," + surfaceQ
+              + ",1)/sqrt(" + surfaceNormSquared + ")",
+          ],
+          keywords: [String(surfaceP), String(surfaceQ), String(surfaceNormSquared)],
+          minKeywords: 3,
+          formula: "\\mathbf n=\\frac{\\mathbf r_u\\times\\mathbf r_v}{|\\mathbf r_u\\times\\mathbf r_v|}",
+          steps: [
+            "u、vで偏微分して \\(\\mathbf r_u=(1,0," + surfaceP + ")\\)、\\(\\mathbf r_v=(0,1,-" + surfaceQ + ")\\)",
+            "外積は \\(\\mathbf r_u\\times\\mathbf r_v=(-" + surfaceP + "," + surfaceQ + ",1)\\)",
+            "大きさ \\(\\sqrt{" + surfaceNormSquared + "}\\) で割り、z成分が正の向きを選ぶ",
+          ],
+          explanation: "曲面の接ベクトル2本の外積が法線と面積要素を同時に与える。後の2問でも同じ外積を使う。",
+        }),
+        examQuestion(id, 4, 2, 6, {
+          topic: "surfaces",
+          genre: "幾何学的表面積",
+          difficulty: 2,
+          format: "text",
+          prompt: "前問の外積を用いて、曲面Sの幾何学的表面積を求めよ。",
+          answer: "\\(" + surfaceDomainArea + "\\sqrt{" + surfaceNormSquared + "}\\)",
+          accepted: [surfaceDomainArea + "sqrt(" + surfaceNormSquared + ")", surfaceDomainArea + "√" + surfaceNormSquared],
+          keywords: [String(surfaceDomainArea), String(surfaceNormSquared)],
+          minKeywords: 2,
+          formula: "S=\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv",
+          steps: [
+            "前問より \\(|\\mathbf r_u\\times\\mathbf r_v|=\\sqrt{" + surfaceNormSquared + "}\\)",
+            "uv平面上の長方形の面積は \\(" + surfaceUSpan + "\\times" + surfaceVSpan + "=" + surfaceDomainArea + "\\)",
+            "\\(S=" + surfaceDomainArea + "\\sqrt{" + surfaceNormSquared + "}\\)",
+          ],
+          explanation: "外積の大きさが一定なので、パラメータ領域の面積との積になる。これは投影面積ではなく曲面そのものの面積である。",
+        }),
+        examQuestion(id, 4, 3, 4, {
+          topic: "surface-integrals",
+          genre: "流束面積分",
+          difficulty: 3,
+          format: "number",
+          prompt: "同じ曲面S上で \\(\\mathbf F=(z,0,-4x)\\) とする。前問の向き付き外積を使い、z成分が正の向きの流束を求めよ。",
+          answer: String(surfaceFlux),
+          numericAnswer: surfaceFlux,
+          formula: "\\int_S\\mathbf F\\cdot\\mathbf n\\,dS=\\iint_D\\mathbf F(\\mathbf r)\\cdot(\\mathbf r_u\\times\\mathbf r_v)\\,du\\,dv",
+          steps: [
+            "\\(\\mathbf F(\\mathbf r)=(" + surfaceP + "u-" + surfaceQ + "v,0,-4u)\\)",
+            "前問の外積との内積は \\(-(" + surfaceP ** 2 + "+4)u+" + surfaceP * surfaceQ + "v\\)",
+            "\\(\\int_0^{" + surfaceVSpan + "}\\int_0^{" + surfaceUSpan + "}[-(" + surfaceP ** 2
+              + "+4)u+" + surfaceP * surfaceQ + "v]\\,du\\,dv=" + surfaceFlux + "\\)",
+          ],
+          explanation: "単位法線と面積要素を別々に作らず、向き付き外積をそのまま使う。前2問の法線計算を流束へつなげる範囲内の面積分である。",
+        }),
       ],
     },
     {
       number: 5,
-      title: "勾配・方向微分・勾配定理",
+      title: "勾配・方向微分・勾配場の線積分",
       topic: "gradient",
       topicIds: ["gradient", "line-integrals"],
       points: 14,
-      context: `\\(\\phi(x,y,z)=x^2+${gradientC}y^2+z^2\\)、点 \\(P=(1,1,1)\\)、単位ベクトル \\(\\mathbf e=(\\frac{1}{\\sqrt2},\\frac{1}{\\sqrt2},0)\\) とする。`,
+      context:
+        "\\(\\phi(x,y,z)=x^2+" + gradientC + "y^2+z^2\\)、\\(P=(1,1,1)\\)、\\(\\mathbf d=(1,1,0)\\) とする。",
       questions: [
-        examQuestion(id, 5, 1, 4, { topic: "gradient", genre: "勾配", difficulty: 1, format: "text", prompt: "\\(\\nabla\\phi\\) と \\(\\nabla\\phi(P)\\) を求めよ。", answer: `\\(\\nabla\\phi=(2x,${2 * gradientC}y,2z),\\ \\nabla\\phi(P)=(${gradientAtPoint.join(",")})\\)`, accepted: [`(2x,${2 * gradientC}y,2z),(${gradientAtPoint.join(",")})`], keywords: ["2x", `${2 * gradientC}y`, "2z"], minKeywords: 3, formula: "\\nabla\\phi=(\\phi_x,\\phi_y,\\phi_z)", steps: ["x,y,zで偏微分する", `\\(\\nabla\\phi=(2x,${2 * gradientC}y,2z)\\)`, `Pを代入して \\((${gradientAtPoint.join(",")})\\)`], explanation: "勾配はスカラー場の各偏微分を並べたベクトル。" }),
-        examQuestion(id, 5, 2, 3, { topic: "gradient", genre: "方向微分", difficulty: 2, format: "text", prompt: "\\(P\\) における \\(\\mathbf e\\) 方向の方向微分を求めよ。", answer: `\\(\\frac{${directionalNumerator}}{\\sqrt2}=${directionalNumerator / 2}\\sqrt2\\)`, accepted: [`${directionalNumerator}/sqrt2`, `${directionalNumerator / 2}sqrt2`], keywords: [String(directionalNumerator)], minKeywords: 1, formula: "D_{\\mathbf e}\\phi=\\nabla\\phi\\cdot\\mathbf e", steps: [`\\(D_{\\mathbf e}\\phi=(${gradientAtPoint.join(",")})\\cdot(\\frac{1}{\\sqrt2},\\frac{1}{\\sqrt2},0)\\)`, `\\(=\\frac{${directionalNumerator}}{\\sqrt2}=${directionalNumerator / 2}\\sqrt2\\)`], explanation: "方向ベクトルが単位ベクトルであることを確認して内積を取る。" }),
-        examQuestion(id, 5, 3, 3, { topic: "gradient", genre: "最大方向微分", difficulty: 2, format: "text", prompt: "\\(P\\) における方向微分の最大値と、その方向の単位ベクトルを求めよ。", answer: `最大値 \\(\\sqrt{${gradientNormSquared}}\\)、方向 \\(\\frac{(${gradientAtPoint.join(",")})}{\\sqrt{${gradientNormSquared}}}\\)`, accepted: [`sqrt(${gradientNormSquared}),(${gradientAtPoint.join(",")})/sqrt(${gradientNormSquared})`], keywords: [String(gradientNormSquared), ...gradientAtPoint.map(String)], minKeywords: 3, formula: "\\max D_{\\mathbf e}\\phi=|\\nabla\\phi|", steps: [`\\(|\\nabla\\phi(P)|=\\sqrt{${gradientNormSquared}}\\)`, `最大となる方向は勾配と同方向なので \\(\\frac{\\nabla\\phi(P)}{|\\nabla\\phi(P)|}\\)`], explanation: "方向微分は勾配と方向単位ベクトルの内積で、両者が同方向のとき最大。" }),
-        examQuestion(id, 5, 4, 4, { topic: "line-integrals", genre: "勾配定理", difficulty: 2, format: "number", prompt: `\\(\\phi=x^2+${gradientC}y+z\\) とする。A=(0,0,0)からB=(1,1,0)へ至る任意の曲線Cについて \\(\\int_C\\nabla\\phi\\cdot d\\mathbf r\\) を求めよ。`, answer: String(potentialIntegral), numericAnswer: potentialIntegral, formula: "\\int_C\\nabla\\phi\\cdot d\\mathbf r=\\phi(B)-\\phi(A)", steps: [`\\(\\phi(B)=1+${gradientC}=${potentialIntegral}\\)`, "\\(\\phi(A)=0\\)", `したがって積分値は \\(${potentialIntegral}\\)`], explanation: "勾配場の線積分は経路によらないため、複雑な曲線を直接パラメータ化する必要はない。" }),
+        examQuestion(id, 5, 1, 4, {
+          topic: "gradient",
+          genre: "勾配",
+          difficulty: 2,
+          format: "text",
+          prompt: "\\(\\nabla\\phi\\) と \\(\\nabla\\phi(P)\\) を求めよ。",
+          answer:
+            "\\(\\nabla\\phi=(2x," + 2 * gradientC + "y,2z)\\)、\\(\\nabla\\phi(P)=("
+            + gradientAtPoint.join(",") + ")\\)",
+          accepted: ["(2x," + 2 * gradientC + "y,2z),(" + gradientAtPoint.join(",") + ")"],
+          keywords: ["2x", 2 * gradientC + "y", "2z"],
+          minKeywords: 3,
+          formula: "\\nabla\\phi=(\\phi_x,\\phi_y,\\phi_z)",
+          steps: [
+            "x、y、zで偏微分する",
+            "\\(\\nabla\\phi=(2x," + 2 * gradientC + "y,2z)\\)",
+            "点Pを代入して \\(\\nabla\\phi(P)=(" + gradientAtPoint.join(",") + ")\\)",
+          ],
+          explanation: "勾配は各座標方向の偏微分を並べたベクトルで、方向微分と最大増加方向の共通の出発点になる。",
+        }),
+        examQuestion(id, 5, 2, 3, {
+          topic: "gradient",
+          genre: "方向微分",
+          difficulty: 2,
+          format: "text",
+          prompt: "前問を用い、点Pにおける \\(\\mathbf d\\) 方向の方向微分を求めよ。ただし、方向ベクトルを先に単位化すること。",
+          answer:
+            "\\(\\mathbf e=\\frac{1}{\\sqrt2}(1,1,0)\\)、\\(D_{\\mathbf e}\\phi(P)=\\frac{"
+            + directionalNumerator + "}{\\sqrt2}\\)",
+          accepted: ["(1,1,0)/sqrt2," + directionalNumerator + "/sqrt2"],
+          keywords: [String(directionalNumerator), "sqrt2"],
+          minKeywords: 2,
+          formula: "D_{\\mathbf e}\\phi=\\nabla\\phi\\cdot\\mathbf e",
+          steps: [
+            "\\(|\\mathbf d|=\\sqrt2\\) なので \\(\\mathbf e=\\frac{1}{\\sqrt2}(1,1,0)\\)",
+            "前問の \\(\\nabla\\phi(P)=(" + gradientAtPoint.join(",") + ")\\) と内積を取る",
+            "\\(D_{\\mathbf e}\\phi(P)=\\frac{" + directionalNumerator + "}{\\sqrt2}\\)",
+          ],
+          explanation: "方向微分の式へ入れるのは単位ベクトルである。与えられた方向をそのまま使うと \\(\\sqrt2\\) 倍ずれる。",
+        }),
+        examQuestion(id, 5, 3, 3, {
+          topic: "gradient",
+          genre: "最大方向微分",
+          difficulty: 3,
+          format: "text",
+          prompt: "点Pで方向微分が最大となる単位方向と、その最大値を求めよ。",
+          answer:
+            "方向 \\(\\frac{1}{\\sqrt{" + gradientNormSquared + "}}(" + gradientAtPoint.join(",")
+            + ")\\)、最大値 \\(\\sqrt{" + gradientNormSquared + "}\\)",
+          accepted: [
+            "(" + gradientAtPoint.join(",") + ")/sqrt(" + gradientNormSquared + "),sqrt(" + gradientNormSquared + ")",
+          ],
+          keywords: [String(gradientNormSquared), ...gradientAtPoint.map(String)],
+          minKeywords: 4,
+          formula: "\\max_{|\\mathbf e|=1}D_{\\mathbf e}\\phi=|\\nabla\\phi|",
+          steps: [
+            "方向微分は \\(\\nabla\\phi(P)\\cdot\\mathbf e\\) なので、内積は同方向で最大になる",
+            "\\(|\\nabla\\phi(P)|=\\sqrt{" + gradientNormSquared + "}\\)",
+            "勾配を正規化して \\(\\mathbf e_{\\max}=\\frac{1}{\\sqrt{" + gradientNormSquared + "}}("
+              + gradientAtPoint.join(",") + ")\\)",
+          ],
+          explanation: "コーシー・シュワルツの等号成立条件により、勾配と同方向の単位ベクトルで方向微分が最大になる。",
+        }),
+        examQuestion(id, 5, 4, 4, {
+          topic: "line-integrals",
+          genre: "勾配場の線積分",
+          difficulty: 3,
+          format: "number",
+          prompt:
+            "曲線 \\(C:\\mathbf c(s)=(s,s,s),\\ 0\\le s\\le1\\) に沿う \\(\\int_C\\nabla\\phi\\cdot d\\mathbf r\\) を直接計算し、端点差とも一致することを示せ。",
+          answer: String(gradientLineIntegral),
+          numericAnswer: gradientLineIntegral,
+          formula: "\\int_C\\nabla\\phi\\cdot d\\mathbf r=\\int_0^1\\nabla\\phi(\\mathbf c(s))\\cdot\\mathbf c'(s)\\,ds",
+          steps: [
+            "\\(\\nabla\\phi(\\mathbf c(s))=(2s," + 2 * gradientC + "s,2s)\\)、\\(\\mathbf c'(s)=(1,1,1)\\)",
+            "内積は \\(" + 2 * (gradientC + 2) + "s\\) なので、\\(\\int_0^1" + 2 * (gradientC + 2) + "s\\,ds="
+              + gradientLineIntegral + "\\)",
+            "\\(\\phi(1,1,1)-\\phi(0,0,0)=" + gradientLineIntegral + "\\) でも同じ値になる",
+          ],
+          explanation: "直接のパラメータ積分と勾配定理を両方使い、計算を相互確認する。経路によらず端点だけで決まることも確認できる。",
+        }),
       ],
     },
     {
       number: 6,
-      title: "発散・回転・流束・グリーン",
+      title: "発散・回転・線積分・Greenの定理",
       topic: "divergence-curl",
-      topicIds: ["divergence-curl", "surface-integrals", "green-theorem"],
+      topicIds: ["divergence-curl", "line-integrals", "green-theorem"],
       points: 12,
-      context: `\\(\\mathbf F(x,y,z)=(${fieldA}x-${fieldB}y,${fieldB}x+${fieldA}y,${fieldC}z)\\) とする。`,
+      context:
+        "\\(\\mathbf F=(" + fieldA + "x-" + fieldB + "y," + fieldB + "x+" + fieldA + "y,"
+        + fieldC + "z)\\) とし、xy成分を \\(P=" + fieldA + "x-" + fieldB + "y\\)、\\(Q="
+        + fieldB + "x+" + fieldA + "y\\) と書く。",
       questions: [
-        examQuestion(id, 6, 1, 3, { topic: "divergence-curl", genre: "発散", difficulty: 1, format: "number", prompt: "\\(\\nabla\\cdot\\mathbf F\\) を求めよ。", answer: String(divergence), numericAnswer: divergence, formula: "\\nabla\\cdot\\mathbf F=\\partial_xF_x+\\partial_yF_y+\\partial_zF_z", steps: [`\\(\\partial_xF_x=${fieldA},\\ \\partial_yF_y=${fieldA},\\ \\partial_zF_z=${fieldC}\\)`, `合計 \\(${fieldA}+${fieldA}+${fieldC}=${divergence}\\)`], explanation: "各成分を対応する座標で偏微分して足す。" }),
-        examQuestion(id, 6, 2, 3, { topic: "divergence-curl", genre: "回転", difficulty: 2, format: "text", prompt: "\\(\\nabla\\times\\mathbf F\\) を求めよ。", answer: `\\((0,0,${curlZ})\\)`, accepted: [`(0,0,${curlZ})`, `0,0,${curlZ}`], keywords: ["0", String(curlZ)], minKeywords: 2, formula: "\\nabla\\times\\mathbf F=(\\partial_yF_z-\\partial_zF_y,\\partial_zF_x-\\partial_xF_z,\\partial_xF_y-\\partial_yF_x)", steps: ["x,y成分は0", `z成分は \\(\\partial_x(${fieldB}x+${fieldA}y)-\\partial_y(${fieldA}x-${fieldB}y)=${fieldB}-(-${fieldB})=${curlZ}\\)`], explanation: "回転のz成分の引き算の順序に注意する。" }),
-        examQuestion(id, 6, 3, 3, { topic: "surface-integrals", genre: "流束面積分", difficulty: 3, format: "number", prompt: `\\(\\mathbf r(u,v)=(u,v,\\sqrt{${fluxRadius ** 2}-u^2})\\), \\(0\\le u\\le${fluxRadius},0\\le v\\le${fluxHeight}\\)、\\(\\mathbf a=(${fluxFieldCoefficient}z,0,-x)\\) とする。z成分が正の法線方向の流束を求めよ。`, answer: String(fluxValue), numericAnswer: fluxValue, formula: "\\int_S\\mathbf a\\cdot\\mathbf n\\,dS=\\iint_D\\mathbf a(\\mathbf r)\\cdot(\\mathbf r_u\\times\\mathbf r_v)dudv", steps: [`\\(\\mathbf r_u\\times\\mathbf r_v=(\\frac{u}{\\sqrt{${fluxRadius ** 2}-u^2}},0,1)\\)`, `内積は \\((${fluxFieldCoefficient}-1)u=${fluxFieldCoefficient - 1}u\\)`, `\\(\\int_0^{${fluxHeight}}\\int_0^{${fluxRadius}}${fluxFieldCoefficient - 1}u\\,du\\,dv=${fluxValue}\\)`], explanation: "法線方向を外積の向きで合わせ、単位法線と面積要素を向き付き外積へまとめる。" }),
-        examQuestion(id, 6, 4, 3, { topic: "green-theorem", genre: "グリーンの定理", difficulty: 2, format: "number", prompt: `半径 \\(${greenRadius}\\) の円の境界Cを反時計回りに一周するとき、\\(\\oint_C\\{(x-y)dx+(x+y)dy\\}\\) を \\(\\pi\\) の係数で答えよ。`, answer: `\\(${greenCoefficient}\\pi\\)（係数${greenCoefficient}）`, numericAnswer: greenCoefficient, formula: "\\oint_C(Pdx+Qdy)=\\iint_D(Q_x-P_y)dA", steps: ["\\(Q_x-P_y=1-(-1)=2\\)", `円の面積は \\(${greenRadius ** 2}\\pi\\)`, `積分値は \\(${greenCoefficient}\\pi\\)`], explanation: "正向きの閉曲線なのでグリーンの定理をそのまま使い、πの係数を入力する。" }),
+        examQuestion(id, 6, 1, 3, {
+          topic: "divergence-curl",
+          genre: "発散",
+          difficulty: 2,
+          format: "number",
+          prompt: "\\(\\nabla\\cdot\\mathbf F\\) を求め、各偏微分の和を示せ。",
+          answer: String(divergence),
+          numericAnswer: divergence,
+          formula: "\\nabla\\cdot\\mathbf F=\\partial_xF_x+\\partial_yF_y+\\partial_zF_z",
+          steps: [
+            "\\(\\partial_xF_x=" + fieldA + "\\)",
+            "\\(\\partial_yF_y=" + fieldA + "\\)、\\(\\partial_zF_z=" + fieldC + "\\)",
+            "\\(\\nabla\\cdot\\mathbf F=" + fieldA + "+" + fieldA + "+" + fieldC + "=" + divergence + "\\)",
+          ],
+          explanation: "発散では各成分を対応する座標で偏微分して加える。交差する変数の項はこの計算には入らない。",
+        }),
+        examQuestion(id, 6, 2, 3, {
+          topic: "divergence-curl",
+          genre: "回転",
+          difficulty: 2,
+          format: "text",
+          prompt: "\\(\\nabla\\times\\mathbf F\\) を求め、どの軸まわりの回転成分が残るか答えよ。",
+          answer: "\\((0,0," + curlZ + ")\\)、z軸まわり",
+          accepted: ["(0,0," + curlZ + "),z"],
+          keywords: ["0", String(curlZ), "z"],
+          minKeywords: 3,
+          formula: "\\nabla\\times\\mathbf F=(\\partial_yF_z-\\partial_zF_y,\\ \\partial_zF_x-\\partial_xF_z,\\ \\partial_xF_y-\\partial_yF_x)",
+          steps: [
+            "x成分とy成分は、zとの交差偏微分がすべて0なので0",
+            "z成分は \\(\\partial_xQ-\\partial_yP=" + fieldB + "-(-" + fieldB + ")=" + curlZ + "\\)",
+            "したがって \\(\\nabla\\times\\mathbf F=(0,0," + curlZ + ")\\) で、z軸まわりの成分が残る",
+          ],
+          explanation: "回転のz成分は平面場の \\(Q_x-P_y\\) と一致し、後のGreenの定理へそのままつながる。",
+        }),
+        examQuestion(id, 6, 3, 3, {
+          topic: "line-integrals",
+          genre: "閉曲線の線積分",
+          difficulty: 3,
+          format: "number",
+          prompt:
+            "半径 \\(" + greenRadius + "\\) の円Cを反時計回りに \\(\\mathbf c(t)=(" + greenRadius
+            + "\\cos t," + greenRadius + "\\sin t)\\)、\\(0\\le t\\le2\\pi\\) と表す。\\(\\oint_C(Pdx+Qdy)\\) を直接計算し、\\(\\pi\\) の係数で答えよ。",
+          answer: "\\(" + circulationCoefficient + "\\pi\\)（係数" + circulationCoefficient + "）",
+          numericAnswer: circulationCoefficient,
+          formula: "\\int_C(P\\,dx+Q\\,dy)=\\int_a^b\\{P(\\mathbf c(t))x'(t)+Q(\\mathbf c(t))y'(t)\\}\\,dt",
+          steps: [
+            "\\(dx=-" + greenRadius + "\\sin t\\,dt\\)、\\(dy=" + greenRadius + "\\cos t\\,dt\\)",
+            "代入すると " + fieldA + " を含む項は打ち消し合い、被積分関数は \\("
+              + fieldB * greenRadius ** 2 + "\\)",
+            "\\(\\int_0^{2\\pi}" + fieldB * greenRadius ** 2 + "\\,dt=" + circulationCoefficient + "\\pi\\)",
+          ],
+          explanation: "閉曲線を直接パラメータ化する計算である。回転に寄与する係数だけが残り、放射状の成分は一周で相殺される。",
+        }),
+        examQuestion(id, 6, 4, 3, {
+          topic: "green-theorem",
+          genre: "Greenの定理",
+          difficulty: 3,
+          format: "number",
+          prompt: "前問と同じ線積分をGreenの定理で計算し、前問の値と一致することを確認せよ。答えは \\(\\pi\\) の係数で入力すること。",
+          answer: "\\(" + circulationCoefficient + "\\pi\\)（係数" + circulationCoefficient + "）",
+          numericAnswer: circulationCoefficient,
+          formula: "\\oint_C(P\\,dx+Q\\,dy)=\\iint_D(Q_x-P_y)\\,dA",
+          steps: [
+            "第(2)問と同じく \\(Q_x-P_y=" + fieldB + "-(-" + fieldB + ")=" + curlZ + "\\)",
+            "円の面積は \\(" + greenRadius ** 2 + "\\pi\\)",
+            "\\(\\iint_D" + curlZ + "\\,dA=" + curlZ + "\\cdot" + greenRadius ** 2 + "\\pi="
+              + circulationCoefficient + "\\pi\\) で前問と一致する",
+          ],
+          explanation: "反時計回りは正向きなので符号を変えない。回転のz成分、直接線積分、Greenの定理の3つを一続きで照合する問題である。",
+        }),
       ],
     },
   ];
 
   const questions = sections.flatMap((section) => section.questions);
   const totalPoints = questions.reduce((sum, question) => sum + question.points, 0);
-  if (sections.length !== 6 || totalPoints !== 80) throw new Error(`${id}: invalid exam blueprint`);
+  const easyCount = questions.filter((question) => question.difficulty === 1).length;
+  const advancedCount = questions.filter((question) => question.difficulty === 3).length;
+  if (sections.length !== 6 || questions.length !== 19 || totalPoints !== 80) {
+    throw new Error(id + ": invalid exam blueprint");
+  }
+  if (easyCount > 2 || advancedCount < 5) {
+    throw new Error(id + ": invalid difficulty balance");
+  }
   const coveredTopics = new Set(sections.flatMap((section) => section.topicIds));
   const questionTopics = new Set(questions.map((question) => question.topic));
   if (APPLIED_MATH_TOPICS.some((topic) => !coveredTopics.has(topic.id) || !questionTopics.has(topic.id))) {
-    throw new Error(`${id}: missing range topic`);
+    throw new Error(id + ": missing range topic");
   }
 
   return {
     id,
     number: variant,
-    title: `全範囲予想 ${String(variant).padStart(2, "0")}`,
-    subtitle: "応用数学・全22枚範囲",
+    title: "全範囲予想 " + String(variant).padStart(2, "0"),
+    subtitle: "応用数学・全22枚範囲・形式1/2/3の記述構成に準拠",
     variant,
     durationMinutes: 50,
     minutes: 50,
@@ -469,11 +827,19 @@ function buildAppliedMathExam(variant: number): AppliedMathExpectedExam {
     questions,
   };
 }
-
 export const APPLIED_MATH_EXPECTED_EXAMS: AppliedMathExpectedExam[] = Array.from(
   { length: 6 },
   (_, index) => buildAppliedMathExam(index + 1),
 );
+
+/** 予想模試と同じ連続計算・途中式量を通常演習にも供給する実戦プール。 */
+export const APPLIED_MATH_EXAM_LEVEL_QUESTIONS: AppliedMathQuestion[] = APPLIED_MATH_EXPECTED_EXAMS
+  .flatMap((exam) => exam.questions)
+  .filter((question) => question.difficulty >= 2)
+  .map((question) => ({
+    ...question,
+    prompt: `${question.prompt} 必要な前問相当の中間量も、上の条件から自分で導出すること。`,
+  }));
 
 export const APPLIED_MATH_EXAM_FORMATS = [
   {

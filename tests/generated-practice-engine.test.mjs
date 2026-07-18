@@ -27,19 +27,27 @@ let modulesPromise;
 async function loadModules() {
   modulesPromise ??= Promise.all([
     readFile(new URL("english-data.ts", APP_URL), "utf8"),
+    readFile(new URL("material-mechanics-generator-data.ts", APP_URL), "utf8"),
+    readFile(new URL("digital-circuits-generator.ts", APP_URL), "utf8"),
+    readFile(new URL("digital-circuits-extra-generator.ts", APP_URL), "utf8"),
     readFile(new URL("generated-practice-engine.ts", APP_URL), "utf8"),
-  ]).then(([englishSource, engineSource]) => {
+  ]).then(([englishSource, materialSource, digitalSource, digitalExtraSource, engineSource]) => {
     const english = evaluateTypeScript(englishSource, "english-data.ts");
+    const material = evaluateTypeScript(materialSource, "material-mechanics-generator-data.ts");
+    const digital = evaluateTypeScript(digitalSource, "digital-circuits-generator.ts");
+    const digitalExtra = evaluateTypeScript(digitalExtraSource, "digital-circuits-extra-generator.ts");
     const engine = evaluateTypeScript(engineSource, "generated-practice-engine.ts", (specifier) => {
       if (specifier === "./english-data") return english;
-      throw new Error(`Unexpected engine import ${specifier}`);
+      if (specifier === "./material-mechanics-generator-data") return material;
+      if (specifier === "./digital-circuits-generator") return digital;
+      if (specifier === "./digital-circuits-extra-generator") return digitalExtra;
+      throw new Error("Unexpected engine import " + specifier);
     });
     return { english, engine };
-  });
-  return modulesPromise;
+  });  return modulesPromise;
 }
 
-const SUBJECT_IDS = ["subject-2", "subject-3", "subject-4", "subject-6", "subject-7", "subject-8"];
+const SUBJECT_IDS = ["subject-2", "subject-3", "subject-4", "subject-5", "subject-6", "subject-7", "subject-8", "subject-9"];
 const ALLOWED_CHAPTERS = new Set(["ch15", "ch16", "ch18"]);
 const FORBIDDEN_CONTROL_CHARACTERS = /[\u0000-\u001F\u007F]/u;
 
@@ -62,9 +70,9 @@ test("on-demand generation metadata exposes only subjects with source-backed gen
   const { engine } = await loadModules();
   assert.deepEqual(engine.GENERATED_PRACTICE_SUBJECTS.map((subject) => subject.id), SUBJECT_IDS);
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "network"), false);
-  assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-5"), false);
-  assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-9"), false);
-  assert.equal(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.length, 26);
+  assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-5"), true);
+  assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-9"), true);
+  assert.equal(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.length, 40);
   assert.deepEqual(
     [...new Set(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.map((template) => template.subjectId))],
     SUBJECT_IDS,
@@ -87,6 +95,7 @@ test("on-demand templates stay inside the formulas currently taught in the loade
   const sourceFileBySubject = {
     "subject-3": "mechanical-dynamics-data.ts",
     "subject-4": "thermodynamics-data.ts",
+    "subject-5": "material-mechanics-data.ts",
     "subject-6": "smart-control-data.ts",
     "subject-7": "statistics-data.ts",
     "subject-8": "applied-math-data.ts",
@@ -97,7 +106,7 @@ test("on-demand templates stay inside the formulas currently taught in the loade
       await readFile(new URL(filename, APP_URL), "utf8"),
     ]),
   ));
-  const numericTemplates = engine.GENERATED_PRACTICE_TEMPLATE_METADATA.filter((template) => template.subjectId !== "subject-2");
+  const numericTemplates = engine.GENERATED_PRACTICE_TEMPLATE_METADATA.filter((template) => template.kind === "calculation");
   assert.equal(Object.keys(engine.GENERATED_PRACTICE_SOURCE_REFERENCES).length, numericTemplates.length);
   for (const template of numericTemplates) {
     const references = engine.GENERATED_PRACTICE_SOURCE_REFERENCES[template.id];
@@ -133,6 +142,23 @@ test("on-demand templates stay inside the formulas currently taught in the loade
   }
 });
 
+test("material and digital generators include scoped solution diagrams", async () => {
+  const { engine } = await loadModules();
+  for (const template of engine.GENERATED_PRACTICE_TEMPLATE_METADATA.filter((item) => item.subjectId === "subject-5")) {
+    const question = engine.generatePracticeQuestion("subject-5", "material-visual-" + template.id, { templateId: template.id });
+    assert.equal(question.evaluation.type, "numeric");
+    assert.equal(question.visual?.type, "material-mechanics");
+    assert.ok(question.sourceReferenceIds?.length);
+  }
+  for (const template of engine.GENERATED_PRACTICE_TEMPLATE_METADATA.filter((item) => item.subjectId === "subject-9")) {
+    const question = engine.generatePracticeQuestion("subject-9", "digital-visual-" + template.id, { templateId: template.id });
+    assert.equal(question.format, "text");
+    assert.equal(question.evaluation.type, "normalized-text");
+    assert.equal(question.visual?.type, "digital-circuit");
+    assert.ok(question.answer);
+    assert.ok(question.steps.length >= 2);
+  }
+});
 test("seeded API is deterministic and the set API cycles through every template", async () => {
   const { engine } = await loadModules();
   for (const subjectId of SUBJECT_IDS) {
@@ -283,6 +309,10 @@ test("English generation uses exact Ch.15, 16, and 18 excerpts and never Chapter
       assert.equal(question.evaluation.type, "ordered-tokens");
       assert.equal(question.evaluation.correctOrder.join(" "), question.source.excerpt);
       assert.equal(question.answer, question.source.excerpt);
+      assert.ok(question.tokens.every((token) => token.trim() && !/\s/u.test(token.trim())), `${question.id} choices must be one word each`);
+      assert.deepEqual(question.evaluation.correctOrder, question.source.excerpt.trim().split(/\s+/u));
+      assert.ok(question.prompt.includes(paragraph.ja), `${question.id} must show the Japanese target meaning`);
+      assert.ok(!question.prompt.includes(question.answer), `${question.id} must not reveal the English answer on the question face`);
     } else if (question.templateId === "english-translation") {
       assert.equal(question.evaluation.type, "japanese-semantic");
       assert.equal(question.answer, paragraph.ja);
@@ -299,6 +329,39 @@ test("English generation uses exact Ch.15, 16, and 18 excerpts and never Chapter
   assert.deepEqual(seenKinds, new Set(["english-order", "english-translation", "english-grammar"]));
 });
 
+test("English, statistics, and applied-math generators use past-paper calibrated multi-stage work", async () => {
+  const { engine } = await loadModules();
+  for (const subjectId of ["subject-2", "subject-7", "subject-8"]) {
+    const templates = engine.GENERATED_PRACTICE_TEMPLATE_METADATA.filter((item) => item.subjectId === subjectId);
+    for (const template of templates) {
+      for (let seed = 0; seed < 12; seed += 1) {
+        const question = engine.generatePracticeQuestion(subjectId, `exam-level:${template.id}:${seed}`, { templateId: template.id });
+        assert.equal(question.difficulty, 3, `${template.id} difficulty`);
+        assert.ok(question.subpartCount >= 3, `${template.id} internal work count`);
+        assert.ok(question.steps.length >= 3, `${template.id} worked stages`);
+        assert.ok(question.sourceBasis.length >= 2, `${template.id} source basis`);
+        assert.doesNotMatch(JSON.stringify(question), /グラフ|作図|ガウス(?:の)?発散定理|ストークス(?:の)?定理/i);
+      }
+    }
+  }
+
+  const ordering = engine.generatePracticeQuestion("subject-2", "masked-passage", { templateId: "english-order" });
+  assert.match(ordering.context, /本文文脈/);
+  assert.match(ordering.context, /この一文を並び替える/);
+  assert.equal(ordering.context.includes(ordering.answer), false);
+  assert.ok(ordering.tokens.every((token) => !/\s/u.test(token.trim())), "ordering chips stay word-by-word");
+
+  const variance = engine.generatePracticeQuestion("subject-7", "exam-variance", { templateId: "statistics-symmetric-variance" });
+  assert.match(variance.formula, /\\sum/);
+  assert.ok(variance.expandedFormula);
+  assert.doesNotMatch(variance.expandedFormula, /\\sum/);
+  assert.match(variance.prompt, /V\(Y\)/);
+
+  const direction = engine.generatePracticeQuestion("subject-8", "exam-direction", { templateId: "applied-directional-derivative" });
+  assert.match(direction.prompt, /単位ベクトルではない/);
+  assert.ok(direction.sourceReferenceIds.includes("am-gradient"));
+  assert.ok(direction.sourceReferenceIds.includes("am-directional"));
+});
 test("validator rejects every unsolved/domain-invalid failure mode", async () => {
   const { engine } = await loadModules();
   const base = engine.generatePracticeQuestion("subject-3", "validator", { templateId: "mechanical-log-decrement" });

@@ -115,6 +115,10 @@ test("12 passage grammar ordering questions stay sentence-sized and span all act
     assert.equal(question.format, "order");
     assert.equal(question.group, "語順整序｜本文主要文法");
     assert.ok(question.tokens.length >= 4);
+    assert.ok(question.tokens.every((token) => token.trim() && !/\s/u.test(token.trim())), `${question.id} choices must be one word each`);
+    assert.equal(question.tokens.join(" "), question.answer, `${question.id} word tokens must reconstruct the complete answer`);
+    assert.match(question.prompt, /[ぁ-んァ-ヶ一-龯々]/u, `${question.id} must show the Japanese target meaning`);
+    assert.ok(!question.prompt.includes(question.answer), `${question.id} must not reveal the English answer on the question face`);
     assert.ok(
       !completeParagraphs.has(question.answer),
       `${question.id} must not turn a whole paragraph into an ordering item`,

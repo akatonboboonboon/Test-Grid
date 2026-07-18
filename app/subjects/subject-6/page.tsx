@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import CardDeckSearch from "../../card-deck-search";
+import SmartControlDiagram from "../../smart-control-diagrams";
 import SmartControlExams from "../../smart-control-exams";
 import SmartControlResponseGraph from "../../smart-control-response-graph";
+import {
+  smartControlDiagramIdFor,
+  type SmartControlFigureItem,
+} from "../../smart-control-figure-data";
 import {
   SMART_CONTROL_CARDS as BASE_SMART_CONTROL_CARDS,
   SMART_CONTROL_EXAM_FORMATS,
@@ -35,6 +40,21 @@ type SavedTestSession = {
   elapsedSeconds: number;
   savedAt: number;
 };
+
+function LinkedSmartControlDiagram({
+  item,
+  solution = false,
+  title,
+}: {
+  item: SmartControlFigureItem;
+  solution?: boolean;
+  title: string;
+}) {
+  const diagramId = smartControlDiagramIdFor(item);
+  return diagramId ? (
+    <SmartControlDiagram diagramId={diagramId} solution={solution} title={title} />
+  ) : null;
+}
 
 const SMART_CONTROL_CARDS = [...BASE_SMART_CONTROL_CARDS, ...TEXTBOOK_RESPONSE_CARDS];
 const SMART_CONTROL_QUESTIONS: SmartControlQuestion[] = [
@@ -293,6 +313,7 @@ function SolutionFeedback({
       <strong>{feedback.correct ? "正解" : "要確認"}</strong>
       <p><span>あなたの解答</span><RichMathText text={feedback.response} /></p>
       <p><span>模範解答</span><RichMathText text={question.answer} /></p>
+      <LinkedSmartControlDiagram item={question} solution title="解説図・模範注記" />
       {question.formula && (
         <div className="statistics-solution-formula"><span>使う式</span><DisplayMath tex={question.formula} /></div>
       )}
@@ -821,6 +842,11 @@ export default function SmartControlSubjectPage() {
                       : <strong><RichMathText text={currentCard.prompt} /></strong>}
                     <small>{cardFlipped ? <RichMathText text={currentCard.cue} /> : "頭の中で式を作ってからタップ"}</small>
                   </button>
+                  <LinkedSmartControlDiagram
+                    item={currentCard}
+                    solution={cardFlipped}
+                    title={cardFlipped ? "公式と対応する模範図" : "問題を考えるための図"}
+                  />
                   {cardFlipped && (
                     <div className="english-guide-tip statistics-card-explanation">
                       <span>WHY / HOW</span>
@@ -867,6 +893,7 @@ export default function SmartControlSubjectPage() {
                   </div>
                   {currentPracticeQuestion.context && <div className="english-guide-tip statistics-question-context"><span>GIVEN</span><p><RichMathText text={currentPracticeQuestion.context} /></p></div>}
                   <div className="generic-test-question english-test-question statistics-test-question"><span>問題</span><h2><RichMathText text={currentPracticeQuestion.prompt} /></h2></div>
+                  <LinkedSmartControlDiagram item={currentPracticeQuestion} title="問題図（答え・注記は非表示）" />
                   <AnswerForm idPrefix="practice" question={currentPracticeQuestion} typedAnswer={practiceTypedAnswer} selectedChoice={practiceSelectedChoice} feedback={practiceFeedback} onTypedAnswer={setPracticeTypedAnswer} onSelectedChoice={setPracticeSelectedChoice} onSubmit={submitPracticeAnswer} />
                   {practiceFeedback && <SolutionFeedback question={currentPracticeQuestion} feedback={practiceFeedback} onOverride={acceptPracticeText} onNext={nextPracticeQuestion} nextLabel={practiceIndex === practiceDeck.length - 1 ? "一周してもう一度 →" : "次の問題へ →"} />}
                 </div>
@@ -916,6 +943,7 @@ export default function SmartControlSubjectPage() {
                   </div>
                   {currentTestQuestion.context && <div className="english-guide-tip statistics-question-context"><span>GIVEN</span><p><RichMathText text={currentTestQuestion.context} /></p></div>}
                   <div className="generic-test-question english-test-question statistics-test-question"><span>問題</span><h2><RichMathText text={currentTestQuestion.prompt} /></h2></div>
+                  <LinkedSmartControlDiagram item={currentTestQuestion} title="問題図（答え・注記は非表示）" />
                   <AnswerForm idPrefix="test" question={currentTestQuestion} typedAnswer={testTypedAnswer} selectedChoice={testSelectedChoice} feedback={testFeedback} onTypedAnswer={setTestTypedAnswer} onSelectedChoice={setTestSelectedChoice} onSubmit={submitTestAnswer} />
                   {testFeedback && <SolutionFeedback question={currentTestQuestion} feedback={testFeedback} onOverride={acceptTestText} onNext={nextTestQuestion} nextLabel={testIndex === testQuestions.length - 1 ? "結果を見る" : "次の問題へ →"} />}
                 </div>
@@ -935,6 +963,7 @@ export default function SmartControlSubjectPage() {
                         {!result.correct && <p>正解：<RichMathText text={result.question.answer} /></p>}
                         <details className="result-review-explanation" open={!result.correct}>
                           <summary>解説を見る</summary>
+                          <LinkedSmartControlDiagram item={result.question} solution title="振り返り用の模範図" />
                           <p><RichMathText text={result.question.explanation} /></p>
                         </details>
                         <Link className="result-card-jump" href={"/cards?subject=subject-6&q=" + encodeURIComponent(result.question.prompt)}>

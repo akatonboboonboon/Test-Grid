@@ -49,7 +49,7 @@ export type MechanicalDynamicsRangePage = {
   orientation?: "portrait-source" | "landscape-sideways-source";
 };
 
-export type MechanicalDynamicsDiagramKind = "spring-network" | "pinned-beam" | "simple-pendulum" | "single-spring-mass" | "damped-spring-mass" | "static-deflection" | "amplitude-decay";
+export type MechanicalDynamicsDiagramKind = "spring-network" | "pinned-beam" | "simple-pendulum" | "single-spring-mass" | "damped-spring-mass" | "static-deflection" | "amplitude-decay" | "cantilever-mass" | "spring-rigid-rod";
 
 export type MechanicalDynamicsFormulaCard = {
   id: string;
@@ -533,13 +533,15 @@ export const MECHANICAL_DYNAMICS_ACTUAL_EXAM: MechanicalDynamicsExam = {
 };
 
 export const MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS: MechanicalDynamicsQuestion[] =
-  MECHANICAL_DYNAMICS_ACTUAL_EXAM.questions.map(
-    ({ major, sub, points: _points, ...item }) => ({
+  MECHANICAL_DYNAMICS_ACTUAL_EXAM.questions.map(({ major, sub, ...rest }) => {
+    const { points, ...item } = rest;
+    void points;
+    return {
       ...item,
       id: "md-practice-actual-m" + major + "-s" + sub,
       genre: "実物過去問・" + item.genre,
-    }),
-  );
+    };
+  });
 
 // 過去問は形式参照ではなく試験範囲なので、通常演習からも13解答欄を反復できるようにする。
 MECHANICAL_DYNAMICS_QUESTIONS.push(...MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS);
@@ -574,123 +576,148 @@ function expectedQuestion(
 
 function buildExpectedExam(variant: number): MechanicalDynamicsExam {
   const id = "md-expected-" + variant;
-  const masses = [2, 4, 5, 8, 10, 12];
-  const targetWn = [40, 50, 60, 25, 30, 20];
-  const staticMm = [2.5, 4, 5, 8, 10, 12.5];
-  const zetas = [0.05, 0.08, 0.12, 0.16, 0.2, 0.25];
-  const m = masses[variant - 1];
-  const wn = targetWn[variant - 1];
-  const k = m * wn * wn;
-  const fn = wn / (2 * PI);
-  const period = 1 / fn;
-  const xst = staticMm[variant - 1] / 1000;
-  const staticWn = Math.sqrt(G / xst);
-  const dm = 4 + variant;
-  const dwn = 18 + 2 * variant;
-  const zeta = zetas[variant - 1];
-  const dk = dm * dwn * dwn;
-  const dc = 2 * zeta * dm * dwn;
-  const wd = dwn * Math.sqrt(1 - zeta * zeta);
-  const cycles = 5 + variant;
-  const remaining = [0.5, 0.4, 0.3, 0.25, 0.2, 0.1][variant - 1];
-  const approxZeta = Math.log(1 / remaining) / (2 * PI * cycles);
+  const index = variant - 1;
+
+  // 範囲プリントの難度に合わせ、各大問を「モデル化→中間量→最終量」の連続計算にする。
+  const baseSpring = [400, 600, 800, 1000, 1200, 1500][index];
+  const mass = [3.5, 4.5, 5, 6.5, 8, 10][index];
+  const equivalentSpring = 3.5 * baseSpring;
+  const naturalAngular = Math.sqrt(equivalentSpring / mass);
+  const naturalFrequency = naturalAngular / (2 * PI);
+  const naturalPeriod = 1 / naturalFrequency;
+
+  const beamEI = [900, 1500, 2400, 3600, 5000, 7200][index];
+  const beamLength = [1.2, 1.4, 1.6, 1.8, 2, 2.2][index];
+  const beamMass = [6, 8, 10, 12, 14, 16][index];
+  const beamStiffness = (3 * beamEI) / beamLength ** 3;
+  const beamAngular = Math.sqrt(beamStiffness / beamMass);
+
+  const dampedMass = 4 + variant;
+  const dampedNaturalAngular = 18 + 2 * variant;
+  const dampingRatios = [0.05, 0.08, 0.12, 0.16, 0.2, 0.25];
+  const dampingRatio = dampingRatios[index];
+  const dampedStiffness = dampedMass * dampedNaturalAngular ** 2;
+  const dampingCoefficient = 2 * dampingRatio * dampedMass * dampedNaturalAngular;
+  const dampedAngular = dampedNaturalAngular * Math.sqrt(1 - dampingRatio ** 2);
+  const initialDisplacementMm = [20, 25, 18, 30, 22, 16][index];
+  const initialDisplacement = initialDisplacementMm / 1000;
+  const initialVelocity = [0.08, -0.04, 0.12, 0, -0.08, 0.05][index];
+  const dampedSineCoefficient =
+    (initialVelocity + dampingRatio * dampedNaturalAngular * initialDisplacement) / dampedAngular;
+
+  const cycles = 2 + variant;
+  const firstPeakMm = [100, 80, 120, 90, 75, 60][index];
+  const remaining = [0.45, 0.32, 0.25, 0.18, 0.12, 0.08][index];
+  const laterPeakMm = firstPeakMm * remaining;
+  const logarithmicDecrement = Math.log(firstPeakMm / laterPeakMm) / cycles;
+  const exactDampingRatio = logarithmicDecrement / Math.sqrt(4 * PI ** 2 + logarithmicDecrement ** 2);
+
   const poleA = variant;
   const poleB = variant + 2;
-  const laplaceA = 1 / (poleB - poleA);
-  const laplaceB = -laplaceA;
-  const leverM = 2 + 0.5 * variant;
-  const leverK = 400 + 50 * variant;
-  const leverC = 20 + 5 * variant;
-  const leverL = 0.6 + 0.05 * variant;
-  const leverR = 0.3 + 0.03 * variant;
-  const leverWn = (leverL / leverR) * Math.sqrt(leverK / leverM);
-  const leverZeta = (leverC * leverR) / (2 * leverL * Math.sqrt(leverM * leverK));
-  const criticalR = (2 * leverL * Math.sqrt(leverM * leverK)) / leverC;
-  const pendulumT = 1.4 + 0.1 * variant;
-  const pendulumL = (G * pendulumT * pendulumT) / (4 * PI * PI);
+  const transferGain = poleA * poleB;
+  const stepA = -poleB / (poleB - poleA);
+  const stepB = poleA / (poleB - poleA);
+
+  const leverMass = 2 + 0.5 * variant;
+  const leverStiffness = 400 + 50 * variant;
+  const leverDamping = 20 + 5 * variant;
+  const leverLength = 0.6 + 0.05 * variant;
+  const leverArm = 0.3 + 0.03 * variant;
+  const leverAngular = (leverLength / leverArm) * Math.sqrt(leverStiffness / leverMass);
+  const leverDampingRatio =
+    (leverDamping * leverArm) / (2 * leverLength * Math.sqrt(leverMass * leverStiffness));
+  const criticalArm = (2 * leverLength * Math.sqrt(leverMass * leverStiffness)) / leverDamping;
+
+  const rodMass = [3, 4, 5, 6, 7, 8][index];
+  const rodLength = [1.2, 1.4, 1.6, 1.8, 2, 2.2][index];
+  const springHeight = rodLength / 2;
+  const rodSpring = [120, 180, 250, 320, 400, 500][index];
+  const rodInertia = rodMass * rodLength ** 2 / 3;
+  const rodRotationalStiffness = rodSpring * springHeight ** 2 + rodMass * G * rodLength / 2;
+  const rodAngular = Math.sqrt(rodRotationalStiffness / rodInertia);
 
   const sections: MechanicalDynamicsExamSection[] = [
     {
       number: 1,
-      title: "ばね質量系の基礎量",
-      topic: "undamped",
-      topicIds: ["undamped"],
+      title: "複合ばね系のモデル化と自由振動",
+      topic: "stiffness",
+      topicIds: ["stiffness", "undamped"],
       points: 15,
-      context: "m=" + m.toFixed(2) + " kg、k=" + k.toFixed(0) + " N/m。π=3.14。",
+      context: "図1の上側は2kとkの並列、下側はkとkの直列で、どちらも質量mの変位に対して復元力を生む。k=" + baseSpring.toFixed(0) + " N/m、m=" + mass.toFixed(2) + " kg、π=3.14。",
       questions: [
-        expectedQuestion(id, 1, 1, 5, { topic: "undamped", genre: "固有角振動数", difficulty: 1, format: "number", prompt: "ωnを求めよ。", answer: wn.toFixed(1) + " rad/s", numericAnswer: wn, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\omega_n=\\sqrt{\\frac{k}{m}}", steps: ["\\(\\frac{k}{m}=" + (k / m).toFixed(0) + "\\)", "平方根を取る"], explanation: "基本式を直接使う。" }),
-        expectedQuestion(id, 1, 2, 5, { topic: "undamped", genre: "固有振動数", difficulty: 1, format: "number", prompt: "fnを求めよ。", answer: rounded(fn, 3) + " Hz", numericAnswer: fn, expectedUnit: "Hz", acceptedUnits: units.hertz, requiresUnit: true, tolerance: 0.02, formula: "f_n=\\frac{\\omega_n}{2\\pi}", steps: ["\\(f_n=\\frac{\\omega_n}{2\\pi}\\)を選ぶ", "\\(\\frac{" + wn + "}{6.28}=" + rounded(fn, 4) + "\\)"], explanation: "π=3.14を使う。" }),
-        expectedQuestion(id, 1, 3, 5, { topic: "undamped", genre: "周期", difficulty: 1, format: "number", prompt: "Tnを求めよ。", answer: rounded(period, 4) + " s", numericAnswer: period, expectedUnit: "s", acceptedUnits: units.seconds, requiresUnit: true, tolerance: 0.001, formula: "T_n=\\frac{1}{f_n}", steps: ["\\(T_n=\\frac{1}{f_n}\\)を選ぶ", "\\(\\frac{1}{" + rounded(fn, 4) + "}=" + rounded(period, 5) + "\\)"], explanation: "周期は固有振動数の逆数なので、\\(T_n=\\frac{1}{f_n}\\)で求める。" }),
+        expectedQuestion(id, 1, 1, 5, { topic: "stiffness", genre: "複合ばね・等価剛性", difficulty: 3, format: "number", prompt: "図から等価ばね定数keqを求めよ。", answer: rounded(equivalentSpring, 3) + " N/m", numericAnswer: equivalentSpring, expectedUnit: "N/m", acceptedUnits: units.stiffness, requiresUnit: true, tolerance: 0.5, formula: "k_{eq}=\\left(2k+k\\right)+\\frac{k\\,k}{k+k}=\\frac{7k}{2}", steps: ["図の上側を並列、下側を直列として別々にまとめる", "\\(k_{upper}=3k\\)", "\\(k_{lower}=\\frac{k}{2}\\)", "\\(k_{eq}=3k+\\frac{k}{2}=\\frac{7k}{2}=" + rounded(equivalentSpring, 3) + "\\ \\mathrm{N/m}\\)"], explanation: "同じ質量変位に対して上側と下側の復元力が同時に働くため、最後は両者を加える。", diagram: "spring-network" }),
+        expectedQuestion(id, 1, 2, 5, { topic: "undamped", genre: "複合ばね・固有角振動数", difficulty: 2, format: "number", prompt: "前問のkeqを用いて固有角振動数ωnを求めよ。", answer: rounded(naturalAngular, 3) + " rad/s", numericAnswer: naturalAngular, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\omega_n=\\sqrt{\\frac{k_{eq}}{m}}", steps: ["前問で得た等価剛性を質量で割る", "\\(\\omega_n=\\sqrt{\\frac{" + rounded(equivalentSpring, 3) + "}{" + mass.toFixed(2) + "}}=" + rounded(naturalAngular, 5) + "\\ \\mathrm{rad/s}\\)"], explanation: "個々のばね定数ではなく、質量から見た等価剛性を使う。", diagram: "spring-network" }),
+        expectedQuestion(id, 1, 3, 5, { topic: "undamped", genre: "複合ばね・周期", difficulty: 2, format: "number", prompt: "固有振動数fnと周期Tnを順に求め、解答欄にはTnを記せ。", answer: rounded(naturalPeriod, 4) + " s", numericAnswer: naturalPeriod, expectedUnit: "s", acceptedUnits: units.seconds, requiresUnit: true, tolerance: 0.001, formula: "T_n=\\frac{2\\pi}{\\omega_n}=\\frac{1}{f_n}", steps: ["\\(f_n=\\frac{" + rounded(naturalAngular, 5) + "}{2\\times3.14}=" + rounded(naturalFrequency, 5) + "\\ \\mathrm{Hz}\\)", "\\(T_n=\\frac{1}{" + rounded(naturalFrequency, 5) + "}=" + rounded(naturalPeriod, 5) + "\\ \\mathrm{s}\\)"], explanation: "中間値の丸め過ぎを避け、ωnから得た値を保持して周期まで計算する。", diagram: "spring-network" }),
       ],
     },
     {
       number: 2,
-      title: "静たわみと等価剛性",
+      title: "片持ちはりを等価ばねに置き換える",
       topic: "stiffness",
       topicIds: ["stiffness", "undamped"],
       points: 10,
-      context: "鉛直ばねの静たわみは" + staticMm[variant - 1].toFixed(2) + " mm。g=9.80 m/s²。",
+      context: "図2の片持ちはり先端に質量m=" + beamMass.toFixed(2) + " kgを取り付ける。曲げ剛性EI=" + beamEI.toFixed(0) + " N·m²、長さl=" + beamLength.toFixed(2) + " m。はり自体の質量は無視する。",
       questions: [
-        expectedQuestion(id, 2, 1, 10, { topic: "stiffness", genre: "静たわみ", difficulty: 2, format: "number", prompt: "ωnを求めよ。", answer: rounded(staticWn, 3) + " rad/s", numericAnswer: staticWn, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\omega_n=\\sqrt{\\frac{g}{x_{st}}}", steps: ["mmをmへ換算", "\\(\\sqrt{\\frac{9.80}{" + xst + "}}\\)"], explanation: "mg=kxstを用いる。" }),
+        expectedQuestion(id, 2, 1, 10, { topic: "stiffness", genre: "片持ちはり・等価剛性", difficulty: 3, format: "number", prompt: "静たわみ式から等価剛性を導き、系の固有角振動数ωnを求めよ。", answer: rounded(beamAngular, 3) + " rad/s", numericAnswer: beamAngular, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\begin{aligned}\\delta&=\\frac{Pl^3}{3EI}\\\\ k_b&=\\frac{P}{\\delta}=\\frac{3EI}{l^3}\\\\ \\omega_n&=\\sqrt{\\frac{k_b}{m}}\\end{aligned}", steps: ["片持ちはりの先端たわみを等価ばねの変位とみなす", "\\(k_b=\\frac{3\\times" + beamEI.toFixed(0) + "}{" + beamLength.toFixed(2) + "^3}=" + rounded(beamStiffness, 5) + "\\ \\mathrm{N/m}\\)", "\\(\\omega_n=\\sqrt{\\frac{" + rounded(beamStiffness, 5) + "}{" + beamMass.toFixed(2) + "}}=" + rounded(beamAngular, 5) + "\\ \\mathrm{rad/s}\\)"], explanation: "プリントと同様に、たわみ式から等価剛性を作ってから一自由度系の公式へつなぐ二段階計算。", diagram: "cantilever-mass" }),
       ],
     },
     {
       number: 3,
-      title: "粘性減衰自由振動",
+      title: "不足減衰系のパラメータと初期値応答",
       topic: "damping",
       topicIds: ["damping"],
       points: 15,
-      context: "m=" + dm + " kg、k=" + rounded(dk, 2) + " N/m、c=" + rounded(dc, 3) + " N·s/m。",
+      context: "図3の系でm=" + dampedMass.toFixed(2) + " kg、k=" + rounded(dampedStiffness, 3) + " N/m、c=" + rounded(dampingCoefficient, 4) + " N·s/m。初期条件はx(0)=" + initialDisplacementMm.toFixed(1) + " mm、v(0)=" + initialVelocity.toFixed(3) + " m/s。",
       questions: [
-        expectedQuestion(id, 3, 1, 5, { topic: "damping", genre: "減衰比", difficulty: 1, format: "number", prompt: "ζを求めよ。", answer: zeta.toFixed(3), numericAnswer: zeta, tolerance: 0.001, formula: "\\zeta=\\frac{c}{2\\sqrt{mk}}", steps: ["値を代入して無次元化", "cを2√(mk)で割り、ζを得る"], explanation: "臨界減衰係数との比。" }),
-        expectedQuestion(id, 3, 2, 5, { topic: "damping", genre: "固有角振動数", difficulty: 1, format: "number", prompt: "ωnを求めよ。", answer: dwn.toFixed(1) + " rad/s", numericAnswer: dwn, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\omega_n=\\sqrt{\\frac{k}{m}}", steps: ["\\(\\sqrt{\\frac{k}{m}}\\)", "\\(\\frac{k}{m}\\)の平方根を取り、rad/sを付ける"], explanation: "減衰があっても\\(\\omega_n\\)は\\(\\frac{k}{m}\\)で定義される。" }),
-        expectedQuestion(id, 3, 3, 5, { topic: "damping", genre: "減衰固有角振動数", difficulty: 2, format: "number", prompt: "ωdを求めよ。", answer: rounded(wd, 3) + " rad/s", numericAnswer: wd, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\omega_d=\\omega_n\\sqrt{1-\\zeta^2}", steps: ["ωn√(1−ζ²)", "√(1−ζ²)をωnへ掛ける"], explanation: "不足減衰の振動角周波数。" }),
+        expectedQuestion(id, 3, 1, 5, { topic: "damping", genre: "不足減衰・減衰比", difficulty: 2, format: "number", prompt: "臨界減衰係数ccを求めたうえで減衰比ζを求め、応答を分類せよ。解答欄にはζを記せ。", answer: dampingRatio.toFixed(3) + "（不足減衰）", numericAnswer: dampingRatio, tolerance: 0.001, formula: "\\begin{aligned}c_c&=2\\sqrt{mk}\\\\ \\zeta&=\\frac{c}{c_c}\\end{aligned}", steps: ["\\(c_c=2\\sqrt{" + dampedMass.toFixed(2) + "\\times" + rounded(dampedStiffness, 3) + "}=" + rounded(2 * Math.sqrt(dampedMass * dampedStiffness), 5) + "\\ \\mathrm{N\\,s/m}\\)", "\\(\\zeta=\\frac{" + rounded(dampingCoefficient, 4) + "}{" + rounded(2 * Math.sqrt(dampedMass * dampedStiffness), 5) + "}=" + dampingRatio.toFixed(5) + "\\)", "\\(0<\\zeta<1\\)なので不足減衰と判定する"], explanation: "減衰比を計算するだけでなく、1との大小から波形の種類まで判断する。", diagram: "damped-spring-mass" }),
+        expectedQuestion(id, 3, 2, 5, { topic: "damping", genre: "不足減衰・減衰固有角振動数", difficulty: 2, format: "number", prompt: "ωnを計算し、減衰固有角振動数ωdを求めよ。", answer: rounded(dampedAngular, 3) + " rad/s", numericAnswer: dampedAngular, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\begin{aligned}\\omega_n&=\\sqrt{\\frac{k}{m}}\\\\ \\omega_d&=\\omega_n\\sqrt{1-\\zeta^2}\\end{aligned}", steps: ["\\(\\omega_n=\\sqrt{\\frac{" + rounded(dampedStiffness, 3) + "}{" + dampedMass.toFixed(2) + "}}=" + dampedNaturalAngular.toFixed(5) + "\\ \\mathrm{rad/s}\\)", "\\(\\omega_d=" + dampedNaturalAngular.toFixed(5) + "\\sqrt{1-" + dampingRatio.toFixed(3) + "^2}=" + rounded(dampedAngular, 5) + "\\ \\mathrm{rad/s}\\)"], explanation: "ωdには前問のζを使うため、途中値を保持して連続計算する。", diagram: "damped-spring-mass" }),
+        expectedQuestion(id, 3, 3, 5, { topic: "damping", genre: "不足減衰・初期条件", difficulty: 3, format: "number", prompt: "不足減衰解のsin項の係数C2を求めよ。", answer: rounded(dampedSineCoefficient, 6) + " m", numericAnswer: dampedSineCoefficient, expectedUnit: "m", acceptedUnits: { m: 1, mm: 0.001 }, requiresUnit: true, tolerance: 0.00002, formula: "C_2=\\frac{v_0+\\zeta\\omega_nx_0}{\\omega_d}", steps: ["初期変位をmmからmへ換算する", "\\(x_0=" + initialDisplacement.toFixed(5) + "\\ \\mathrm{m}\\)", "\\(C_2=\\frac{" + initialVelocity.toFixed(3) + "+" + dampingRatio.toFixed(3) + "\\times" + dampedNaturalAngular.toFixed(3) + "\\times" + initialDisplacement.toFixed(5) + "}{" + rounded(dampedAngular, 5) + "}=" + rounded(dampedSineCoefficient, 7) + "\\ \\mathrm{m}\\)"], explanation: "初速度が0の場合でも減衰項が残る点、初期変位のmm換算を落とさない点がプリント相当の要点。", diagram: "damped-spring-mass" }),
       ],
     },
     {
       number: 4,
-      title: "n周期後の振幅",
+      title: "減衰波形の同符号ピークを読む",
       topic: "decrement",
-      topicIds: ["decrement"],
+      topicIds: ["decrement", "damping"],
       points: 10,
-      context: cycles + "周期後、振幅が初期値の" + (remaining * 100).toFixed(1) + "%になった。π=3.14。",
+      context: "図4の同じ向きのピークを読むと、x_i=" + firstPeakMm.toFixed(2) + " mm、" + cycles + "周期後のx_{i+n}=" + laterPeakMm.toFixed(2) + " mmであった。π=3.14。",
       questions: [
-        expectedQuestion(id, 4, 1, 10, { topic: "decrement", genre: "減衰比近似", difficulty: 2, format: "number", prompt: "簡略式でζを求めよ。", answer: rounded(approxZeta, 5).toString(), numericAnswer: approxZeta, tolerance: 0.0001, formula: "\\zeta\\simeq\\frac{1}{2\\pi n}\\ln\\!\\left(\\frac{x_i}{x_{i+n}}\\right)", steps: ["振幅比を自然対数にする", "2πnで割る"], explanation: "減少率ではなく残存率を使う。" }),
+        expectedQuestion(id, 4, 1, 10, { topic: "decrement", genre: "波形読解・厳密減衰比", difficulty: 3, format: "number", prompt: "1周期当たりの対数減衰率δを求め、厳密式から減衰比ζを求めよ。解答欄にはζを記せ。", answer: rounded(exactDampingRatio, 5).toString(), numericAnswer: exactDampingRatio, tolerance: 0.0001, formula: "\\begin{aligned}\\delta&=\\frac{1}{n}\\ln\\!\\left(\\frac{x_i}{x_{i+n}}\\right)\\\\ \\zeta&=\\frac{\\delta}{\\sqrt{4\\pi^2+\\delta^2}}\\end{aligned}", steps: ["正負が異なる山ではなく同符号ピークを選ぶ", "\\(\\delta=\\frac{1}{" + cycles + "}\\ln\\!\\left(\\frac{" + firstPeakMm.toFixed(2) + "}{" + laterPeakMm.toFixed(2) + "}\\right)=" + rounded(logarithmicDecrement, 6) + "\\)", "\\(\\zeta=\\frac{" + rounded(logarithmicDecrement, 6) + "}{\\sqrt{4\\times3.14^2+" + rounded(logarithmicDecrement, 6) + "^2}}=" + rounded(exactDampingRatio, 7) + "\\)"], explanation: "近似式だけで終えず、波形からδを作って厳密式へ入れる二段階問題。振幅の単位は比で消える。", diagram: "amplitude-decay" }),
       ],
     },
     {
       number: 5,
-      title: "ラプラス変換・部分分数",
+      title: "伝達関数の単位ステップ応答",
       topic: "laplace",
       topicIds: ["laplace"],
       points: 10,
-      context: "\\(F(s)=\\frac{1}{(s+" + poleA + ")(s+" + poleB + ")}\\)。",
+      context: "\\(G(s)=\\frac{" + transferGain + "}{(s+" + poleA + ")(s+" + poleB + ")}\\)の系へ単位ステップ\\(U(s)=\\frac{1}{s}\\)を入力する。初期値は0とする。",
       questions: [
-        expectedQuestion(id, 5, 1, 10, { topic: "laplace", genre: "部分分数と逆変換", difficulty: 2, format: "derivation", prompt: "部分分数分解し、f(t)を求めよ。", answer: "\\(" + rounded(laplaceA, 4) + "e^{-" + poleA + "t}" + (laplaceB < 0 ? "" : "+") + rounded(laplaceB, 4) + "e^{-" + poleB + "t}\\)", accepted: [rounded(laplaceA, 4) + "e^-" + poleA + "t" + rounded(laplaceB, 4) + "e^-" + poleB + "t"], keywords: [String(poleA), String(poleB), "e"], minKeywords: 3, formula: "\\frac{1}{(s+a)(s+b)}=\\frac{1}{b-a}\\left(\\frac{1}{s+a}-\\frac{1}{s+b}\\right)", steps: ["各極へ代入して係数を求める", "\\(\\frac{1}{s+a}\\)を\\(e^{-at}\\)へ戻す"], explanation: "範囲ノート8〜9枚目の相異なる極の形式。" }),
+        expectedQuestion(id, 5, 1, 10, { topic: "laplace", genre: "単位ステップ応答・3項部分分数", difficulty: 3, format: "derivation", prompt: "Y(s)=G(s)U(s)を3項へ部分分数分解し、y(t)を求めよ。", answer: "\\(y(t)=1" + (stepA < 0 ? "" : "+") + rounded(stepA, 4) + "e^{-" + poleA + "t}+" + rounded(stepB, 4) + "e^{-" + poleB + "t}\\)", accepted: ["1" + rounded(stepA, 4) + "e^-" + poleA + "t+" + rounded(stepB, 4) + "e^-" + poleB + "t"], keywords: ["1", rounded(stepA, 4).toString(), rounded(stepB, 4).toString(), String(poleA), String(poleB)], minKeywords: 4, formula: "Y(s)=\\frac{ab}{s(s+a)(s+b)}=\\frac{1}{s}-\\frac{b}{b-a}\\frac{1}{s+a}+\\frac{a}{b-a}\\frac{1}{s+b}", steps: ["単位ステップなので伝達関数へ\\(\\frac{1}{s}\\)を掛ける", "\\(Y(s)=\\frac{" + transferGain + "}{s(s+" + poleA + ")(s+" + poleB + ")}\\)", "各極へ代入すると\\(A=1,\\ B=" + rounded(stepA, 4) + ",\\ C=" + rounded(stepB, 4) + "\\)", "\\(\\frac{1}{s}\\leftrightarrow1\\)、\\(\\frac{1}{s+a}\\leftrightarrow e^{-at}\\)を項ごとに適用する"], explanation: "入力のラプラス変換を掛け忘れず、2項ではなく定常項を含む3項の部分分数へ分ける。", }),
       ],
     },
     {
       number: 6,
-      title: "レバー・ばね・ダンパ系",
+      title: "レバー・ばね・ダンパ系の連続計算",
       topic: "rotational",
       topicIds: ["rotational", "damping"],
       points: 30,
-      context: "質点m=" + leverM.toFixed(2) + " kgとダンパc=" + leverC.toFixed(1) + " N·s/mの作用腕r=" + leverR.toFixed(3) + " m、ばねk=" + leverK.toFixed(0) + " N/mの作用腕l=" + leverL.toFixed(3) + " m。",
+      context: "図5の質量なしレバーは左端ピン支持。質点m=" + leverMass.toFixed(2) + " kgとダンパc=" + leverDamping.toFixed(1) + " N·s/mの作用腕はr=" + leverArm.toFixed(3) + " m、ばねk=" + leverStiffness.toFixed(0) + " N/mの作用腕はl=" + leverLength.toFixed(3) + " m。微小角θとする。",
       questions: [
-        expectedQuestion(id, 6, 1, 10, { topic: "rotational", genre: "運動方程式", difficulty: 3, format: "derivation", prompt: "微小角θの運動方程式を示せ。", answer: "\\(mr^2\\ddot\\theta+cr^2\\dot\\theta+kl^2\\theta=0\\)", accepted: ["mr^2", "cr^2", "kl^2"], keywords: ["mr", "cr", "kl"], minKeywords: 3, formula: "J\\ddot\\theta+C_\\theta\\dot\\theta+K_\\theta\\theta=0", steps: ["J=mr²", "Cθ=cr²", "Kθ=kl²"], diagram: "pinned-beam", explanation: "各係数を作用腕の二乗で換算。" }),
-        expectedQuestion(id, 6, 2, 10, { topic: "rotational", genre: "固有角振動数", difficulty: 2, format: "number", prompt: "ωnを求めよ。", answer: rounded(leverWn, 3) + " rad/s", numericAnswer: leverWn, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\omega_n=\\frac{l}{r}\\sqrt{\\frac{k}{m}}", steps: ["作用腕比\\(\\frac{l}{r}\\)を忘れない", "\\(\\omega_n=\\frac{l}{r}\\sqrt{\\frac{k}{m}}\\)へ数値を代入する"], diagram: "pinned-beam", explanation: "回転剛性と回転慣性の比。" }),
-        expectedQuestion(id, 6, 3, 10, { topic: "rotational", genre: "減衰比・臨界腕長", difficulty: 3, format: "text", prompt: "現在の減衰比ζと、臨界減衰になる作用腕r_cを求めよ。", answer: "\\(\\zeta=" + rounded(leverZeta, 4) + ",\\ r_c=" + rounded(criticalR, 4) + "\\ \\mathrm{m}\\)", accepted: [rounded(leverZeta, 4) + "," + rounded(criticalR, 4)], keywords: [rounded(leverZeta, 4).toString(), rounded(criticalR, 4).toString()], minKeywords: 2, formula: "\\begin{aligned}\\zeta&=\\frac{cr}{2l\\sqrt{mk}}\\\\ r_c&=\\frac{2l\\sqrt{mk}}{c}\\end{aligned}", steps: ["ζへ数値を代入", "ζ=1としてrを解く"], diagram: "pinned-beam", explanation: "同じ式を順方向と逆方向に使う。" }),
+        expectedQuestion(id, 6, 1, 10, { topic: "rotational", genre: "レバー系・運動方程式", difficulty: 3, format: "derivation", prompt: "支点まわりの運動方程式を立て、回転慣性・回転減衰・回転剛性を示せ。", answer: "\\(mr^2\\ddot\\theta+cr^2\\dot\\theta+kl^2\\theta=0\\)", accepted: ["mr^2", "cr^2", "kl^2"], keywords: ["mr", "cr", "kl"], minKeywords: 3, formula: "J\\ddot\\theta+C_\\theta\\dot\\theta+K_\\theta\\theta=0", steps: ["各要素の微小並進変位は作用腕とθの積になる", "\\(J=mr^2\\)", "\\(C_\\theta=cr^2\\)", "\\(K_\\theta=kl^2\\)", "\\(mr^2\\ddot\\theta+cr^2\\dot\\theta+kl^2\\theta=0\\)"], diagram: "pinned-beam", explanation: "作用腕は変位換算とモーメント換算で二度掛かるため、各係数には腕の二乗が付く。" }),
+        expectedQuestion(id, 6, 2, 10, { topic: "rotational", genre: "レバー系・固有角振動数", difficulty: 3, format: "number", prompt: "前問の回転係数から固有角振動数ωnを求めよ。", answer: rounded(leverAngular, 3) + " rad/s", numericAnswer: leverAngular, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\omega_n=\\sqrt{\\frac{K_\\theta}{J}}=\\frac{l}{r}\\sqrt{\\frac{k}{m}}", steps: ["前問で得た\\(J\\)と\\(K_\\theta\\)の比を取る", "\\(\\omega_n=\\frac{" + leverLength.toFixed(3) + "}{" + leverArm.toFixed(3) + "}\\sqrt{\\frac{" + leverStiffness.toFixed(0) + "}{" + leverMass.toFixed(2) + "}}=" + rounded(leverAngular, 5) + "\\ \\mathrm{rad/s}\\)"], diagram: "pinned-beam", explanation: "並進系の式へそのままkとmを入れず、作用腕比を含む回転系として計算する。" }),
+        expectedQuestion(id, 6, 3, 10, { topic: "rotational", genre: "レバー系・減衰比と臨界条件", difficulty: 3, format: "text", prompt: "現在の減衰比ζを求め、ζ=1となる臨界作用腕r_cも求めよ。", answer: "\\(\\zeta=" + rounded(leverDampingRatio, 4) + ",\\quad r_c=" + rounded(criticalArm, 4) + "\\ \\mathrm{m}\\)", accepted: [rounded(leverDampingRatio, 4) + "," + rounded(criticalArm, 4)], keywords: [rounded(leverDampingRatio, 4).toString(), rounded(criticalArm, 4).toString()], minKeywords: 2, formula: "\\begin{aligned}\\zeta&=\\frac{cr}{2l\\sqrt{mk}}\\\\ r_c&=\\frac{2l\\sqrt{mk}}{c}\\end{aligned}", steps: ["\\(\\zeta=\\frac{" + leverDamping.toFixed(1) + "\\times" + leverArm.toFixed(3) + "}{2\\times" + leverLength.toFixed(3) + "\\sqrt{" + leverMass.toFixed(2) + "\\times" + leverStiffness.toFixed(0) + "}}=" + rounded(leverDampingRatio, 6) + "\\)", "臨界条件\\(\\zeta=1\\)として作用腕について解く", "\\(r_c=\\frac{2\\times" + leverLength.toFixed(3) + "\\sqrt{" + leverMass.toFixed(2) + "\\times" + leverStiffness.toFixed(0) + "}}{" + leverDamping.toFixed(1) + "}=" + rounded(criticalArm, 6) + "\\ \\mathrm{m}\\)"], diagram: "pinned-beam", explanation: "同じ減衰比式を順方向と逆方向に用い、現状態と臨界条件の両方を評価する。" }),
       ],
     },
     {
       number: 7,
-      title: "単振り子",
+      title: "ばね付き一様剛体棒",
       topic: "rotational",
       topicIds: ["rotational"],
       points: 10,
-      context: "周期T=" + pendulumT.toFixed(2) + " s。g=9.80 m/s²、π=3.14。",
+      context: "図6の一様剛体棒は上端ピン支持。m=" + rodMass.toFixed(2) + " kg、l=" + rodLength.toFixed(2) + " m、ばね取付高さh=" + springHeight.toFixed(2) + " m、k=" + rodSpring.toFixed(0) + " N/m。微小角θ、g=9.80 m/s²。",
       questions: [
-        expectedQuestion(id, 7, 1, 10, { topic: "rotational", genre: "単振り子", difficulty: 1, format: "number", prompt: "長さlを求めよ。", answer: rounded(pendulumL, 4) + " m", numericAnswer: pendulumL, expectedUnit: "m", acceptedUnits: { m: 1, cm: 0.01, mm: 0.001 }, requiresUnit: true, tolerance: 0.002, formula: "l=\\frac{gT^2}{4\\pi^2}", steps: ["指定定数を代入", "\\(l=\\frac{gT^2}{4\\pi^2}\\)を計算し、mを付ける"], diagram: "simple-pendulum", explanation: "過去問Q7と同じ計算手順。" }),
+        expectedQuestion(id, 7, 1, 10, { topic: "rotational", genre: "剛体棒・回転剛性", difficulty: 3, format: "number", prompt: "支点まわりの慣性モーメントと回転剛性を求め、固有角振動数ωnを計算せよ。", answer: rounded(rodAngular, 3) + " rad/s", numericAnswer: rodAngular, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\begin{aligned}J&=\\frac{1}{3}ml^2\\\\ K_\\theta&=kh^2+\\frac{1}{2}mgl\\\\ \\omega_n&=\\sqrt{\\frac{K_\\theta}{J}}\\end{aligned}", steps: ["一様棒の重心は支点から\\(\\frac{l}{2}\\)にある", "\\(J=\\frac{1}{3}\\times" + rodMass.toFixed(2) + "\\times" + rodLength.toFixed(2) + "^2=" + rounded(rodInertia, 6) + "\\ \\mathrm{kg\\,m^2}\\)", "\\(K_\\theta=" + rodSpring.toFixed(0) + "\\times" + springHeight.toFixed(2) + "^2+\\frac{1}{2}\\times" + rodMass.toFixed(2) + "\\times9.80\\times" + rodLength.toFixed(2) + "=" + rounded(rodRotationalStiffness, 6) + "\\ \\mathrm{N\\,m/rad}\\)", "\\(\\omega_n=\\sqrt{\\frac{" + rounded(rodRotationalStiffness, 6) + "}{" + rounded(rodInertia, 6) + "}}=" + rounded(rodAngular, 6) + "\\ \\mathrm{rad/s}\\)"], diagram: "spring-rigid-rod", explanation: "並進ばねを回転剛性へ換算し、棒の慣性モーメントと重力復元項をまとめる三段階問題。" }),
       ],
     },
   ];
@@ -710,7 +737,7 @@ function buildExpectedExam(variant: number): MechanicalDynamicsExam {
     kind: "expected",
     number: variant,
     title: "全範囲想定試験 " + String(variant).padStart(2, "0"),
-    subtitle: "過去問の7大問・13解答欄・100点形式を踏襲",
+    subtitle: "範囲プリント4枚と同等難度・7大問／13解答欄／100点",
     variant,
     defaultMinutes: 50,
     userAdjustable: true,
@@ -719,14 +746,27 @@ function buildExpectedExam(variant: number): MechanicalDynamicsExam {
     scoreLabel: "練習用100点",
     passPercent: 60,
     paper: "A4 portrait",
-    officialConditionsNote: "試験時間は資料で確認できないため、50分は変更可能な練習用初期値。g=9.80 m/s²、π=3.14、有効数字は3桁、単位必須。",
+    officialConditionsNote: "範囲プリント4枚と同等のモデル化・多段階計算・図読解で構成。50分は変更可能な練習用初期値。g=9.80 m/s²、π=3.14、有効数字は3桁、単位必須。",
     sections,
     questions,
   };
 }
-
 export const MECHANICAL_DYNAMICS_EXPECTED_EXAMS: MechanicalDynamicsExam[] =
   Array.from({ length: 6 }, (_, index) => buildExpectedExam(index + 1));
+
+/**
+ * Standalone, past-paper-level questions used by the timed confirmation test.
+ * Section conditions are copied onto every item so a shuffled question never loses its setup.
+ */
+export const MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS: MechanicalDynamicsExamQuestion[] =
+  MECHANICAL_DYNAMICS_EXPECTED_EXAMS.flatMap((exam) => exam.sections.flatMap((section) =>
+    section.questions.map((question) => ({
+      ...question,
+      difficulty: 3,
+      steps: question.steps.length >= 3 ? question.steps : [...question.steps, "求めた中間値・単位・物理的な妥当性を答案上で照査する。"],
+      context: [section.context, question.context].filter(Boolean).join(" "),
+    })),
+  ));
 
 export const MECHANICAL_DYNAMICS_EXAM_FORMATS = [
   {

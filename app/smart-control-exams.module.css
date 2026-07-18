@@ -218,6 +218,16 @@
   font-family: inherit;
 }
 
+.diagram {
+  width: min(100%, 150mm);
+  margin: 4mm auto;
+}
+
+.diagram svg,
+.diagram canvas {
+  max-height: 60mm;
+}
+
 .finishBar {
   display: flex;
   justify-content: flex-end;
@@ -310,6 +320,10 @@
 
   .questions textarea {
     min-height: 36mm;
+  }
+
+  .diagram {
+    margin: 2mm auto;
   }
 
   .solution {

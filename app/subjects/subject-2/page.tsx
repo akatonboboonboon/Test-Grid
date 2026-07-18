@@ -19,6 +19,7 @@ import {
 import { EnglishQuestionExplanation, EnglishVocabInsight } from "../../english-explanation-panel";
 import EnglishCh18Quiz from "../../english-ch18-quiz";
 import EnglishExpectedExams from "../../english-expected-exams";
+import { ENGLISH_EXAM_LEVEL_QUESTIONS } from "../../english-expected-exams-data";
 import EnglishWeatherFigure from "../../english-weather-figure";
 
 type Mode = "cards" | "expected" | "quiz18" | "test" | "reading" | "guide";
@@ -57,12 +58,13 @@ const COURSE_UNITS = ENGLISH_UNITS.filter((unit) => unit.id !== "exam-sample");
 const COURSE_UNIT_IDS = COURSE_UNITS.map((unit) => unit.id);
 const COURSE_PASSAGE_IDS = new Set(ENGLISH_PASSAGES.map((passage) => passage.id));
 const STUDY_QUESTIONS = ENGLISH_QUESTIONS.filter((question) => question.unit !== "exam-sample");
+const EXAM_LEVEL_QUESTIONS = ENGLISH_EXAM_LEVEL_QUESTIONS.filter((question) => question.unit !== "exam-sample");
 
 function questionGenre(question: EnglishQuestion) {
   return question.group.split("｜", 1)[0];
 }
 
-const ALL_QUESTION_GROUPS = Array.from(new Set(STUDY_QUESTIONS.map(questionGenre)));
+const ALL_QUESTION_GROUPS = Array.from(new Set(EXAM_LEVEL_QUESTIONS.map(questionGenre)));
 
 function randomize<T>(items: readonly T[]): T[] {
   const result = [...items];
@@ -344,14 +346,14 @@ export default function EnglishSubjectPage() {
 
   const availableTestGroups = useMemo(
     () => Array.from(new Set(
-      STUDY_QUESTIONS
+      EXAM_LEVEL_QUESTIONS
         .filter((question) => chapterMatches(question.unit, testUnits))
         .map(questionGenre),
     )),
     [testUnits],
   );
   const availableQuestions = useMemo(
-    () => STUDY_QUESTIONS.filter(
+    () => EXAM_LEVEL_QUESTIONS.filter(
       (question) => chapterMatches(question.unit, testUnits)
         && selectedTestGroups.includes(questionGenre(question)),
     ),
@@ -603,7 +605,7 @@ export default function EnglishSubjectPage() {
       setAnnouncement("再開できる保存データがありません。");
       return;
     }
-    const questionsById = new Map(STUDY_QUESTIONS.map((question) => [question.id, question]));
+    const questionsById = new Map(EXAM_LEVEL_QUESTIONS.map((question) => [question.id, question]));
     const questions = session.questionIds
       .map((id) => questionsById.get(id))
       .filter((question): question is EnglishQuestion => Boolean(question));
@@ -622,7 +624,7 @@ export default function EnglishSubjectPage() {
     const nextIndex = Math.min(session.testIndex, questions.length - 1);
     const nextQuestion = questions[nextIndex];
     const unitGroups = Array.from(new Set(
-      STUDY_QUESTIONS
+      EXAM_LEVEL_QUESTIONS
         .filter((question) => chapterMatches(question.unit, session.testUnits))
         .map(questionGenre),
     ));

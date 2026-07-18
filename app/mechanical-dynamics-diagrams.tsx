@@ -7,7 +7,9 @@ export type MechanicalDynamicsDiagramKind =
   | "single-spring-mass"
   | "damped-spring-mass"
   | "static-deflection"
-  | "amplitude-decay";
+  | "amplitude-decay"
+  | "cantilever-mass"
+  | "spring-rigid-rod";
 
 type DiagramProps = {
   kind: MechanicalDynamicsDiagramKind | string;
@@ -24,6 +26,8 @@ const KNOWN_KINDS = new Set<MechanicalDynamicsDiagramKind>([
   "damped-spring-mass",
   "static-deflection",
   "amplitude-decay",
+  "cantilever-mass",
+  "spring-rigid-rod",
 ]);
 
 function ArrowMarker({ id }: { id: string }) {
@@ -95,6 +99,45 @@ function SpringNetwork({ arrowId }: { arrowId: string }) {
   );
 }
 
+function CantileverMass({ arrowId }: { arrowId: string }) {
+  return (
+    <svg viewBox="0 0 380 230" role="img" aria-label="片持ちはり先端に質量を取り付けた振動系">
+      <ArrowMarker id={arrowId} />
+      <path d="M52 28 V198" stroke="currentColor" strokeWidth="5" />
+      {Array.from({ length: 8 }, (_, index) => <path key={index} d={`M52 ${38 + index * 21} l-18 13`} stroke="currentColor" opacity="0.45" />)}
+      <path d="M55 112 H292" stroke="currentColor" strokeWidth="8" />
+      <rect x="286" y="78" width="64" height="68" rx="4" fill="#fff" stroke="currentColor" strokeWidth="3" />
+      <text x="318" y="119" textAnchor="middle" fontSize="20" fontWeight="700">m</text>
+      <text x="150" y="96" fontWeight="700">EI</text>
+      <path d="M59 184 H287" markerStart={`url(#${arrowId})`} markerEnd={`url(#${arrowId})`} stroke="currentColor" />
+      <text x="173" y="207" textAnchor="middle" fontWeight="700">l</text>
+      <path d="M359 88 v54" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="2" />
+      <text x="365" y="121" fontWeight="700">x</text>
+    </svg>
+  );
+}
+
+function SpringRigidRod({ arrowId }: { arrowId: string }) {
+  return (
+    <svg viewBox="0 0 390 255" role="img" aria-label="上端支持の一様剛体棒に水平ばねを取り付けた振動系">
+      <ArrowMarker id={arrowId} />
+      <path d="M125 18 H265" stroke="currentColor" strokeWidth="3" />
+      <circle cx="205" cy="31" r="6" fill="currentColor" />
+      <path d="M205 31 L226 218" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
+      <text x="239" y="190" fontWeight="700">m</text>
+      <path d="M42 76 V168" stroke="currentColor" strokeWidth="4" />
+      {Array.from({ length: 5 }, (_, index) => <path key={index} d={`M42 ${85 + index * 18} l-14 10`} stroke="currentColor" opacity="0.45" />)}
+      <path d="M44 117 h20 l10 -9 16 18 16 -18 16 18 16 -18 16 18 16 -18 16 18 16 -9 h47" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <text x="119" y="99" fontWeight="700">k</text>
+      <path d="M262 35 L282 214" markerStart={`url(#${arrowId})`} markerEnd={`url(#${arrowId})`} stroke="currentColor" />
+      <text x="289" y="132" fontWeight="700">l</text>
+      <path d="M180 34 L190 117" markerStart={`url(#${arrowId})`} markerEnd={`url(#${arrowId})`} stroke="currentColor" />
+      <text x="160" y="82" fontWeight="700">h</text>
+      <path d="M205 62 A34 34 0 0 1 220 60" fill="none" stroke="currentColor" strokeWidth="2" />
+      <text x="219" y="52" fontWeight="700">θ</text>
+    </svg>
+  );
+}
 function PinnedBeam({ arrowId }: { arrowId: string }) {
   return (
     <svg viewBox="0 0 390 235" role="img" aria-label="左端ピン支持された梁と質点、ダンパ、ばね">
@@ -128,14 +171,19 @@ function Pendulum({ arrowId }: { arrowId: string }) {
 }
 
 function AmplitudeDecay({ solution, arrowId }: { solution: boolean; arrowId: string }) {
-  const wave: ReactNode = solution ? <path d="M38 104 C52 31 67 31 82 104 S111 165 126 104 S155 55 170 104 S199 143 214 104 S243 72 258 104 S287 129 302 104" fill="none" stroke="currentColor" strokeWidth="3" /> : null;
+  const wave: ReactNode = <path d="M38 104 C52 31 67 31 82 104 S111 165 126 104 S155 55 170 104 S199 143 214 104 S243 72 258 104 S287 129 302 104" fill="none" stroke="currentColor" strokeWidth="3" />;
   return (
     <svg viewBox="0 0 340 215" role="img" aria-label={`減衰振動の振幅波形${solution ? "の模範例" : "の解答用座標"}`}>
       <ArrowMarker id={arrowId} />
       <path d="M28 20 V190 M18 105 H322" stroke="currentColor" strokeWidth="2" />
       <path d="M35 34 C105 48 195 76 312 97 M35 176 C105 162 195 134 312 113" fill="none" stroke="currentColor" strokeDasharray="6 4" opacity="0.55" />
       {wave}<text x="10" y="25" fontWeight="700">x</text><text x="317" y="123" fontWeight="700">t</text>
-      {!solution && <text x="176" y="200" textAnchor="middle" opacity="0.48">振幅包絡線と周期を記入</text>}
+      {!solution && <>
+        <circle cx="60" cy="50" r="4" fill="currentColor" /><circle cx="258" cy="86" r="4" fill="currentColor" />
+        <text x="43" y="38" fontWeight="700">xᵢ</text><text x="258" y="72" textAnchor="middle" fontWeight="700">xᵢ₊ₙ</text>
+        <path d="M60 181 H258" markerStart={`url(#${arrowId})`} markerEnd={`url(#${arrowId})`} stroke="currentColor" />
+        <text x="159" y="201" textAnchor="middle" fontWeight="700">nT_d</text>
+      </>}
     </svg>
   );
 }
@@ -146,6 +194,8 @@ export default function MechanicalDynamicsDiagram({ kind, solution = false, titl
   const safeKind = kind as MechanicalDynamicsDiagramKind;
   let diagram: ReactNode;
   if (safeKind === "spring-network") diagram = <SpringNetwork arrowId={arrowId} />;
+  else if (safeKind === "cantilever-mass") diagram = <CantileverMass arrowId={arrowId} />;
+  else if (safeKind === "spring-rigid-rod") diagram = <SpringRigidRod arrowId={arrowId} />;
   else if (safeKind === "pinned-beam") diagram = <PinnedBeam arrowId={arrowId} />;
   else if (safeKind === "simple-pendulum") diagram = <Pendulum arrowId={arrowId} />;
   else if (safeKind === "amplitude-decay") diagram = <AmplitudeDecay solution={solution} arrowId={arrowId} />;

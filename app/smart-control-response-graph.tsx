@@ -12,7 +12,9 @@ import {
 import styles from "./smart-control-response-graph.module.css";
 
 export type SmartControlResponseGraphProps = {
+  answerVisibility?: "toggle" | "hidden" | "shown";
   className?: string;
+  compact?: boolean;
   dampingRatio?: number;
   naturalFrequency?: number;
   initiallyRevealed?: boolean;
@@ -420,13 +422,21 @@ const drawResponseGraph = (
 const hiddenText = "答えを表示すると確認できます";
 
 export default function SmartControlResponseGraph({
+  answerVisibility = "toggle",
   className,
+  compact = false,
   dampingRatio = 0.35,
   naturalFrequency = 1,
   initiallyRevealed = false,
   title = "過渡応答の特性値を覚える",
 }: SmartControlResponseGraphProps) {
-  const [revealed, setRevealed] = useState(initiallyRevealed);
+  const [toggleRevealed, setRevealed] = useState(initiallyRevealed);
+  const revealed =
+    answerVisibility === "shown"
+      ? true
+      : answerVisibility === "hidden"
+        ? false
+        : toggleRevealed;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const graphShellRef = useRef<HTMLDivElement>(null);
   const descriptionId = useId();
@@ -442,9 +452,11 @@ export default function SmartControlResponseGraph({
     if (!canvas || !graphShell || typeof window === "undefined") return;
 
     const width = Math.max(280, Math.floor(graphShell.getBoundingClientRect().width));
-    const height = clamp(width * (width < 560 ? 0.94 : 0.56), 360, 520);
+    const height = compact
+      ? clamp(width * (width < 560 ? 0.78 : 0.48), 260, 360)
+      : clamp(width * (width < 560 ? 0.94 : 0.56), 360, 520);
     drawResponseGraph(canvas, width, height, data, revealed);
-  }, [data, revealed]);
+  }, [compact, data, revealed]);
 
   useEffect(() => {
     redraw();
@@ -526,7 +538,7 @@ export default function SmartControlResponseGraph({
     : "二次遅れ系の単位ステップ応答。特性値のラベルと数値は暗記練習のため非表示です。";
 
   return (
-    <section className={`${styles.root}${className ? ` ${className}` : ""}`}>
+    <section className={styles.root + (compact ? " " + styles.compact : "") + (className ? " " + className : "")}>
       <div className={styles.headingRow}>
         <div>
           <p className={styles.eyebrow}>STEP RESPONSE MEMORY GRAPH</p>
@@ -535,7 +547,7 @@ export default function SmartControlResponseGraph({
             曲線の位置から、各記号・基準値・意味を口に出してから答えを開いてください。
           </p>
         </div>
-        <button
+        {answerVisibility === "toggle" && <button
           className={styles.revealButton}
           type="button"
           aria-controls={`${descriptionId} ${statusId}`}
@@ -543,7 +555,7 @@ export default function SmartControlResponseGraph({
           onClick={() => setRevealed((current) => !current)}
         >
           {revealed ? "ラベルを隠す" : "答えを表示"}
-        </button>
+        </button>}
       </div>
 
       <div className={styles.graphShell} ref={graphShellRef}>
@@ -552,7 +564,7 @@ export default function SmartControlResponseGraph({
           ref={canvasRef}
           role="img"
           aria-label={accessibleSummary}
-          aria-describedby={descriptionId}
+          aria-describedby={compact ? undefined : descriptionId}
         >
           {accessibleSummary}
         </canvas>

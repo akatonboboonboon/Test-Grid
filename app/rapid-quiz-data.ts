@@ -1,13 +1,16 @@
-import { ENGLISH_VOCAB } from "./english-data";
-import { APPLIED_MATH_FORMULAS } from "./applied-math-data";
-import { MECHANICAL_DYNAMICS_FORMULAS } from "./mechanical-dynamics-data";
+import { ENGLISH_QUESTIONS } from "./english-data";
+import { ENGLISH_EXAM_LEVEL_QUESTIONS } from "./english-expected-exams-data";
+import { APPLIED_MATH_EXAM_LEVEL_QUESTIONS, APPLIED_MATH_FORMULAS, APPLIED_MATH_QUESTIONS } from "./applied-math-data";
+import { DIGITAL_CIRCUIT_ALL_FORMULAS, DIGITAL_CIRCUIT_ALL_QUESTIONS, DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS } from "./digital-circuits-extra-data";
+import { MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS, MATERIAL_MECHANICS_FORMULAS, MATERIAL_MECHANICS_QUESTIONS } from "./material-mechanics-data";
+import { MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS, MECHANICAL_DYNAMICS_FORMULAS, MECHANICAL_DYNAMICS_QUESTIONS } from "./mechanical-dynamics-data";
 import { ALL_LAYERS, DEFAULT_CARDS, cardLayers, type ProtocolCard } from "./protocols";
-import { SMART_CONTROL_CARDS } from "./smart-control-data";
-import { TEXTBOOK_RESPONSE_CARDS } from "./smart-control-textbook-data";
-import { STATISTICS_FORMULAS } from "./statistics-data";
-import { THERMODYNAMICS_FORMULAS } from "./thermodynamics-data";
-import { DEFAULT_SUBJECTS, type StudyCard, type SubjectId } from "./study-data";
-
+import { SMART_CONTROL_CARDS, SMART_CONTROL_EXAM_LEVEL_QUESTIONS, SMART_CONTROL_QUESTIONS } from "./smart-control-data";
+import { TEXTBOOK_RESPONSE_CARDS, TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS } from "./smart-control-textbook-data";
+import { STATISTICS_FORMULAS, STATISTICS_QUESTIONS } from "./statistics-data";
+import { STATISTICS_EXAM_LEVEL_QUESTIONS } from "./statistics-expected-exams-data";
+import { THERMODYNAMICS_EXAM_LEVEL_QUESTIONS, THERMODYNAMICS_FORMULAS, THERMODYNAMICS_QUESTIONS } from "./thermodynamics-data";
+import { DEFAULT_SUBJECTS, type SubjectId } from "./study-data";
 export type RapidQuestion = {
   id: string;
   subjectId: SubjectId;
@@ -19,6 +22,10 @@ export type RapidQuestion = {
   explanation: string;
   studyHref: string;
   mathOptions?: boolean;
+  difficulty: 1 | 2 | 3;
+  recommendedSeconds: number;
+  steps: string[];
+  sourceBasis: string;
 };
 
 export type RapidQuestionInstance = RapidQuestion & {
@@ -43,6 +50,10 @@ type ChoiceSeed = {
   options?: string[];
   acceptedOptions?: string[];
   mathOptions?: boolean;
+  difficulty?: 1 | 2 | 3;
+  recommendedSeconds?: number;
+  steps?: string[];
+  sourceBasis?: string;
 };
 
 export const RAPID_SUBJECTS: RapidSubjectMeta[] = DEFAULT_SUBJECTS.map((subject) => ({
@@ -52,9 +63,7 @@ export const RAPID_SUBJECTS: RapidSubjectMeta[] = DEFAULT_SUBJECTS.map((subject)
   href: subject.id === "network" ? "/subjects/network" : `/subjects/${subject.id}`,
   cardHref: subject.id === "network"
     ? "/subjects/network/cards"
-    : subject.id === "subject-5" || subject.id === "subject-9"
-      ? `/subjects/${subject.id}?mode=study`
-      : `/subjects/${subject.id}?mode=cards`,
+    : `/subjects/${subject.id}?mode=cards`,
 }));
 
 export const RAPID_SUBJECT_IDS = RAPID_SUBJECTS.map((subject) => subject.id);
@@ -102,6 +111,10 @@ function buildChoicePool(subjectId: SubjectId, seeds: ChoiceSeed[]): RapidQuesti
     return {
       ...seed,
       subjectId,
+      difficulty: seed.difficulty ?? 2,
+      recommendedSeconds: seed.recommendedSeconds ?? 90,
+      steps: seed.steps?.length ? seed.steps : ["条件を整理する。", "必要な関係式または本文根拠を適用する。", "単位・符号・文脈を検算する。"],
+      sourceBasis: seed.sourceBasis ?? "読み込み済み試験範囲の確認問題",
       studyHref: flashcardSearchHref(subjectId, seed.prompt),
       acceptedOptions: unique(seed.acceptedOptions ?? [seed.answer]),
       options: rotated(options.slice(0, 4), (stableHash(seed.id) + seedIndex) % Math.min(4, options.length)),
@@ -109,16 +122,166 @@ function buildChoicePool(subjectId: SubjectId, seeds: ChoiceSeed[]): RapidQuesti
   });
 }
 
-const ENGLISH_RAPID = buildChoicePool("subject-2", ENGLISH_VOCAB
-  .filter((card) => ["ch15", "ch16", "ch18"].includes(card.unit))
-  .map((card) => ({
-    id: `rapid-${card.id}`,
-    topicLabel: card.unit.toUpperCase(),
-    prompt: `“${card.en}” の意味は？`,
-    answer: card.ja,
-    explanation: card.note ? `${card.ja}。覚え方：${card.note}` : `${card.en} は「${card.ja}」を表します。`,
-    studyHref: "/subjects/subject-2?mode=cards",
+type ExamLevelRapidSource = {
+  id: string;
+  topic?: string;
+  topicId?: string;
+  unit?: string;
+  group?: string;
+  genre?: string;
+  difficulty?: 1 | 2 | 3;
+  prompt: string;
+  context?: string;
+  answer: string;
+  options?: string[];
+  accepted?: string[];
+  numericAnswer?: number;
+  expectedUnit?: string;
+  formula?: string;
+  steps?: string[];
+  explanation?: string;
+};
+
+const ACTIVE_ENGLISH_RAPID_GROUPS = new Set([
+  "長文 True / False",
+  "要約穴埋め",
+  "語形・文脈",
+  "長文内容理解",
+  "和訳",
+  "情報検索",
+]);
+
+const RAPID_SOURCE_BASIS: Partial<Record<SubjectId, string>> = {
+  "subject-2": "英語ZIP本文 Ch.15・16・18 と提供過去問の出題形式",
+  "subject-3": "機械力学範囲プリント4枚相当・過去問の連続計算",
+  "subject-4": "熱力学範囲ZIPと形式1〜3の複合状態変化",
+  "subject-5": "材料力学範囲ZIPと形式2の範囲重複問題",
+  "subject-6": "スマート制御範囲・演習・過去問の計算と図読解",
+  "subject-7": "確率統計範囲ZIP・演習PDF1〜4・過去問形式",
+  "subject-8": "応用数学範囲・追加範囲と提供テスト形式",
+  "subject-9": "デジタル回路範囲ZIP・演習・過去問の設計問題",
+};
+
+function rapidNumber(value: number) {
+  if (value === 0) return "0";
+  const magnitude = Math.abs(value);
+  if (magnitude >= 10_000 || magnitude < 0.001) return value.toExponential(3);
+  return Number(value.toPrecision(4)).toString();
+}
+
+function numericRapidOptions(question: ExamLevelRapidSource) {
+  const value = question.numericAnswer;
+  if (!Number.isFinite(value)) return question.options;
+  const numeric = value as number;
+  const variants = numeric === 0
+    ? [1, -1, 2]
+    : [numeric / 2, numeric * 2, -numeric];
+  const suffix = question.expectedUnit?.trim() ?? "";
+  const usesPi = /\\pi|π/.test(question.answer);
+  return unique([
+    question.answer,
+    ...variants.map((candidate) => {
+      const base = rapidNumber(candidate);
+      if (usesPi) return `${base}π`;
+      return suffix ? `${base} ${suffix}` : base;
+    }),
+  ]);
+}
+
+function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource): ChoiceSeed {
+  const steps = question.steps?.filter(Boolean) ?? [];
+  const formulaNote = question.formula ? `使用式：\\(${question.formula}\\)` : "";
+  const explanation = [...steps, formulaNote, question.explanation ?? ""].filter(Boolean).join(" ");
+  const topicLabel = question.group ?? question.genre ?? question.topicId ?? question.topic ?? question.unit ?? "本番水準";
+  const options = question.options?.length ? question.options : numericRapidOptions(question);
+  const optionValues = options?.length ? options : [question.answer];
+  const mathOptions = subjectId !== "subject-2"
+    && optionValues.every((option) => !/[\u3000-\u9fff。、]/u.test(option));
+  return {
+    id: `rapid-exam-${question.id}`,
+    topicLabel: `${topicLabel} / 本番水準`,
+    prompt: [question.context, question.prompt].filter(Boolean).join("\n"),
+    answer: question.answer,
+    options,
+    acceptedOptions: [question.answer],
+    explanation,
+    studyHref: `/subjects/${subjectId}?mode=practice`,
+    mathOptions,
+    difficulty: question.difficulty ?? 3,
+    recommendedSeconds: subjectId === "subject-2" ? 60 : 90,
+    steps: steps.length >= 2 ? steps : ["条件・本文根拠を整理する。", "複数の計算または判断を順に行う。", "答えを元の条件へ戻して検算する。"],
+    sourceBasis: RAPID_SOURCE_BASIS[subjectId] ?? "読み込み済み試験範囲",
+  };
+}
+
+function examLevelPool(
+  subjectId: SubjectId,
+  questions: readonly ExamLevelRapidSource[],
+  include: (question: ExamLevelRapidSource) => boolean,
+) {
+  const seen = new Set<string>();
+  const selected = questions.filter((question) => {
+    if (seen.has(question.id) || !include(question)) return false;
+    seen.add(question.id);
+    return true;
+  });
+  return buildChoicePool(subjectId, selected.map((question) => examLevelSeed(subjectId, question)));
+}
+
+type ComprehensiveFormulaCard = {
+  id: string;
+  title: string;
+  prompt: string;
+  formula: string;
+  explanation: string;
+  cue: string;
+  example?: string;
+  expandedFormula?: string;
+};
+
+function formulaCardPool(subjectId: SubjectId, cards: readonly ComprehensiveFormulaCard[]) {
+  const formulaBank = unique(cards.map((card) => card.formula));
+  return buildChoicePool(subjectId, cards.map((card) => ({
+    id: `rapid-card-${card.id}`,
+    topicLabel: `${card.title} / 暗記・公式`,
+    prompt: card.prompt,
+    answer: card.formula,
+    options: [
+      card.formula,
+      ...rotated(formulaBank, stableHash(card.id) % Math.max(1, formulaBank.length))
+        .filter((formula) => formula !== card.formula)
+        .slice(0, 3),
+    ],
+    acceptedOptions: [card.formula],
+    explanation: [
+      card.explanation,
+      `覚え方：${card.cue}`,
+      card.expandedFormula ? `Σを使わない形：\\(${card.expandedFormula}\\)` : "",
+      card.example ? `例：${card.example}` : "",
+    ].filter(Boolean).join(" "),
+    studyHref: `/subjects/${subjectId}?mode=cards`,
+    mathOptions: true,
+    difficulty: 3 as const,
+    recommendedSeconds: 45,
+    steps: ["問いの条件・記号を整理する。", `手掛かり「${card.cue}」から公式・定義を再現する。`, "各記号の意味と適用条件を確認する。"],
+    sourceBasis: `${RAPID_SOURCE_BASIS[subjectId] ?? "読み込み済み試験範囲"} / 暗記・公式カード`,
   })));
+}
+
+function combineRapidPools(...pools: readonly RapidQuestion[][]) {
+  const seen = new Set<string>();
+  return pools.flat().filter((question) => {
+    if (seen.has(question.id)) return false;
+    seen.add(question.id);
+    return true;
+  });
+}
+const ENGLISH_RAPID = examLevelPool(
+  "subject-2",
+  [...ENGLISH_QUESTIONS, ...ENGLISH_EXAM_LEVEL_QUESTIONS],
+  (question) => ["ch15", "ch16", "ch18"].includes(question.unit ?? "")
+    && (ACTIVE_ENGLISH_RAPID_GROUPS.has(question.group ?? "") || question.id.startsWith("exam-level-")),
+);
 
 export function networkCardsToRapid(cards: ProtocolCard[]) {
   return cards.map((card) => {
@@ -127,95 +290,116 @@ export function networkCardsToRapid(cards: ProtocolCard[]) {
     return {
       id: `rapid-${card.id}`,
       subjectId: "network" as const,
-      topicLabel: "OSIレイヤー",
+      topicLabel: "OSIレイヤー / 本番瞬時判定",
       prompt: `${card.label} は第何層？`,
       answer: labels.join(" / "),
       acceptedOptions: labels,
       options: ALL_LAYERS.map((layer) => `L${layer}`),
-      explanation: [card.fullName, card.description, card.note].filter(Boolean).join("｜") || `${card.label} は ${labels.join(" / ")} に属します。`,
+      explanation: [card.fullName, card.description, card.note].filter(Boolean).join("。") || `${card.label} は ${labels.join(" / ")} に属します。`,
       studyHref: flashcardSearchHref("network", card.label),
+      difficulty: 3 as const,
+      recommendedSeconds: 8,
+      steps: ["略称を正式名称へ展開する。", "主な働きからOSI参照モデルの層を判定する。"],
+      sourceBasis: "提供されたネットワーク層別一覧（本番の瞬時判定形式）",
     } satisfies RapidQuestion;
   });
 }
 
-const MECHANICAL_RAPID = buildChoicePool("subject-3", MECHANICAL_DYNAMICS_FORMULAS.map((card) => ({
-  id: `rapid-${card.id}`,
-  topicLabel: card.title,
-  prompt: card.prompt,
-  answer: card.formula,
-  explanation: `${card.explanation} 覚え方：${card.cue}`,
-  studyHref: "/subjects/subject-3?mode=cards",
-  mathOptions: true,
-})));
-
-const THERMODYNAMICS_RAPID = buildChoicePool("subject-4", THERMODYNAMICS_FORMULAS.map((card) => ({
-  id: `rapid-${card.id}`,
-  topicLabel: card.title,
-  prompt: card.prompt,
-  answer: card.formula,
-  explanation: `${card.explanation} 覚え方：${card.cue}`,
-  studyHref: "/subjects/subject-4?mode=cards",
-  mathOptions: true,
-})));
-
-const SMART_CONTROL_ALL_CARDS = [...SMART_CONTROL_CARDS, ...TEXTBOOK_RESPONSE_CARDS];
-const SMART_CONTROL_RAPID = buildChoicePool("subject-6", SMART_CONTROL_ALL_CARDS.map((card) => ({
-  id: `rapid-${card.id}`,
-  topicLabel: card.title,
-  prompt: card.prompt,
-  answer: card.formula,
-  explanation: `${card.explanation} 覚え方：${card.cue}`,
-  studyHref: "/subjects/subject-6?mode=cards",
-  mathOptions: true,
-})));
-
-const STATISTICS_RAPID = buildChoicePool("subject-7", STATISTICS_FORMULAS.map((card) => ({
-  id: `rapid-${card.id}`,
-  topicLabel: card.title,
-  prompt: card.prompt,
-  answer: card.formula,
-  explanation: `${card.explanation} 覚え方：${card.cue}`,
-  studyHref: "/subjects/subject-7?mode=cards",
-  mathOptions: true,
-})));
-
-const APPLIED_MATH_RAPID = buildChoicePool("subject-8", APPLIED_MATH_FORMULAS.map((card) => ({
-  id: `rapid-${card.id}`,
-  topicLabel: card.title,
-  prompt: card.prompt,
-  answer: card.formula,
-  explanation: `${card.explanation} 覚え方：${card.cue}`,
-  studyHref: "/subjects/subject-8?mode=cards",
-  mathOptions: true,
-})));
-
+const MECHANICAL_RAPID = examLevelPool(
+  "subject-3",
+  [...MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, ...MECHANICAL_DYNAMICS_QUESTIONS, ...MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS],
+  (question) => (question.difficulty ?? 1) >= 2,
+);
+const THERMODYNAMICS_RAPID = examLevelPool(
+  "subject-4",
+  [...THERMODYNAMICS_QUESTIONS, ...THERMODYNAMICS_EXAM_LEVEL_QUESTIONS],
+  (question) => (question.difficulty ?? 1) >= 2,
+);
+const MATERIAL_MECHANICS_RAPID = examLevelPool(
+  "subject-5",
+  [...MATERIAL_MECHANICS_QUESTIONS, ...MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS],
+  (question) => (question.difficulty ?? 1) >= 2,
+);
+const SMART_CONTROL_RAPID = examLevelPool(
+  "subject-6",
+  [...SMART_CONTROL_QUESTIONS, ...TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS, ...SMART_CONTROL_EXAM_LEVEL_QUESTIONS],
+  (question) => (question.difficulty ?? 1) >= 2,
+);
+const STATISTICS_RAPID = examLevelPool(
+  "subject-7",
+  [...STATISTICS_QUESTIONS, ...STATISTICS_EXAM_LEVEL_QUESTIONS],
+  (question) => (question.difficulty ?? 1) >= 2,
+);
+const APPLIED_MATH_RAPID = examLevelPool(
+  "subject-8",
+  [...APPLIED_MATH_QUESTIONS, ...APPLIED_MATH_EXAM_LEVEL_QUESTIONS],
+  (question) => (question.difficulty ?? 1) >= 2,
+);
+const DIGITAL_CIRCUITS_RAPID = examLevelPool(
+  "subject-9",
+  [...DIGITAL_CIRCUIT_ALL_QUESTIONS, ...DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS],
+  (question) => (question.difficulty ?? 1) >= 2,
+);
 const STATIC_POOLS: Record<SubjectId, RapidQuestion[]> = {
   "subject-2": ENGLISH_RAPID,
   network: networkCardsToRapid(DEFAULT_CARDS),
   "subject-3": MECHANICAL_RAPID,
   "subject-4": THERMODYNAMICS_RAPID,
-  "subject-5": [],
+  "subject-5": MATERIAL_MECHANICS_RAPID,
   "subject-6": SMART_CONTROL_RAPID,
   "subject-7": STATISTICS_RAPID,
   "subject-8": APPLIED_MATH_RAPID,
-  "subject-9": [],
+  "subject-9": DIGITAL_CIRCUITS_RAPID,
 };
 
 export function getStaticRapidPool(subjectId: SubjectId) {
   return STATIC_POOLS[subjectId];
 }
 
-export function studyCardsToRapid(subjectId: SubjectId, cards: StudyCard[]) {
-  const meta = rapidSubjectMeta(subjectId);
-  return buildChoicePool(subjectId, cards.filter((card) => card.enabled).map((card) => ({
-    id: `rapid-${card.id}`,
-    topicLabel: "登録教材",
-    prompt: card.prompt,
-    answer: card.answer,
-    explanation: `登録した暗記カードの答えは「${card.answer}」です。`,
-    studyHref: meta.cardHref,
-  })));
+const COMPREHENSIVE_POOLS: Record<SubjectId, RapidQuestion[]> = {
+  "subject-2": examLevelPool(
+    "subject-2",
+    [...ENGLISH_QUESTIONS, ...ENGLISH_EXAM_LEVEL_QUESTIONS],
+    (question) => ["ch15", "ch16", "ch18"].includes(question.unit ?? ""),
+  ),
+  network: networkCardsToRapid(DEFAULT_CARDS),
+  "subject-3": combineRapidPools(
+    examLevelPool(
+      "subject-3",
+      [...MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, ...MECHANICAL_DYNAMICS_QUESTIONS, ...MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS],
+      () => true,
+    ),
+    formulaCardPool("subject-3", MECHANICAL_DYNAMICS_FORMULAS),
+  ),
+  "subject-4": combineRapidPools(
+    examLevelPool("subject-4", [...THERMODYNAMICS_QUESTIONS, ...THERMODYNAMICS_EXAM_LEVEL_QUESTIONS], () => true),
+    formulaCardPool("subject-4", THERMODYNAMICS_FORMULAS),
+  ),
+  "subject-5": combineRapidPools(
+    examLevelPool("subject-5", [...MATERIAL_MECHANICS_QUESTIONS, ...MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS], () => true),
+    formulaCardPool("subject-5", MATERIAL_MECHANICS_FORMULAS),
+  ),
+  "subject-6": combineRapidPools(
+    examLevelPool("subject-6", [...SMART_CONTROL_QUESTIONS, ...TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS, ...SMART_CONTROL_EXAM_LEVEL_QUESTIONS], () => true),
+    formulaCardPool("subject-6", [...SMART_CONTROL_CARDS, ...TEXTBOOK_RESPONSE_CARDS]),
+  ),
+  "subject-7": combineRapidPools(
+    examLevelPool("subject-7", [...STATISTICS_QUESTIONS, ...STATISTICS_EXAM_LEVEL_QUESTIONS], () => true),
+    formulaCardPool("subject-7", STATISTICS_FORMULAS),
+  ),
+  "subject-8": combineRapidPools(
+    examLevelPool("subject-8", [...APPLIED_MATH_QUESTIONS, ...APPLIED_MATH_EXAM_LEVEL_QUESTIONS], () => true),
+    formulaCardPool("subject-8", APPLIED_MATH_FORMULAS),
+  ),
+  "subject-9": combineRapidPools(
+    examLevelPool("subject-9", [...DIGITAL_CIRCUIT_ALL_QUESTIONS, ...DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS], () => true),
+    formulaCardPool("subject-9", DIGITAL_CIRCUIT_ALL_FORMULAS),
+  ),
+};
+export function getComprehensiveRapidPool(subjectId: SubjectId) {
+  return COMPREHENSIVE_POOLS[subjectId];
 }
+
 
 export function shuffleWith<T>(values: readonly T[], random: () => number = Math.random) {
   const copy = [...values];
@@ -264,6 +448,12 @@ export function createBalancedRapidSession(
   return result.map((question, index) => ({ ...question, instanceId: `${question.id}-balanced-${index}` }));
 }
 
+export function unwrapRapidMath(value: string) {
+  const trimmed = value.trim();
+  return trimmed.startsWith("\\(") && trimmed.endsWith("\\)")
+    ? trimmed.slice(2, -2)
+    : trimmed;
+}
 export function isRapidAnswerCorrect(question: RapidQuestion, selected: string | null) {
   return selected !== null && question.acceptedOptions.includes(selected);
 }

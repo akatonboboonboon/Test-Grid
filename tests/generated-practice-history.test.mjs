@@ -23,13 +23,24 @@ test("generated practice supports a bounded 1 to 100 question session", async ()
 });
 
 test("generated questions are saved to a public, validated, paginated D1 history", async () => {
-  const [client, route, schema, hosting, historyMigration, quotaMigration] = await Promise.all([
+  const [
+    client,
+    route,
+    favoriteRoute,
+    schema,
+    hosting,
+    historyMigration,
+    quotaMigration,
+    favoriteMigration,
+  ] = await Promise.all([
     readFile(new URL("app/generated-practice-client.tsx", ROOT), "utf8"),
     readFile(new URL("app/api/generated-practice-history/route.ts", ROOT), "utf8"),
+    readFile(new URL("app/api/generated-practice-favorites/route.ts", ROOT), "utf8"),
     readFile(new URL("db/schema.ts", ROOT), "utf8"),
     readFile(new URL(".openai/hosting.json", ROOT), "utf8"),
     readFile(new URL("drizzle/0000_blushing_jetstream.sql", ROOT), "utf8"),
     readFile(new URL("drizzle/0001_mute_robbie_robertson.sql", ROOT), "utf8"),
+    readFile(new URL("drizzle/0002_easy_harrier.sql", ROOT), "utf8"),
   ]);
 
   assert.match(client, /みんなの生成履歴/);
@@ -50,14 +61,30 @@ test("generated questions are saved to a public, validated, paginated D1 history
   assert.match(route, /claimFallbackWrite/);
   assert.match(route, /PERSISTENT_QUOTA_UNAVAILABLE/);
   assert.match(route, /LIMIT -1 OFFSET \?/);
+  assert.match(route, /UNFAVORITED_TTL_MS = 3 \* 24 \* 60 \* 60 \* 1_000/);
+  assert.match(route, /NOT EXISTS \(\s*SELECT 1\s*FROM generated_practice_favorites/s);
   assert.doesNotMatch(route, /body\.questions/);
   assert.match(route, /INSERT OR IGNORE INTO generated_practice_history/);
   assert.doesNotMatch(route, /getChatGPTUser/);
   assert.match(schema, /generated_practice_history/);
   assert.match(schema, /generated_practice_write_limits/);
+  assert.match(schema, /generated_practice_favorites/);
+  assert.ok(schema.includes("primaryKey({ columns: [table.questionId, table.actorKey] })"));
   assert.equal(JSON.parse(hosting).d1, "DB");
   assert.match(historyMigration, /CREATE TABLE .*generated_practice_history/);
   assert.match(quotaMigration, /CREATE TABLE .*generated_practice_write_limits/);
+  assert.match(favoriteMigration, /CREATE TABLE .*generated_practice_favorites/);
+  assert.match(favoriteMigration, /ON DELETE cascade/);
+  assert.match(favoriteRoute, /export async function GET/);
+  assert.match(favoriteRoute, /export async function PATCH/);
+  assert.match(favoriteRoute, /INSERT OR IGNORE INTO generated_practice_favorites/);
+  assert.match(favoriteRoute, /DELETE FROM generated_practice_favorites/);
+  assert.ok(favoriteRoute.includes("UNFAVORITED_TTL_MS = 3 * 24 * 60 * 60 * 1_000"));
+  assert.match(favoriteRoute, /favoriteCount/);
+  assert.match(favoriteRoute, /viewerFavorited/);
+  assert.match(client, /toggleFavorite/);
+  assert.ok(client.includes("aria-pressed={Boolean(item.viewerFavorited)}"));
+  assert.match(client, /お気に入りが0件の問題は生成から3日で自動整理/);
 });
 
 test("generated practice has high-contrast page tokens and obvious entry points", async () => {
@@ -72,6 +99,7 @@ test("generated practice has high-contrast page tokens and obvious entry points"
   assert.ok(css.includes(".generated-practice-builder,"));
   assert.ok(css.includes("color: var(--ink)"));
   assert.ok(css.includes(".generated-practice-history-grid"));
+  assert.ok(css.includes(".generated-practice-favorite-button"));
   assert.ok(css.includes("border-left: 10px solid #f04f8a"));
   assert.ok(css.includes(".hub-generated-header-link"));
   assert.ok(css.includes("background: #f04f8a"));

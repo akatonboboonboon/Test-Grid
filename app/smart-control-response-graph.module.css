@@ -167,6 +167,31 @@
   line-height: 1.65;
 }
 
+.compact {
+  padding: clamp(.65rem, 2vw, 1rem);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--statistics-blue, #8fb5ff) 22%, transparent);
+}
+
+.compact .headingRow {
+  margin-bottom: .55rem;
+}
+
+.compact .eyebrow {
+  margin-bottom: .2rem;
+  font-size: .64rem;
+}
+
+.compact .title {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.compact .lead,
+.compact .status,
+.compact .tableWrap,
+.compact .note {
+  display: none;
+}
+
 @media (max-width: 680px) {
   .root {
     padding: 0.85rem;

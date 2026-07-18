@@ -1,3 +1,5 @@
+import type { SmartControlDiagramId } from "./smart-control-figure-data";
+
 export type SmartControlTopicId =
   | "transfer"
   | "inverse-laplace"
@@ -24,6 +26,7 @@ export type SmartControlCard = {
   explanation: string;
   cue: string;
   example?: string;
+  diagramId?: SmartControlDiagramId;
 };
 
 export type SmartControlQuestion = {
@@ -43,6 +46,12 @@ export type SmartControlQuestion = {
   steps: string[];
   explanation: string;
   source: "scope-zip" | "past2-overlap" | "textbook-p65-68";
+  diagramId?: SmartControlDiagramId;
+  /** 本番形式に合わせ、設問内で処理する段階数。 */
+  subpartCount?: number;
+  /** 範囲・過去問へ遡れる難度校正根拠。 */
+  sourceBasis?: readonly string[];
+  examLevel?: true;
 };
 
 export type SmartControlExamQuestion = {
@@ -53,6 +62,10 @@ export type SmartControlExamQuestion = {
   answer: string;
   formula?: string;
   steps: string[];
+  diagramId?: SmartControlDiagramId;
+  difficulty?: 1 | 2 | 3;
+  subpartCount?: number;
+  sourceBasis?: readonly string[];
 };
 
 export type SmartControlExam = {
@@ -408,7 +421,7 @@ export const SMART_CONTROL_CARDS: SmartControlCard[] = [
   },
 ];
 
-export const SMART_CONTROL_QUESTIONS: SmartControlQuestion[] = [
+export const SMART_CONTROL_FOUNDATION_QUESTIONS: SmartControlQuestion[] = [
   {
     id: "smart-q-transfer-1",
     topic: "transfer",
@@ -946,6 +959,65 @@ export const SMART_CONTROL_QUESTIONS: SmartControlQuestion[] = [
   },
 ];
 
+const SMART_CONTROL_PRACTICE_CALIBRATION: Record<SmartControlTopicId, {
+  derivation: string;
+  verification: string;
+  sourceBasis: readonly string[];
+}> = {
+  transfer: {
+    derivation: "標準入力・保存式・伝達関数のうち設問が求める出発式を定義から示し、必要な場合は初期値0でs領域へ移す。",
+    verification: "得た入力または伝達関数を一次遅れ系へ接続したときの出力式まで作り、直流ゲイン・時定数・初期値または最終値で検算する。",
+    sourceBasis: ["範囲ZIP 010709：伝達関数・標準入力・一次遅れ", "過去問・演習：式の導出から応答までを連続して問う形式"],
+  },
+  "inverse-laplace": {
+    derivation: "分母の根を分類し、必要な部分分数分解または平方完成を行って、標準変換対と照合できる形まで係数を決定する。",
+    verification: "逆変換後の初期値と長時間後の挙動をs領域の極と照合する。",
+    sourceBasis: ["範囲ZIP 010717・010733：部分分数分解と逆ラプラス変換", "過去問・演習：複数種類の極を同時に扱う形式"],
+  },
+  "response-stability": {
+    derivation: "特性方程式を作り、すべての極を求めて各極が生む時間応答モードを対応させる。",
+    verification: "極平面上の位置、減衰・発散・振動の有無、安定性を一組の答案として照合する。",
+    sourceBasis: ["範囲ZIP 010737・010802：極と応答・安定性", "教科書p.65〜68：応答グラフの数値と判定"],
+  },
+  feedback: {
+    derivation: "帰還符号を確認して閉ループ伝達関数と特性方程式を導き、必要ならゲイン条件まで求める。",
+    verification: "直流ゲインと極を別々に計算し、負帰還の効果と安定性が両立するか確認する。",
+    sourceBasis: ["範囲ZIP 010802・010813：フィードバックとゲインK", "過去問：閉ループ式・極・安定範囲を連続して問う形式"],
+  },
+  "block-diagram": {
+    derivation: "最内周の直列・並列・帰還ループから一段ずつ等価変換し、信号の向きを式で追う。",
+    verification: "加え合わせ点・引き出し点の移動前後で同じ信号になることを代数式で照合する。",
+    sourceBasis: ["範囲ZIP・教科書p.38 図3.13〜3.15：ブロック線図の等価変換", "過去問：複合ブロック線図の段階的簡約"],
+  },
+};
+
+function hardenSmartControlQuestion(question: SmartControlQuestion): SmartControlQuestion {
+  const calibration = SMART_CONTROL_PRACTICE_CALIBRATION[question.topic];
+  return {
+    ...question,
+    difficulty: 3,
+    context: [
+      "本番・過去問水準の確認問題です。最終答案だけでなく、途中式と判定根拠を紙に残してください。",
+      question.context,
+    ].filter(Boolean).join(" "),
+    prompt: `【3段階】(1) ${calibration.derivation} (2) ${calibration.verification} (3) ${question.prompt} 最終答案を選択または入力せよ。`,
+    steps: [calibration.derivation, ...question.steps, calibration.verification],
+    explanation: `${question.explanation} 本番では導出・数値または式・検算の3点を一続きで説明できる状態を正解とする。`,
+    subpartCount: 3,
+    sourceBasis: calibration.sourceBasis,
+    examLevel: true,
+  };
+}
+
+/** 通常演習・確認テストで使う、本番難度へ校正済みの問題群。 */
+export const SMART_CONTROL_QUESTIONS: SmartControlQuestion[] =
+  SMART_CONTROL_FOUNDATION_QUESTIONS.map(hardenSmartControlQuestion);
+
+/** 時間制限問題へ流用できる選択式の本番難度問題群。 */
+export const SMART_CONTROL_RAPID_CHALLENGES: SmartControlQuestion[] =
+  SMART_CONTROL_QUESTIONS.filter((question) => question.format === "choice");
+
+
 export const SMART_CONTROL_EXAM_FORMATS: SmartControlExamFormat[] = [
   {
     id: "smart-format-terms",
@@ -979,7 +1051,7 @@ export const SMART_CONTROL_EXAM_FORMATS: SmartControlExamFormat[] = [
   },
 ];
 
-export const SMART_CONTROL_EXAMS: SmartControlExam[] = [
+const SMART_CONTROL_BASE_EXAMS: SmartControlExam[] = [
   {
     id: "smart-exam-1",
     title: "想定試験 01",
@@ -1236,6 +1308,233 @@ export const SMART_CONTROL_EXAMS: SmartControlExam[] = [
       },
     ],
   },
+];
+
+type SmartControlExamHardening = {
+  promptSuffix: string;
+  answerSuffix: string;
+  steps: readonly string[];
+  subpartCount: number;
+};
+
+const SMART_CONTROL_EXAM_SOURCE_BASIS = [
+  "範囲ZIPの伝達関数・逆ラプラス・極・帰還・ブロック線図",
+  "過去問2の範囲重複部分にある4大問構成",
+  "教科書p.65〜68の応答曲線・赤字定義・グラフ数値",
+] as const;
+
+const SMART_CONTROL_EXAM_HARDENING: Record<string, readonly SmartControlExamHardening[]> = {
+  "smart-exam-1": [
+    {
+      promptSuffix: "（2）図5.1型の応答で、定常値20、10%到達0.25 s、90%到達0.85 s、最大値25とする。2.8 sで±5%帯へ入った後3.1 sで外れ、4.2 sで再び入って以後は外れなかった。立ち上がり時間、行き過ぎ率、整定帯、整定時間を求めよ。",
+      answerSuffix: "（2）\\(t_r=0.85-0.25=0.60\\,\\mathrm{s}\\)、行き過ぎ率25%、整定帯は19〜21、\\(t_s=4.2\\,\\mathrm{s}\\)。",
+      steps: ["10%と90%の到達時刻の差を取る。", "超過量5を定常値20で割る。", "最後に許容帯へ入り直した時刻を整定時間とする。"],
+      subpartCount: 5,
+    },
+    {
+      promptSuffix: "（2）得た時間関数について初期値 \\(f(0^+)\\) と定常値 \\(f(\\infty)\\) を求め、s領域の極限でも照合せよ。",
+      answerSuffix: "（2）\\(f(0^+)=0\\)、\\(f(\\infty)=3\\)。それぞれ \\(\\lim_{s\\to\\infty}sF(s)\\)、\\(\\lim_{s\\to0}sF(s)\\) と一致する。",
+      steps: ["時間関数へt=0を代入する。", "指数項とt指数項の極限を取り、s領域の初期値・最終値でも検算する。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）各極が生む時間応答モードを書き、複素平面へ配置して不安定成分を明示せよ。",
+      answerSuffix: "（2）モードは \\(e^{-2t}\\) と \\(e^{t}\\)。極1が右半平面にあり \\(e^t\\) が発散する。",
+      steps: ["極s=pは時間領域の \\(e^{pt}\\) に対応させる。", "右半平面極を不安定成分として丸で示す。"],
+      subpartCount: 3,
+    },
+    {
+      promptSuffix: "（2）\\(K=3\\) としたときの閉ループ極、時定数、単位ステップ入力に対する定常値を求めよ。",
+      answerSuffix: "（2）\\(G_{cl}=\\frac{3}{s+2}\\) なので極は−2、時定数0.5 s、定常値は \\(G_{cl}(0)=\\frac{3}{2}\\)。",
+      steps: ["K=3を閉ループ式へ代入する。", "一次遅れの分母を \\(Ts+1\\) 形へ直し、直流ゲインを読む。"],
+      subpartCount: 4,
+    },
+  ],
+  "smart-exam-2": [
+    {
+      promptSuffix: "（2）定常値8、10%到達0.30 s、90%到達1.10 s、最大値10、最後の整定帯再入時刻3.6 sの応答について、\\(t_r\\)、行き過ぎ率、±5%帯、\\(t_s\\) を求めよ。",
+      answerSuffix: "（2）\\(t_r=0.80\\,\\mathrm{s}\\)、行き過ぎ率25%、帯は7.6〜8.4、\\(t_s=3.6\\,\\mathrm{s}\\)。",
+      steps: ["90%到達から10%到達を引く。", "最大超過2を定常値8で割る。", "0.95倍と1.05倍で帯を作る。"],
+      subpartCount: 5,
+    },
+    {
+      promptSuffix: "（2）時間関数の \\(f(0^+)\\)、初期勾配 \\(f'(0^+)\\)、\\(f(\\infty)\\) を求め、減衰振動であることを説明せよ。",
+      answerSuffix: "（2）\\(f(0^+)=2\\)、\\(f'(0^+)=1\\)、\\(f(\\infty)=0\\)。\\(e^{-t}\\) が振幅を減らしながら正弦・余弦項を振動させる。",
+      steps: ["t=0を代入する。", "積の微分で初期勾配を計算する。", "指数包絡が0へ収束することを確認する。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）極に対応する時間応答モードと振動角周波数を答え、極平面上で安定性を説明せよ。",
+      answerSuffix: "（2）モードは \\(e^{-2t}\\cos2t\\)、\\(e^{-2t}\\sin2t\\)、角周波数は2 rad/s。実部−2なので減衰して安定。",
+      steps: ["複素極の実部を減衰率、虚部を角周波数として読む。", "左右対称の共役極を左半平面へ描く。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）\\(G_1=\\frac{2}{s+1},\\ G_2=3,\\ H=1\\) を代入して閉ループ伝達関数、極、安定性を求めよ。",
+      answerSuffix: "（2）\\(G_{cl}=\\frac{6}{s+7}\\)、極は−7で安定。",
+      steps: ["直列積を \\(\\frac{6}{s+1}\\) とする。", "分母分子へs+1を掛け、極を読む。"],
+      subpartCount: 4,
+    },
+  ],
+  "smart-exam-3": [
+    {
+      promptSuffix: "（2）\\(R=2,\\ C=3\\) のとき、時定数、単位ステップ応答の定常値、\\(t=6\\,\\mathrm{s}\\) の液位を求めよ。",
+      answerSuffix: "（2）時定数 \\(RC=6\\,\\mathrm{s}\\)、定常値2、\\(h(6)=2(1-e^{-1})\\approx1.264\\)。",
+      steps: ["分母CRs+1から時定数を読む。", "直流ゲインRを定常値とし、t=RCを応答式へ代入する。"],
+      subpartCount: 5,
+    },
+    {
+      promptSuffix: "（2）\\(f(0^+)\\)、\\(f(\\frac{\\pi}{2})\\)、長時間後の挙動を求め、最終値の定理を使えない理由を答えよ。",
+      answerSuffix: "（2）\\(f(0^+)=0\\)、\\(f(\\frac{\\pi}{2})=\\frac{\\pi}{8}\\)、長時間では \\(\\frac{t}{4}\\) により発散する。sF(s)が原点極を持つため最終値の定理の安定条件を満たさない。",
+      steps: ["時間関数へ各時刻を代入する。", "線形成分 \(\frac{t}{4}\) が残ることと原点極を対応させる。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）各極の応答モードを示し、なぜ虚軸上の単純極でも漸近安定でないか説明せよ。",
+      answerSuffix: "（2）モードは \\(e^{-t}\\)、\\(\\cos2t,\\sin2t)\\)。後二者は減衰せず持続するため漸近安定でない。",
+      steps: ["−1から減衰指数、±2jから持続正弦波を作る。", "実部0では振幅が消えないことを述べる。"],
+      subpartCount: 3,
+    },
+    {
+      promptSuffix: "（2）\\(K=1\\) の閉ループ極を数値で求め、応答の振動性と安定性を判定せよ。",
+      answerSuffix: "（2）極は \\(\\frac{-1\\pm j\\sqrt3}{2}\\)。実部 \\(-\\frac{1}{2}\\) なので安定、虚部を持つので減衰振動。",
+      steps: ["K=1を判別式へ代入する。", "実部と虚部から安定性・振動性を分けて判定する。"],
+      subpartCount: 4,
+    },
+  ],
+  "smart-exam-4": [
+    {
+      promptSuffix: "（2）各系の極を複素平面へ置き、単位ステップ応答に最終値が存在するかを答えよ。存在する場合はその値も求めよ。",
+      answerSuffix: "（2）極0の積分系はランプで最終値なし、極−1の一次遅れは最終値1、極±jは持続振動で最終値なし、極−1±jは減衰振動で最終値 \(\frac{1}{2}\)。",
+      steps: ["入力 \(\frac{1}{s}\) を掛けた出力の極も確認する。", "安定な系は直流ゲインG(0)から最終値を求める。"],
+      subpartCount: 5,
+    },
+    {
+      promptSuffix: "（2）得た時間関数の初期値と最終値を、時間領域とs領域の両方から検算せよ。",
+      answerSuffix: "（2）\\(f(0^+)=0\\)、\\(f(\\infty)=0\\)。\\(\\lim_{s\\to\\infty}sF(s)=0\\)、\\(\\lim_{s\\to0}sF(s)=0\\) と一致する。",
+      steps: ["時間関数へ0を代入する。", "すべての指数項が消える極限を取り、s領域でも照合する。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）時間応答モードを書き、振幅と振動角周波数が時間とともにどうなるか説明せよ。",
+      answerSuffix: "（2）モードは \\(e^t\\cos2t\\)、\\(e^t\\sin2t\\)。角周波数2 rad/sのまま振幅が \\(e^t\\) で増大する。",
+      steps: ["実部1を包絡e^t、虚部2を振動角周波数へ対応させる。", "右半平面極なので振幅が増えると結論する。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）\\(G=4\\) として、移動枝へ入れる具体値を求め、移動前後の枝信号を式で照合せよ。",
+      answerSuffix: "（2）加え合わせ点は \(\frac{1}{4}\)、引き出し点は4。いずれも移動後に主経路Gを通した枝信号が移動前と同じになる。",
+      steps: ["一般則へG=4を代入する。", "枝信号をvと置き、移動前後で\(4\times\frac{v}{4}=v\) または \(4v\)となることを確認する。"],
+      subpartCount: 4,
+    },
+  ],
+  "smart-exam-5": [
+    {
+      promptSuffix: "（2）\\(y_\\infty=12,\\ y_{max}=15,\\ t_{10}=0.20\\,\\mathrm{s},\\ t_{90}=0.95\\,\\mathrm{s}\\)、最後の整定帯再入が4.8 sのとき、\\(M_p,t_r\\)、整定帯、\\(t_s\\) を求めよ。",
+      answerSuffix: "（2）\\(M_p=25\\%\\)、\\(t_r=0.75\\,\\mathrm{s}\\)、整定帯11.4〜12.6、\\(t_s=4.8\\,\\mathrm{s}\\)。",
+      steps: ["超過量3を12で割る。", "0.95−0.20で立ち上がり時間を求める。", "12の±5%を計算する。"],
+      subpartCount: 5,
+    },
+    {
+      promptSuffix: "（2）時間関数の初期値、定常値、定常値の95%へ初めて到達する時刻を求めよ。",
+      answerSuffix: "（2）\\(f(0^+)=1\\)、\\(f(\\infty)=2\\)。\\(2-e^{-2t}=1.9\\) より \\(t=\\frac{\\ln10}{2}\\approx1.151\\,\\mathrm{s}\\)。",
+      steps: ["t=0と無限大を代入する。", "95%値1.9を応答式へ入れて指数方程式を解く。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）各極の時間応答モードを示し、重極−1の項と原点極の影響を区別せよ。",
+      answerSuffix: "（2）原点極は定数または非減衰成分、重極−1は \\(e^{-t}\\) と \\(te^{-t}\\)。後者は消えるが原点成分は残るため漸近安定でない。",
+      steps: ["m重極にはtの0乗からm−1乗を掛けた指数項が対応する。", "原点極の非減衰性を別に判定する。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）\\(K=1\\) の極を求め、減衰振動か単調応答かを判定せよ。",
+      answerSuffix: "（2）極は \\(\\frac{-1\\pm j\\sqrt3}{2}\\)。左半平面の複素共役極なので安定な減衰振動。",
+      steps: ["K=1を二次方程式へ代入する。", "判別式が負、実部が負であることを確認する。"],
+      subpartCount: 5,
+    },
+  ],
+  "smart-exam-6": [
+    {
+      promptSuffix: "（2）\\(F(s)=\\frac{N(s)}{s(s+1)^2(s^2+4)}\\) の部分分数形を、係数を求めずに漏れなく書け。",
+      answerSuffix: "（2）\\(F(s)=\\frac{A}{s}+\\frac{B}{s+1}+\\frac{C}{(s+1)^2}+\\frac{Ds+E}{s^2+4}\\)。",
+      steps: ["単根s、重根s+1、既約二次s²+4に分ける。", "重根は1乗・2乗、二次因子の分子は一次式を置く。"],
+      subpartCount: 5,
+    },
+    {
+      promptSuffix: "（2）得た時間関数の初期値と定常値を求め、s領域の極限で検算せよ。",
+      answerSuffix: "（2）\\(f(0^+)=0\\)、\\(f(\\infty)=\\frac{1}{2}\\)。初期値・最終値の定理でも同じ。",
+      steps: ["t=0で余弦1・正弦0とする。", "指数項を0へ収束させ、sF(s)の両極限と照合する。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）各極が生む時間応答モードと振動角周波数を答え、最も遅く減衰するモードを示せ。",
+      answerSuffix: "（2）モードは \\(e^{-t}\\)、\\(e^{-2t}\\cos3t\\)、\\(e^{-2t}\\sin3t\\)、角周波数3 rad/s。最も遅いのは \\(e^{-t}\\)。",
+      steps: ["実極−1と複素極−2±3jを各モードへ写す。", "実部の絶対値が小さいものを遅い減衰と判定する。"],
+      subpartCount: 4,
+    },
+    {
+      promptSuffix: "（2）\\(G_1=2,\\ G_2=3,\\ G_3=1\\) を代入して内側ループと全体のゲインを求め、直列積を先に取る誤答との違いを説明せよ。",
+      answerSuffix: "（2）内側は \\(\\frac{3}{1+3}=\\frac{3}{4}\\)、全体は \\(2\\times\\frac{3}{4}=\\frac{3}{2}\\)。分母には内側ループの \\(G_2G_3\\) だけが入る。",
+      steps: ["最内側の負帰還を先に \(\frac{3}{4}\) へ簡約する。", "外側のG1=2を最後に掛ける。"],
+      subpartCount: 4,
+    },
+  ],
+};
+
+export const SMART_CONTROL_EXAMS: SmartControlExam[] = SMART_CONTROL_BASE_EXAMS.map((exam) => {
+  const hardening = SMART_CONTROL_EXAM_HARDENING[exam.id];
+  if (!hardening || hardening.length !== exam.questions.length) {
+    throw new Error(`${exam.id}: missing past-paper difficulty calibration`);
+  }
+  return {
+    ...exam,
+    subtitle: `${exam.subtitle}・過去問型4大問／多段階計算`,
+    questions: exam.questions.map((question, index) => ({
+      ...question,
+      prompt: `（1）${question.prompt} ${hardening[index].promptSuffix}`,
+      answer: `（1）${question.answer} ${hardening[index].answerSuffix}`,
+      steps: [...question.steps, ...hardening[index].steps],
+      difficulty: 3,
+      subpartCount: hardening[index].subpartCount,
+      sourceBasis: SMART_CONTROL_EXAM_SOURCE_BASIS,
+    })),
+  };
+});
+
+function smartExamQuestionTopic(question: SmartControlExamQuestion): SmartControlTopicId {
+  if (question.section.includes("液面") || question.section.includes("標準入力")) return "transfer";
+  if (question.section.includes("逆ラプラス") || question.section.includes("解法分類")) return "inverse-laplace";
+  if (question.section.includes("ブロック") || question.section.includes("線図")) return "block-diagram";
+  if (question.section.includes("フィードバック") || question.section.includes("ゲインK") || question.section.includes("安定境界")) return "feedback";
+  return "response-stability";
+}
+
+const SMART_CONTROL_FLAT_EXAM_QUESTIONS: SmartControlQuestion[] = SMART_CONTROL_EXAMS.flatMap((exam) =>
+  exam.questions.map((question) => ({
+    id: question.id,
+    topic: smartExamQuestionTopic(question),
+    genre: `模試・${question.section}`,
+    difficulty: 3,
+    format: "text",
+    prompt: question.prompt,
+    context: `${exam.title}・${question.section}・${question.points}点。紙に全小問の途中式と判定根拠を残す。`,
+    answer: question.answer,
+    formula: question.formula,
+    steps: question.steps,
+    explanation: `${question.answer} ${question.steps.join(" ")}`,
+    source: "scope-zip",
+    diagramId: question.diagramId,
+    subpartCount: question.subpartCount ?? Math.max(3, question.steps.length),
+    sourceBasis: question.sourceBasis ?? SMART_CONTROL_EXAM_SOURCE_BASIS,
+    examLevel: true,
+  })),
+);
+
+/** 通常確認と6回分の模試24問を一意IDで束ねた、非生成の本番水準flat pool。 */
+export const SMART_CONTROL_EXAM_LEVEL_QUESTIONS: SmartControlQuestion[] = [
+  ...SMART_CONTROL_QUESTIONS,
+  ...SMART_CONTROL_FLAT_EXAM_QUESTIONS,
 ];
 
 export const SMART_CONTROL_PENDING_SOURCES = [] as const;

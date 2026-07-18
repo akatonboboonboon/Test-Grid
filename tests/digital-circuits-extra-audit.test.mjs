@@ -1,0 +1,104 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import ts from "typescript";
+
+const BASE_URL = new URL("../app/digital-circuits-data.ts", import.meta.url);
+const EXTRA_URL = new URL("../app/digital-circuits-extra-data.ts", import.meta.url);
+const DIAGRAM_URL = new URL("../app/digital-circuits-extra-diagrams.tsx", import.meta.url);
+const GENERATOR_URL = new URL("../app/digital-circuits-extra-generator.ts", import.meta.url);
+
+const compile = (source) => ts.transpileModule(source, {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const dataUrl = (source) => "data:text/javascript;base64," + Buffer.from(compile(source)).toString("base64");
+
+async function loadExtra() {
+  const baseUrl = dataUrl(await readFile(BASE_URL, "utf8"));
+  const source = (await readFile(EXTRA_URL, "utf8"))
+    .replace('"./digital-circuits-data"', JSON.stringify(baseUrl));
+  return import(dataUrl(source));
+}
+
+test("past-machine source table and S1S0 graph retain all eight exact transitions", async () => {
+  const extra = await loadExtra();
+  const actual = extra.DIGITAL_CIRCUIT_PAST_MACHINE_TRANSITIONS;
+  assert.equal(actual.length, 8);
+  assert.deepEqual(actual.map(({ graphStateS1S0, input, nextGraphStateS1S0, output }) =>
+    `${graphStateS1S0}:${input}->${nextGraphStateS1S0}/${output}`), [
+    "00:0->00/1", "10:0->01/0", "01:0->00/1", "11:0->10/0",
+    "00:1->01/0", "10:1->11/0", "01:1->10/0", "11:1->00/1",
+  ]);
+  for (const transition of actual) {
+    assert.equal(transition.graphStateS1S0, [...transition.tableStateS0S1].reverse().join(""));
+    assert.equal(transition.nextGraphStateS1S0, [...transition.nextTableStateS0S1].reverse().join(""));
+  }
+  assert.equal(new Set(actual.map((item) => item.graphStateS1S0 + item.input)).size, 8);
+});
+
+test("1001 detector retains the source's exact eight Mealy transitions", async () => {
+  const extra = await loadExtra();
+  assert.deepEqual(extra.DIGITAL_CIRCUIT_DETECTOR_1001_TRANSITIONS, [
+    { current: "00", input: 0, next: "00", output: 0 },
+    { current: "00", input: 1, next: "01", output: 0 },
+    { current: "01", input: 0, next: "10", output: 0 },
+    { current: "01", input: 1, next: "01", output: 0 },
+    { current: "10", input: 0, next: "11", output: 0 },
+    { current: "10", input: 1, next: "01", output: 0 },
+    { current: "11", input: 0, next: "00", output: 0 },
+    { current: "11", input: 1, next: "01", output: 1 },
+  ]);
+});
+
+test("unsolved diagrams are neutral worksheets and solved diagrams consume canonical transitions", async () => {
+  const source = await readFile(DIAGRAM_URL, "utf8");
+  const cyclic = source.slice(source.indexOf("function CyclicDown"), source.indexOf("function Exercise3"));
+  const cyclicBlank = cyclic.slice(0, cyclic.indexOf("model answer"));
+  assert.doesNotMatch(cyclicBlank, /9状態|0010の次|1010を非同期ロード/);
+  assert.match(cyclicBlank, /戻り状態を検出する論理/);
+
+  const pastBlank = source.slice(source.indexOf("function PastMachineWorksheet"), source.indexOf("function pastLabel"));
+  assert.match(pastBlank, /出典表: In, S0, S1/);
+  assert.match(pastBlank, /状態図のノード名は S1S0 順/);
+  assert.doesNotMatch(pastBlank, /nextGraphStateS1S0|transition\.output|pastLabel/);
+
+  const detectorBlank = source.slice(source.indexOf("function Detector1001Worksheet"), source.indexOf("function detectorLabel"));
+  assert.doesNotMatch(detectorBlank, /初期|1まで一致|10まで一致|100まで一致|transition\.next|transition\.output/);
+  assert.match(detectorBlank, /各枝へ I\/O を記入/);
+  assert.match(source, /DIGITAL_CIRCUIT_PAST_MACHINE_TRANSITIONS\.find/);
+  assert.match(source, /DIGITAL_CIRCUIT_DETECTOR_1001_TRANSITIONS\.find/);
+});
+
+test("added practice covers full waveform table, circuit/timing, full state table, and all detector branches", async () => {
+  const extra = await loadExtra();
+  const ids = new Set(extra.DIGITAL_CIRCUIT_EXTRA_QUESTIONS.map((question) => question.id));
+  for (const id of [
+    "dc-extra-q-truth-table-full", "dc-extra-q-cycle-design", "dc-extra-q-cycle-timing",
+    "dc-extra-q-past-full-table", "dc-extra-q-sequence-full-table",
+  ]) assert.ok(ids.has(id), id);
+  assert.match(extra.DIGITAL_CIRCUIT_EXTRA_QUESTIONS.find((item) => item.id === "dc-extra-q-past-full-table").explanation, /表.*S0S1.*グラフ.*S1S0/);
+});
+
+test("every predicted paper carries past-paper-level synthesis work", async () => {
+  const extra = await loadExtra();
+  for (const exam of extra.DIGITAL_CIRCUIT_ALL_EXPECTED_EXAMS) {
+    const questions = exam.sections.flatMap((section) => section.questions);
+    assert.equal(questions.length, 12);
+    assert.ok(questions.filter((question) => question.difficulty >= 2).length >= 7, exam.id);
+    assert.ok(questions.filter((question) => question.difficulty >= 3).length >= 2, exam.id);
+    assert.ok(questions.some((question) => question.id === "dc-extra-q-cycle-design" || question.id === "dc-extra-q-cycle-timing" || question.id === "dc-extra-q-three-jk"), exam.id);
+    assert.ok(questions.some((question) => question.id === "dc-extra-q-past-full-table" || question.id === "dc-extra-q-ex3-equation" || question.id === "dc-extra-q-ex3-table"), exam.id);
+    assert.ok(questions.some((question) => question.id === "dc-extra-q-sequence-full-table" || question.id === "dc-extra-q-sequence-stream" || question.id === "dc-extra-q-sequence-output"), exam.id);
+  }
+});
+test("generated variants keep their three stable IDs and use neutral canonical diagrams", async () => {
+  const source = await readFile(GENERATOR_URL, "utf8");
+  const generator = await import(dataUrl(source));
+  assert.deepEqual(generator.DIGITAL_CIRCUIT_EXTRA_GENERATOR_SPECS.map((item) => item.id), [
+    "xor-waveform", "cyclic-down-10-2", "sequence-detector-1001",
+  ]);
+  assert.equal(generator.generateDigitalCircuitExtraQuestion(3).diagram, "xor-timing");
+  assert.equal(generator.generateDigitalCircuitExtraQuestion(4).diagram, "cyclic-down-10-2");
+  assert.equal(generator.generateDigitalCircuitExtraQuestion(5).diagram, "sequence-detector-1001");
+}
+);

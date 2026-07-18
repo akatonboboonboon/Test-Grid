@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import SmartControlDiagram from "./smart-control-diagrams";
 import { SMART_CONTROL_EXAMS } from "./smart-control-data";
+import { smartControlDiagramIdFor } from "./smart-control-figure-data";
 import { DisplayMath, RichMathText } from "./statistics-math";
 import styles from "./smart-control-exams.module.css";
 
@@ -15,6 +17,24 @@ type SavedExpectedExam = {
 
 const STORAGE_KEY = "test-grid:subject-6:expected-exam:v1";
 const EXAM_IDS = new Set(SMART_CONTROL_EXAMS.map((exam) => exam.id));
+
+function ExpectedExamDiagram({
+  questionId,
+  solution = false,
+}: {
+  questionId: string;
+  solution?: boolean;
+}) {
+  const diagramId = smartControlDiagramIdFor({ id: questionId });
+  return diagramId ? (
+    <SmartControlDiagram
+      className={styles.diagram}
+      diagramId={diagramId}
+      solution={solution}
+      title={solution ? "模範図・注記" : "解答用の問題図"}
+    />
+  ) : null;
+}
 
 function formatTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -218,6 +238,7 @@ export default function SmartControlExams() {
             <article key={question.id}>
               <header><strong>{question.section}</strong><span>{question.points}点</span></header>
               <p><RichMathText text={question.prompt} /></p>
+              <ExpectedExamDiagram questionId={question.id} />
               {!showSolutions && (
                 <label>
                   <span>解答・途中式</span>
@@ -233,6 +254,7 @@ export default function SmartControlExams() {
                 <div className={styles.solution}>
                   <span>模範解答</span>
                   {question.formula && <DisplayMath tex={question.formula} />}
+                  <ExpectedExamDiagram questionId={question.id} solution />
                   <p><RichMathText text={question.answer} /></p>
                   <ol>{question.steps.map((step, index) => <li key={`${question.id}-step-${index}`}><RichMathText text={step} /></li>)}</ol>
                   <details><summary>自分の解答を確認</summary><pre>{responses[question.id] || "未入力（紙の解答を確認）"}</pre></details>

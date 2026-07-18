@@ -11,14 +11,13 @@ import { STATISTICS_FORMULAS } from "./statistics-data";
 import { APPLIED_MATH_FORMULAS } from "./applied-math-data";
 import { THERMODYNAMICS_FORMULAS } from "./thermodynamics-data";
 import { MECHANICAL_DYNAMICS_FORMULAS } from "./mechanical-dynamics-data";
+import { MATERIAL_MECHANICS_FORMULAS } from "./material-mechanics-data";
+import { DIGITAL_CIRCUIT_ALL_FORMULAS } from "./digital-circuits-extra-data";
 import {
   DEFAULT_SUBJECTS,
   EXAM_SCHEDULE,
   SUBJECT_ACCENTS,
-  cardsStorageKey,
   loadSubjects,
-  normalizeStudyCards,
-  normalizeStudyProgress,
   progressStorageKey,
   saveSubjects,
   type StudySubject,
@@ -30,9 +29,11 @@ const GENERATED_PRACTICE_SUBJECT_IDS = new Set<SubjectId>([
   "subject-2",
   "subject-3",
   "subject-4",
+  "subject-5",
   "subject-6",
   "subject-7",
   "subject-8",
+  "subject-9",
 ]);
 
 type SubjectMetric = { cards: number; mastered: number };
@@ -95,6 +96,13 @@ function readMetrics(subjects: StudySubject[]) {
         mastered: THERMODYNAMICS_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
     }
+    if (subject.id === "subject-5") {
+      const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-5"), {});
+      return [subject.id, {
+        cards: MATERIAL_MECHANICS_FORMULAS.length,
+        mastered: MATERIAL_MECHANICS_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
+      } satisfies SubjectMetric];
+    }
     if (subject.id === "subject-6") {
       const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-6"), {});
       return [subject.id, {
@@ -116,18 +124,14 @@ function readMetrics(subjects: StudySubject[]) {
         mastered: APPLIED_MATH_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
       } satisfies SubjectMetric];
     }
-    const cards = normalizeStudyCards(
-      storageRead<unknown>(cardsStorageKey(subject.id), []),
-      subject.id,
-    ).filter((card) => card.enabled);
-    const progress = normalizeStudyProgress(
-      storageRead<unknown>(progressStorageKey(subject.id), {}),
-      cards,
-    );
-    return [subject.id, {
-      cards: cards.length,
-      mastered: cards.filter((card) => progress[card.id] === "mastered").length,
-    } satisfies SubjectMetric];
+    if (subject.id === "subject-9") {
+      const progress = storageRead<Record<string, unknown>>(progressStorageKey("subject-9"), {});
+      return [subject.id, {
+        cards: DIGITAL_CIRCUIT_ALL_FORMULAS.length,
+        mastered: DIGITAL_CIRCUIT_ALL_FORMULAS.filter((card) => progress[card.id] === "mastered").length,
+      } satisfies SubjectMetric];
+    }
+    return [subject.id, { cards: 0, mastered: 0 } satisfies SubjectMetric];
   })) as Record<SubjectId, SubjectMetric>;
 }
 

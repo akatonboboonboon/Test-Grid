@@ -201,7 +201,7 @@ export const TEXTBOOK_RESPONSE_CARDS: SmartControlCard[] = [
   },
 ];
 
-export const TEXTBOOK_RESPONSE_QUESTIONS: TextbookResponseQuestion[] = [
+export const TEXTBOOK_RESPONSE_FOUNDATION_QUESTIONS: TextbookResponseQuestion[] = [
   {
     id: "textbook-response-q01-steady-characteristic",
     topic: "response-stability",
@@ -755,3 +755,30 @@ export const TEXTBOOK_RESPONSE_QUESTIONS: TextbookResponseQuestion[] = [
     source: "textbook-p65-68",
   },
 ];
+function hardenTextbookResponseQuestion(question: TextbookResponseQuestion): TextbookResponseQuestion {
+  return {
+    ...question,
+    difficulty: 3,
+    context: [
+      "教科書p.65〜68の赤字・図5.1〜5.3を、本番と同じく数値読取りから判定まで連結して解きます。",
+      question.context,
+    ].filter(Boolean).join(" "),
+    prompt: `【図読取り3段階】(1) 図の定常値を基準に10%・50%・90%・許容帯・最大値の実数値を必要分すべて求める。 (2) 時間指標と減衰指標を図へ書き込み、応答の速さと安定性を判定する。 (3) ${question.prompt}`,
+    steps: [
+      "図の縦軸から定常値を読み、割合表示を実数値へ換算する。",
+      ...question.steps,
+      "定義式・図上の交点・応答の物理的意味が一致するか検算する。",
+    ],
+    explanation: `${question.explanation} 本番では用語だけでなく、図上の値・定義式・速応性または減衰性の判定までを一組の答案として確認する。`,
+    subpartCount: 3,
+    sourceBasis: ["スマート制御教科書p.65〜68の赤文字", "同範囲の図5.1〜5.3とグラフ数値"],
+    examLevel: true,
+  };
+}
+
+/** 教科書赤字・応答グラフの通常確認と総合問題に使う本番水準プール。 */
+export const TEXTBOOK_RESPONSE_QUESTIONS: TextbookResponseQuestion[] =
+  TEXTBOOK_RESPONSE_FOUNDATION_QUESTIONS.map(hardenTextbookResponseQuestion);
+
+export const TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS: TextbookResponseQuestion[] =
+  TEXTBOOK_RESPONSE_QUESTIONS;

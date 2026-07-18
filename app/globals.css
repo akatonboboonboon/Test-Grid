@@ -8479,6 +8479,32 @@ footer p {
   line-height: 1.75;
 }
 
+.generated-practice-visual {
+  margin: 22px 0 10px;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 14px;
+}
+
+.generated-practice-visual figure {
+  margin: 0 !important;
+  min-width: 0;
+}
+
+.generated-practice-visual figcaption {
+  margin-bottom: 8px;
+  color: #233649;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.generated-practice-visual svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 440px;
+}
 .generated-practice-question .statistics-rich-math-display-segment {
   max-width: 100%;
   overflow-x: auto;
@@ -8917,6 +8943,9 @@ footer p {
     text-align: right;
   }
 
+  .generated-practice-visual svg {
+    min-width: 540px;
+  }
   .generated-practice-answer-head {
     display: block;
   }
@@ -9208,7 +9237,7 @@ footer p {
 
 .generated-practice-restart,
 .generated-practice-history-tools button,
-.generated-practice-history-grid article > button,
+.generated-practice-history-actions > button,
 .generated-practice-history-more {
   min-height: 48px;
   border: 1px solid var(--dark);
@@ -9323,11 +9352,51 @@ footer p {
   line-height: 1.75;
 }
 
-.generated-practice-history-grid article > button {
+.generated-practice-history-actions {
   align-self: end;
-  justify-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.generated-practice-history-actions > button {
+  min-height: 44px;
+}
+
+.generated-practice-history-actions > button:last-child {
   background: var(--practice-accent);
   color: #10151c;
+}
+
+.generated-practice-favorite-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-color: #b54a70;
+  background: #fff7fa;
+  color: #7d2448;
+}
+
+.generated-practice-favorite-button:hover,
+.generated-practice-favorite-button:focus-visible,
+.generated-practice-favorite-button.is-active {
+  border-color: #842443;
+  background: #f04f8a;
+  color: #10151c;
+}
+
+.generated-practice-favorite-button b {
+  min-width: 1.65rem;
+  border-radius: 999px;
+  background: rgba(16, 21, 28, 0.12);
+  padding: 2px 7px;
+  text-align: center;
+  font-family: var(--mono);
+}
+
+.generated-practice-favorite-button:disabled {
+  opacity: 0.58;
+  cursor: wait;
 }
 
 .generated-practice-history-more {
@@ -9359,6 +9428,15 @@ footer p {
   .generated-practice-result-summary,
   .generated-practice-history-grid {
     grid-template-columns: 1fr;
+  }
+
+  .generated-practice-history-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .generated-practice-history-actions > button {
+    width: 100%;
   }
 
   .generated-practice-result-summary > div {

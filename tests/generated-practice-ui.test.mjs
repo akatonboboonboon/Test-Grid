@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const APP_URL = new URL("../app/", import.meta.url);
-const SUBJECT_IDS = ["subject-2", "subject-3", "subject-4", "subject-6", "subject-7", "subject-8"];
+const SUBJECT_IDS = ["subject-2", "subject-3", "subject-4", "subject-5", "subject-6", "subject-7", "subject-8", "subject-9"];
 
 test("generated-practice UI is a separate source-guarded one-question workspace", async () => {
   const [route, client, hub] = await Promise.all([
@@ -24,18 +24,23 @@ test("generated-practice UI is a separate source-guarded one-question workspace"
   assert.match(client, /question\.format === "translation"/);
   assert.match(client, /question\.format === "choice"/);
   assert.match(client, /question\.format === "number"/);
+  assert.match(client, /question\.format === "text"/);
+  assert.match(client, /GeneratedQuestionVisual/);
   assert.match(client, /RichMathText/);
   assert.match(client, /DisplayMath/);
   assert.match(client, /\{revealed && \(/);
   assert.match(client, /\{question\.steps\.map/);
   assert.match(client, /question\.reason/);
   assert.match(client, /question\.explanation/);
+  assert.match(client, /question\.difficulty/);
+  assert.match(client, /question\.subpartCount/);
+  assert.match(client, /question\.sourceBasis/);
   assert.match(client, /question\.source\.excerpt/);
   assert.match(hub, /href="\/generated-practice"/);
   assert.match(hub, /自動生成問題で、もう1問/);
 });
 
-test("only the six ready subjects link to the generated-practice tab", async () => {
+test("all eight ready non-network subjects link to the generated-practice tab", async () => {
   for (const subjectId of SUBJECT_IDS) {
     const page = await readFile(new URL("subjects/" + subjectId + "/page.tsx", APP_URL), "utf8");
     assert.match(page, new RegExp("generated-practice\\?subject=" + subjectId));
