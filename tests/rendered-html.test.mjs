@@ -873,7 +873,8 @@ test("ships layer filtering, autocomplete card search, rapid drills, and balance
   assert.match(rapidDrill, /間違えた問題の暗記帳へ/);
   assert.match(rapidData, /createBalancedRapidSession/);
   assert.match(overallChallenge, /normalizeOverallQuestionCount/);
-  assert.match(overallChallenge, /最大999問/);
+  assert.match(overallChallenge, /最大\{COMPREHENSIVE_MAX_QUESTIONS\}問/);
+  assert.match(overallChallenge, /英語546問を一通り出題/);
   assert.match(overallChallenge, /9教科の得意・不得意/);
   assert.match(overallChallenge, /全\{runner\.results\.length\}問の振り返り/);
 });

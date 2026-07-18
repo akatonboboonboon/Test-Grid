@@ -126,7 +126,7 @@ function FeedbackPanel({ question, feedback, onNext }: { question: DigitalCircui
       {question.diagram && <div className={styles.diagram}><DigitalCircuitStudyDiagram kind={question.diagram} solution title="模範図・書き込み例" /></div>}
       {question.formula && <DisplayMath tex={question.formula} />}
       <ol>{question.steps.map((step, index) => <li key={index}><RichMathText text={step} /></li>)}</ol>
-      <p><b>理由：</b>{question.explanation}</p>
+      <p><b>理由：</b><RichMathText text={question.explanation} /></p>
       <small>出典：{question.sourceRefs.map((source) => source.filename + " p." + source.page).join(" / ")}</small>
       {onNext && <div className={styles.actions}><button type="button" onClick={onNext}>次の問題へ</button></div>}
     </div>
@@ -336,14 +336,14 @@ export default function DigitalCircuitSubjectPage() {
               <div className={styles.questionMeta}><span>QUESTION {testIndex + 1} / {testDeck.length}</span><span>{topicLabel(currentTest.topic)} · {currentTest.genre}</span></div>
               <div className={styles.questionBox}><h3><RichMathText text={currentTest.prompt} /></h3></div>
               {currentTest.diagram && <div className={styles.diagram}><DigitalCircuitStudyDiagram kind={currentTest.diagram} title="模試の解答用図" /></div>}
-              {currentTest.format === "choice" ? <fieldset className={styles.choices}>{currentTest.options?.map((option) => <label key={option}><input type="radio" name={"test-" + currentTest.id} checked={(testAnswers[currentTest.id] ?? "") === option} onChange={() => setTestAnswers((values) => ({ ...values, [currentTest.id]: option }))} />{option}</label>)}</fieldset> : <textarea className={styles.select} rows={5} value={testAnswers[currentTest.id] ?? ""} onChange={(event) => setTestAnswers((values) => ({ ...values, [currentTest.id]: event.target.value }))} placeholder="解答を入力" />}
+              {currentTest.format === "choice" ? <fieldset className={styles.choices}>{currentTest.options?.map((option) => <label key={option}><input type="radio" name={"test-" + currentTest.id} checked={(testAnswers[currentTest.id] ?? "") === option} onChange={() => setTestAnswers((values) => ({ ...values, [currentTest.id]: option }))} /><RichMathText text={option} /></label>)}</fieldset> : <textarea className={styles.select} rows={5} value={testAnswers[currentTest.id] ?? ""} onChange={(event) => setTestAnswers((values) => ({ ...values, [currentTest.id]: event.target.value }))} placeholder="解答を入力" />}
               <div className={styles.actions}><button type="button" disabled={testIndex === 0} onClick={() => setTestIndex((value) => value - 1)}>前へ</button><button type="button" onClick={pauseTest}>中断・保存</button>{testIndex < testDeck.length - 1 ? <button type="button" onClick={() => setTestIndex((value) => value + 1)}>次へ</button> : <button type="button" className={styles.danger} onClick={finishTest}>提出・採点</button>}</div>
             </>}
             {testPhase === "result" && <>
               <div className={styles.panelHeading}><div><span className={styles.eyebrow}>RANDOM RESULT</span><h2>{testScore} / {testDeck.length}</h2></div><p>全問を一覧で振り返り、各問題の解説と模範図を開けます。</p></div>
               <div className={styles.resultList}>{testDeck.map((question, index) => {
                 const ok = isCorrect(question, testAnswers[question.id] ?? "");
-                return <article key={question.id} className={styles.resultItem} data-correct={ok}><strong>{ok ? "○" : "×"} Q{index + 1} · {question.genre}</strong><p><RichMathText text={question.prompt} /></p><p>あなた：{testAnswers[question.id] || "未解答"} ／ 正解：<RichMathText text={question.answer} /></p><details open={!ok}><summary>解説と模範図</summary>{question.diagram && <div className={styles.diagram}><DigitalCircuitStudyDiagram kind={question.diagram} solution title="振り返り用模範図" /></div>}<ol>{question.steps.map((step, stepIndex) => <li key={stepIndex}>{step}</li>)}</ol><p>{question.explanation}</p></details><Link href={"/cards?subject=subject-9&q=" + encodeURIComponent(question.prompt)}>関連暗記帳を検索 →</Link></article>;
+                return <article key={question.id} className={styles.resultItem} data-correct={ok}><strong>{ok ? "○" : "×"} Q{index + 1} · {question.genre}</strong><p><RichMathText text={question.prompt} /></p><p>あなた：{testAnswers[question.id] ? <RichMathText text={testAnswers[question.id]} /> : "未解答"} ／ 正解：<RichMathText text={question.answer} /></p><details open={!ok}><summary>解説と模範図</summary>{question.diagram && <div className={styles.diagram}><DigitalCircuitStudyDiagram kind={question.diagram} solution title="振り返り用模範図" /></div>}<ol>{question.steps.map((step, stepIndex) => <li key={stepIndex}><RichMathText text={step} /></li>)}</ol><p><RichMathText text={question.explanation} /></p></details><Link href={"/cards?subject=subject-9&q=" + encodeURIComponent(question.prompt)}>関連暗記帳を検索 →</Link></article>;
               })}</div>
               <div className={styles.actions}><button type="button" onClick={() => setTestPhase("setup")}>設定へ戻る</button><button type="button" onClick={startTest}>同じ設定でもう一度</button></div>
             </>}

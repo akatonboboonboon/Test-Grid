@@ -243,7 +243,7 @@ function SolutionBook({ exam, answers = {} }: { exam: Exam; answers?: AnswerMap 
               <section key={question.id} className={styles.solutionItem}>
                 <strong>問{question.major}({question.sub}) ／ {question.points}点</strong>
                 <p className={styles.solutionPrompt}><RichMathText text={question.prompt} /></p>
-                {answers[question.id] !== undefined && <p>あなたの解答：{answers[question.id] || "未解答"} ／ {correct(question, answers[question.id]) ? "○" : "×"}</p>}
+                {answers[question.id] !== undefined && <p>あなたの解答：{answers[question.id] ? <RichMathText text={answers[question.id]} /> : "未解答"} ／ {correct(question, answers[question.id]) ? "○" : "×"}</p>}
                 <p><b>解答：</b><RichMathText text={question.answer} /></p>
                 {needsQuestionFigure(question) && question.diagram && (
                   <div className={styles.examQuestionFigure}>
@@ -251,7 +251,7 @@ function SolutionBook({ exam, answers = {} }: { exam: Exam; answers?: AnswerMap 
                   </div>
                 )}
                 <ol>{question.steps.map((step, index) => <li key={index}><RichMathText text={step} /></li>)}</ol>
-                <p><b>理由：</b>{question.explanation}</p>
+                <p><b>理由：</b><RichMathText text={question.explanation} /></p>
                 <small>出典：{question.sourceRefs.map((source) => source.filename + " p." + source.page).join(" / ")}</small>
               </section>
             ))}

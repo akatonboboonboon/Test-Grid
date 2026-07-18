@@ -2,14 +2,21 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { InlineMath, RichMathText } from "./statistics-math";
+import { RichMathText } from "./statistics-math";
+import RapidAnswerText from "./rapid-answer-text";
+import RapidQuestionVisual from "./rapid-question-visual";
 import {
+  OVERALL_PAUSE_STORAGE_KEY,
+  createOverallPauseSnapshot,
+  restoreOverallPauseSnapshot,
+} from "./rapid-saved-session";
+import {
+  COMPREHENSIVE_MAX_QUESTIONS,
   RAPID_SUBJECT_IDS,
   RAPID_SUBJECTS,
   createBalancedRapidSession,
   getComprehensiveRapidPool,
   isRapidAnswerCorrect,
-  unwrapRapidMath,
   networkCardsToRapid,
   normalizeOverallQuestionCount,
   type RapidQuestion,
@@ -37,7 +44,7 @@ type OverallAnswerResult = {
 };
 
 type OverallRunner = {
-  phase: "setup" | "playing" | "feedback" | "result";
+  phase: "setup" | "playing" | "feedback" | "paused" | "result";
   session: RapidQuestionInstance[];
   index: number;
   remainingMs: number;
@@ -103,10 +110,15 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
   const [history, setHistory] = useState<RapidAttemptSummary[]>([]);
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
   const [publishState, setPublishState] = useState<"idle" | "saved" | "sign-in-required" | "unavailable">("idle");
+  const [pauseSaveState, setPauseSaveState] = useState<"idle" | "saved" | "unavailable">("idle");
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
   const [reviewVisibleCount, setReviewVisibleCount] = useState(REVIEW_BATCH_SIZE);
   const startedAtRef = useRef(0);
+  const activeElapsedRef = useRef(0);
   const deadlineRef = useRef(0);
+  const questionRemainingRef = useRef(0);
   const answerLockedRef = useRef(false);
+  const restoreAttemptedRef = useRef(false);
 
   const displaySubjects = useMemo(() => RAPID_SUBJECTS.map((meta) => {
     const subject = subjects.find((candidate) => candidate.id === meta.id);
@@ -157,8 +169,37 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
 
   useEffect(() => {
     function refreshPools() {
-      setPools(loadOverallPools());
+      const nextPools = loadOverallPools();
+      setPools(nextPools);
       setHistory(loadRapidHistory());
+      if (!restoreAttemptedRef.current) {
+        restoreAttemptedRef.current = true;
+        let rawSnapshot: string | null = null;
+        try {
+          rawSnapshot = window.localStorage.getItem(OVERALL_PAUSE_STORAGE_KEY);
+        } catch {
+          setPauseSaveState("unavailable");
+        }
+        const restored = restoreOverallPauseSnapshot(rawSnapshot, nextPools);
+        if (restored) {
+          setQuestionCount(restored.questionCount);
+          setLimitSeconds(restored.limitSeconds);
+          activeElapsedRef.current = restored.activeElapsedMs;
+          questionRemainingRef.current = restored.remainingMs;
+          setPausedAt(restored.savedAt);
+          setPauseSaveState("saved");
+          setRunner({
+            phase: "paused",
+            session: restored.session,
+            index: restored.index,
+            remainingMs: restored.remainingMs,
+            results: restored.results,
+            correctCount: restored.correctCount,
+            streak: restored.streak,
+            bestStreak: restored.bestStreak,
+          });
+        }
+      }
       setHydrated(true);
     }
     refreshPools();
@@ -201,8 +242,9 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
   useEffect(() => {
     if (runner.phase !== "playing" || !currentQuestion) return;
     const limitMs = limitSeconds * 1000;
+    const remainingAtStart = Math.max(0, Math.min(limitMs, questionRemainingRef.current || limitMs));
     answerLockedRef.current = false;
-    deadlineRef.current = Date.now() + limitMs;
+    deadlineRef.current = Date.now() + remainingAtStart;
 
     const interval = window.setInterval(() => {
       const remainingMs = Math.max(0, deadlineRef.current - Date.now());
@@ -210,7 +252,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
     }, 100);
     const timeout = window.setTimeout(() => {
       applyAnswer(null, true, limitMs);
-    }, limitMs);
+    }, remainingAtStart);
     return () => {
       window.clearInterval(interval);
       window.clearTimeout(timeout);
@@ -230,9 +272,18 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
     setQuestionCount(count);
     setLimitSeconds(seconds);
     setPublishState("idle");
+    setPauseSaveState("idle");
+    setPausedAt(null);
     setReviewVisibleCount(REVIEW_BATCH_SIZE);
+    activeElapsedRef.current = 0;
+    questionRemainingRef.current = seconds * 1000;
     startedAtRef.current = Date.now();
     answerLockedRef.current = false;
+    try {
+      window.localStorage.removeItem(OVERALL_PAUSE_STORAGE_KEY);
+    } catch {
+      // The challenge can still run when browser storage is unavailable.
+    }
     setRunner({
       ...INITIAL_RUNNER,
       phase: "playing",
@@ -247,8 +298,37 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
     applyAnswer(selected, false, elapsedMs);
   }
 
+  function pause() {
+    if (runner.phase !== "playing") return;
+    const now = Date.now();
+    const remainingMs = Math.max(0, deadlineRef.current - now);
+    const activeElapsedMs = activeElapsedRef.current + Math.max(0, now - startedAtRef.current);
+    activeElapsedRef.current = activeElapsedMs;
+    questionRemainingRef.current = remainingMs;
+    const pausedRunner: OverallRunner = { ...runner, phase: "paused", remainingMs };
+    const snapshot = createOverallPauseSnapshot(pausedRunner, questionCount, limitSeconds, activeElapsedMs);
+    let nextSaveState: "saved" | "unavailable" = "saved";
+    try {
+      window.localStorage.setItem(OVERALL_PAUSE_STORAGE_KEY, JSON.stringify(snapshot));
+    } catch {
+      nextSaveState = "unavailable";
+    }
+    setPausedAt(snapshot.savedAt);
+    setPauseSaveState(nextSaveState);
+    setRunner(pausedRunner);
+  }
+
+  function resume() {
+    if (runner.phase !== "paused") return;
+    questionRemainingRef.current = runner.remainingMs;
+    startedAtRef.current = Date.now();
+    answerLockedRef.current = false;
+    setPauseSaveState("idle");
+    setRunner((current) => current.phase === "paused" ? { ...current, phase: "playing" } : current);
+  }
+
   async function finishAttempt() {
-    const durationMs = Math.max(1, Date.now() - startedAtRef.current);
+    const durationMs = Math.max(1, activeElapsedRef.current + Math.max(0, Date.now() - startedAtRef.current));
     const attempt: RapidAttemptSummary = {
       id: boardKey + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8),
       boardKey,
@@ -261,6 +341,11 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
     };
     setHistory(saveRapidAttempt(attempt));
     setRunner((current) => ({ ...current, phase: "result" }));
+    try {
+      window.localStorage.removeItem(OVERALL_PAUSE_STORAGE_KEY);
+    } catch {
+      // Local results and ranking still work without browser storage.
+    }
     setReviewVisibleCount(REVIEW_BATCH_SIZE);
     const published = await publishRapidScore(attempt);
     setPublishState(published);
@@ -273,6 +358,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
       return;
     }
     answerLockedRef.current = false;
+    questionRemainingRef.current = limitSeconds * 1000;
     setRunner((current) => ({
       ...current,
       phase: "playing",
@@ -283,9 +369,17 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
 
   function restart() {
     answerLockedRef.current = false;
+    activeElapsedRef.current = 0;
     setRunner(INITIAL_RUNNER);
     setPublishState("idle");
+    setPauseSaveState("idle");
+    setPausedAt(null);
     setReviewVisibleCount(REVIEW_BATCH_SIZE);
+    try {
+      window.localStorage.removeItem(OVERALL_PAUSE_STORAGE_KEY);
+    } catch {
+      // Keep the reset usable even when storage is blocked.
+    }
   }
 
   return (
@@ -302,7 +396,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
         <section className="rapid-setup overall-setup" aria-labelledby="overall-setup-title">
           <div className="rapid-section-heading">
             <div><span>READY / 9 SUBJECTS</span><h2 id="overall-setup-title">総合問題の設定</h2></div>
-            <p>問題数は9問刻みで最大999問。各教科へ必ず同数を割り当てます。</p>
+            <p>問題数は9問刻みで最大{COMPREHENSIVE_MAX_QUESTIONS}問。最大設定なら英語546問を一通り出題し、各教科へ同数を割り当てます。</p>
           </div>
 
           <div className="rapid-settings overall-settings">
@@ -313,14 +407,14 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
                 <input
                   type="number"
                   min="9"
-                  max="999"
+                  max={COMPREHENSIVE_MAX_QUESTIONS}
                   step="9"
                   inputMode="numeric"
                   value={questionCount}
                   onChange={(event) => setQuestionCount(normalizeOverallQuestionCount(Number(event.target.value)))}
                   aria-label="総問題数"
                 />
-                <button type="button" onClick={() => changeQuestionCount(9)} disabled={questionCount >= 999} aria-label="問題数を9問増やす">＋9</button>
+                <button type="button" onClick={() => changeQuestionCount(9)} disabled={questionCount >= COMPREHENSIVE_MAX_QUESTIONS} aria-label="問題数を9問増やす">＋9</button>
               </div>
               <small>1教科 {questionCount / 9}問 × 9教科 = {questionCount}問</small>
             </label>
@@ -361,7 +455,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
         </section>
       )}
 
-      {(runner.phase === "playing" || runner.phase === "feedback") && currentQuestion && currentSubject && (
+      {(runner.phase === "playing" || runner.phase === "feedback" || runner.phase === "paused") && currentQuestion && currentSubject && (
         <section className="rapid-runner overall-runner" aria-live="polite" style={{ "--rapid-accent": currentSubject.accent } as CSSProperties}>
           <div className="rapid-runner-status">
             <span>QUESTION <strong>{runner.index + 1}</strong> / {runner.session.length}</span>
@@ -376,8 +470,25 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
             <div><span>TIME LEFT</span><strong>{(runner.remainingMs / 1000).toFixed(1)}</strong><small>秒</small></div>
             <progress value={runner.remainingMs} max={limitSeconds * 1000} aria-label={"残り時間 " + (runner.remainingMs / 1000).toFixed(1) + "秒"} />
           </div>
+          <div className={"overall-pause-controls" + (runner.phase === "paused" ? " is-paused" : "")}>
+            {runner.phase === "playing" && (
+              <button type="button" onClick={pause}><span>PAUSE &amp; SAVE</span><strong>中断して保存</strong></button>
+            )}
+            {runner.phase === "paused" && (
+              <>
+                <div>
+                  <span>PAUSED</span>
+                  <strong>残り {(runner.remainingMs / 1000).toFixed(1)} 秒から再開できます</strong>
+                  <small>{pauseSaveState === "saved" && pausedAt ? new Date(pausedAt).toLocaleString("ja-JP") + " にこの端末へ保存済み" : "タイマーは停止中です。端末保存は利用できません。"}</small>
+                </div>
+                <button type="button" onClick={resume}><span>CONTINUE</span><strong>続きから再開</strong></button>
+                <button type="button" className="secondary" onClick={restart}><span>RESET</span><strong>設定へ戻る</strong></button>
+              </>
+            )}
+          </div>
           <article className="rapid-question">
             <header><span>{currentQuestion.topicLabel} · 難度{currentQuestion.difficulty} · 非生成全問題プール</span><h2><RichMathText text={currentQuestion.prompt} /></h2></header>
+            <RapidQuestionVisual visual={currentQuestion.visual} solution={runner.phase === "feedback"} />
             <div className="rapid-options" role="group" aria-label="答えを選択">
               {currentQuestion.options.map((option) => {
                 const selected = currentResult?.selected === option;
@@ -387,7 +498,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
                   : "";
                 return (
                   <button type="button" key={option} disabled={runner.phase !== "playing"} className={className} onClick={() => answer(option)}>
-                    {currentQuestion.mathOptions ? <InlineMath tex={unwrapRapidMath(option)} /> : option}
+                    <RapidAnswerText value={option} mathOptions={currentQuestion.mathOptions} />
                   </button>
                 );
               })}
@@ -398,7 +509,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
               <div>
                 <span>{currentResult.correct ? "CORRECT" : currentResult.timedOut ? "TIME UP" : "REVIEW"}</span>
                 <h3>{currentResult.correct ? "正解です。" : currentSubject.name + "を復習しましょう。"}</h3>
-                {!currentResult.correct && <p>正解：{currentQuestion.mathOptions ? <InlineMath tex={unwrapRapidMath(currentQuestion.answer)} /> : <strong>{currentQuestion.answer}</strong>}</p>}
+                {!currentResult.correct && <p>正解：<RapidAnswerText value={currentQuestion.answer} mathOptions={currentQuestion.mathOptions} emphasizeRichText /></p>}
               </div>
               <div><strong>本番と同じ解法手順</strong><ol>{currentQuestion.steps.map((step) => <li key={step}><RichMathText text={step} /></li>)}</ol><p><RichMathText text={currentQuestion.explanation} /></p><small>出題根拠：{currentQuestion.sourceBasis}</small></div>
               <div>
@@ -452,8 +563,9 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
                   <summary><span>{String(resultIndex + 1).padStart(3, "0")}</span><strong>{subject.name} / {result.question.topicLabel}</strong><b>{result.correct ? "○ 正解" : result.timedOut ? "× 時間切れ" : "× 不正解"}</b></summary>
                   <div>
                     <h4><RichMathText text={result.question.prompt} /></h4>
-                    <p><span>あなたの回答</span>{result.selected ?? "未回答"}</p>
-                    <p><span>正解</span>{result.question.mathOptions ? <InlineMath tex={unwrapRapidMath(result.question.answer)} /> : <strong>{result.question.answer}</strong>}</p>
+                    <RapidQuestionVisual visual={result.question.visual} solution compact />
+                    <p><span>あなたの回答</span>{result.selected ? <RapidAnswerText value={result.selected} mathOptions={result.question.mathOptions} /> : "未回答"}</p>
+                    <p><span>正解</span><RapidAnswerText value={result.question.answer} mathOptions={result.question.mathOptions} emphasizeRichText /></p>
                     <aside><span>解法・解説</span><ol>{result.question.steps.map((step) => <li key={step}><RichMathText text={step} /></li>)}</ol><RichMathText text={result.question.explanation} /><small>出題根拠：{result.question.sourceBasis}</small></aside>
                     <div className="overall-review-links">
                       <Link href={result.question.studyHref}>{result.correct ? "暗記帳で確認" : "誤答を暗記帳で復習 →"}</Link>

@@ -97,11 +97,11 @@ export default function DigitalCircuitRapidPage() {
           <div className={styles.rapidPrompt}><RichMathText text={question.prompt} /></div>
           {question.diagram && <div className={styles.diagram + " " + styles.diagramCompact}><DigitalCircuitStudyDiagram kind={question.diagram} solution={status !== "active"} title={status === "active" ? "即答用図" : "模範図"} compact /></div>}
           {status === "active" && <>
-            {question.format === "choice" ? <fieldset className={styles.choices}>{question.options?.map((option) => <label key={option}><input type="radio" name="rapid" checked={answer === option} onChange={() => setAnswer(option)} />{option}</label>)}</fieldset> : <input className={styles.select} autoFocus value={answer} onChange={(event) => setAnswer(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submit(); }} placeholder="状態列を入力してEnter" />}
+            {question.format === "choice" ? <fieldset className={styles.choices}>{question.options?.map((option) => <label key={option}><input type="radio" name="rapid" checked={answer === option} onChange={() => setAnswer(option)} /><RichMathText text={option} /></label>)}</fieldset> : <input className={styles.select} autoFocus value={answer} onChange={(event) => setAnswer(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submit(); }} placeholder="状態列を入力してEnter" />}
             <div className={styles.actions}><button type="button" onClick={submit} disabled={!answer.trim()}>回答</button><button type="button" className={styles.danger} onClick={finish}>終了・記録</button></div>
           </>}
           {status !== "active" && <>
-            <div className={styles.feedback} data-correct={status === "correct"}><strong>{status === "correct" ? "正解" : status === "timeout" ? "時間切れ" : "不正解"}</strong><p>正解：<RichMathText text={question.answer} /></p><p>{question.explanation}</p></div>
+            <div className={styles.feedback} data-correct={status === "correct"}><strong>{status === "correct" ? "正解" : status === "timeout" ? "時間切れ" : "不正解"}</strong><p>正解：<RichMathText text={question.answer} /></p><p><RichMathText text={question.explanation} /></p></div>
             <div className={styles.actions}><button type="button" onClick={advance}>次の問題</button><button type="button" className={styles.danger} onClick={finish}>終了・記録</button></div>
           </>}
         </>}

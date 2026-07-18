@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { InlineMath, RichMathText } from "./statistics-math";
+import { RichMathText } from "./statistics-math";
+import RapidAnswerText from "./rapid-answer-text";
+import RapidQuestionVisual from "./rapid-question-visual";
 import {
   createRapidSession,
   getStaticRapidPool,
   isRapidAnswerCorrect,
-  unwrapRapidMath,
   networkCardsToRapid,
   rapidSubjectMeta,
   type RapidQuestionInstance,
@@ -286,6 +287,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
             </div>
             <article className="rapid-question">
               <header><span>{currentQuestion.topicLabel} · 難度{currentQuestion.difficulty} · 推奨{currentQuestion.recommendedSeconds}秒</span><h2><RichMathText text={currentQuestion.prompt} /></h2></header>
+              <RapidQuestionVisual visual={currentQuestion.visual} solution={state.phase === "feedback"} />
               <div className="rapid-options" role="group" aria-label="答えを選択">
                 {currentQuestion.options.map((option) => {
                   const selected = currentResult?.selected === option;
@@ -295,7 +297,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
                     : "";
                   return (
                     <button type="button" key={option} disabled={state.phase !== "playing"} className={className} onClick={() => answer(option)}>
-                      {currentQuestion.mathOptions ? <InlineMath tex={unwrapRapidMath(option)} /> : option}
+                      <RapidAnswerText value={option} mathOptions={currentQuestion.mathOptions} />
                     </button>
                   );
                 })}
@@ -306,7 +308,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
                 <div>
                   <span>{currentResult.correct ? "CORRECT" : currentResult.timedOut ? "TIME UP" : "REVIEW"}</span>
                   <h3>{currentResult.correct ? "正解です。" : "ここを暗記し直しましょう。"}</h3>
-                  {!currentResult.correct && <p>正解：{currentQuestion.mathOptions ? <InlineMath tex={unwrapRapidMath(currentQuestion.answer)} /> : <strong>{currentQuestion.answer}</strong>}</p>}
+                  {!currentResult.correct && <p>正解：<RapidAnswerText value={currentQuestion.answer} mathOptions={currentQuestion.mathOptions} emphasizeRichText /></p>}
                 </div>
                 <div><strong>本番と同じ解法手順</strong><ol>{currentQuestion.steps.map((step) => <li key={step}><RichMathText text={step} /></li>)}</ol><p><RichMathText text={currentQuestion.explanation} /></p><small>出題根拠：{currentQuestion.sourceBasis}</small></div>
                 <div><Link href={currentQuestion.studyHref}>この問題の暗記帳へ</Link><button type="button" onClick={next}>{state.index === state.session.length - 1 ? "結果を見る →" : "次の問題 →"}</button></div>
@@ -335,8 +337,9 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
                   <summary><span>{String(resultIndex + 1).padStart(2, "0")}</span><strong>{result.question.topicLabel}</strong><b>{result.correct ? "○ 正解" : result.timedOut ? "× 時間切れ" : "× 不正解"}</b></summary>
                   <div>
                     <h4><RichMathText text={result.question.prompt} /></h4>
-                    <p><span>あなたの回答</span>{result.selected ?? "未回答"}</p>
-                    <p><span>正解</span>{result.question.mathOptions ? <InlineMath tex={unwrapRapidMath(result.question.answer)} /> : <strong>{result.question.answer}</strong>}</p>
+                    <RapidQuestionVisual visual={result.question.visual} solution compact />
+                    <p><span>あなたの回答</span>{result.selected ? <RapidAnswerText value={result.selected} mathOptions={result.question.mathOptions} /> : "未回答"}</p>
+                    <p><span>正解</span><RapidAnswerText value={result.question.answer} mathOptions={result.question.mathOptions} emphasizeRichText /></p>
                     <aside><span>解説</span><RichMathText text={result.question.explanation} /></aside>
                     <Link href={result.question.studyHref}>{result.correct ? "暗記帳で確認する" : "間違えた問題の暗記帳へ →"}</Link>
                   </div>

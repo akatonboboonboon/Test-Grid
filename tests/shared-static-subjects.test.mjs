@@ -37,6 +37,10 @@ test("uses exam-level non-generated questions in rapid and comprehensive pools",
   ]) assert.match(rapid, new RegExp(cardSource));
 
   assert.match(rapid, /const COMPREHENSIVE_POOLS/);
+  assert.match(rapid, /COMPREHENSIVE_QUESTIONS_PER_SUBJECT = 546/);
+  assert.match(rapid, /COMPREHENSIVE_MAX_QUESTIONS = 9 \* COMPREHENSIVE_QUESTIONS_PER_SUBJECT/);
+  assert.match(rapid, /count > COMPREHENSIVE_MAX_QUESTIONS/);
+  assert.match(rapid, /Math\.min\(COMPREHENSIVE_MAX_QUESTIONS/);
   assert.match(rapid, /getComprehensiveRapidPool/);
   assert.match(rapid, /function formulaCardPool/);
   assert.match(rapid, /rapid-card-\$\{card\.id\}/);

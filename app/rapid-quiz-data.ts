@@ -2,16 +2,25 @@ import { ENGLISH_QUESTIONS } from "./english-data";
 import { ENGLISH_CH18_QUIZ_ITEMS } from "./english-ch18-quiz-data";
 import { ENGLISH_EXAM_LEVEL_QUESTIONS } from "./english-expected-exams-data";
 import { APPLIED_MATH_EXAM_LEVEL_QUESTIONS, APPLIED_MATH_FORMULAS, APPLIED_MATH_QUESTIONS } from "./applied-math-data";
-import { DIGITAL_CIRCUIT_ALL_FORMULAS, DIGITAL_CIRCUIT_ALL_QUESTIONS, DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS } from "./digital-circuits-extra-data";
-import { MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS, MATERIAL_MECHANICS_FORMULAS, MATERIAL_MECHANICS_QUESTIONS } from "./material-mechanics-data";
-import { MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS, MECHANICAL_DYNAMICS_FORMULAS, MECHANICAL_DYNAMICS_QUESTIONS } from "./mechanical-dynamics-data";
+import { DIGITAL_CIRCUIT_ALL_FORMULAS, DIGITAL_CIRCUIT_ALL_QUESTIONS, DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS, type DigitalCircuitAnyDiagramKind } from "./digital-circuits-extra-data";
+import { MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS, MATERIAL_MECHANICS_FORMULAS, MATERIAL_MECHANICS_QUESTIONS, type MaterialMechanicsDiagramKind } from "./material-mechanics-data";
+import { MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS, MECHANICAL_DYNAMICS_FORMULAS, MECHANICAL_DYNAMICS_QUESTIONS, type MechanicalDynamicsDiagramKind } from "./mechanical-dynamics-data";
 import { ALL_LAYERS, DEFAULT_CARDS, cardLayers, type ProtocolCard } from "./protocols";
 import { SMART_CONTROL_CARDS, SMART_CONTROL_EXAM_LEVEL_QUESTIONS, SMART_CONTROL_QUESTIONS } from "./smart-control-data";
 import { TEXTBOOK_RESPONSE_CARDS, TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS } from "./smart-control-textbook-data";
 import { STATISTICS_FORMULAS, STATISTICS_QUESTIONS } from "./statistics-data";
 import { STATISTICS_EXAM_LEVEL_QUESTIONS } from "./statistics-expected-exams-data";
-import { THERMODYNAMICS_EXAM_LEVEL_QUESTIONS, THERMODYNAMICS_FORMULAS, THERMODYNAMICS_QUESTIONS } from "./thermodynamics-data";
+import { THERMODYNAMICS_EXAM_LEVEL_QUESTIONS, THERMODYNAMICS_FORMULAS, THERMODYNAMICS_QUESTIONS, type ThermodynamicsDiagramKind } from "./thermodynamics-data";
 import { DEFAULT_SUBJECTS, type SubjectId } from "./study-data";
+import type { SmartControlDiagramId } from "./smart-control-figure-data";
+
+export type RapidQuestionVisual =
+  | { type: "mechanical-dynamics"; kind: MechanicalDynamicsDiagramKind }
+  | { type: "thermodynamics"; kind: ThermodynamicsDiagramKind }
+  | { type: "material-mechanics"; kind: MaterialMechanicsDiagramKind }
+  | { type: "smart-control"; kind: SmartControlDiagramId }
+  | { type: "digital-circuit"; kind: DigitalCircuitAnyDiagramKind };
+
 export type RapidQuestion = {
   id: string;
   subjectId: SubjectId;
@@ -23,6 +32,7 @@ export type RapidQuestion = {
   explanation: string;
   studyHref: string;
   mathOptions?: boolean;
+  visual?: RapidQuestionVisual;
   difficulty: 1 | 2 | 3;
   recommendedSeconds: number;
   steps: string[];
@@ -51,6 +61,7 @@ type ChoiceSeed = {
   options?: string[];
   acceptedOptions?: string[];
   mathOptions?: boolean;
+  visual?: RapidQuestionVisual;
   difficulty?: 1 | 2 | 3;
   recommendedSeconds?: number;
   steps?: string[];
@@ -68,6 +79,8 @@ export const RAPID_SUBJECTS: RapidSubjectMeta[] = DEFAULT_SUBJECTS.map((subject)
 }));
 
 export const RAPID_SUBJECT_IDS = RAPID_SUBJECTS.map((subject) => subject.id);
+export const COMPREHENSIVE_QUESTIONS_PER_SUBJECT = 546;
+export const COMPREHENSIVE_MAX_QUESTIONS = 9 * COMPREHENSIVE_QUESTIONS_PER_SUBJECT;
 
 export function rapidSubjectMeta(subjectId: SubjectId) {
   return RAPID_SUBJECTS.find((subject) => subject.id === subjectId) ?? RAPID_SUBJECTS[0];
@@ -189,7 +202,7 @@ function numericRapidOptions(question: ExamLevelRapidSource) {
   ]);
 }
 
-function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource): ChoiceSeed {
+function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource, visual?: RapidQuestionVisual): ChoiceSeed {
   const steps = question.steps?.filter(Boolean) ?? [];
   const formulaNote = question.formula ? `使用式：\\(${question.formula}\\)` : "";
   const explanation = [...steps, formulaNote, question.explanation ?? ""].filter(Boolean).join(" ");
@@ -208,6 +221,7 @@ function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource): Ch
     explanation,
     studyHref: `/subjects/${subjectId}?mode=practice`,
     mathOptions,
+    visual,
     difficulty: question.difficulty ?? 3,
     recommendedSeconds: subjectId === "subject-2" ? 60 : 90,
     steps: steps.length >= 2 ? steps : ["条件・本文根拠を整理する。", "複数の計算または判断を順に行う。", "答えを元の条件へ戻して検算する。"],
@@ -215,10 +229,11 @@ function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource): Ch
   };
 }
 
-function examLevelPool(
+function examLevelPool<T extends ExamLevelRapidSource>(
   subjectId: SubjectId,
-  questions: readonly ExamLevelRapidSource[],
-  include: (question: ExamLevelRapidSource) => boolean,
+  questions: readonly T[],
+  include: (question: T) => boolean,
+  getVisual?: (question: T) => RapidQuestionVisual | undefined,
 ) {
   const seen = new Set<string>();
   const selected = questions.filter((question) => {
@@ -226,8 +241,19 @@ function examLevelPool(
     seen.add(question.id);
     return true;
   });
-  return buildChoicePool(subjectId, selected.map((question) => examLevelSeed(subjectId, question)));
+  return buildChoicePool(subjectId, selected.map((question) => examLevelSeed(subjectId, question, getVisual?.(question))));
 }
+
+const mechanicalVisual = (question: { diagram?: MechanicalDynamicsDiagramKind }): RapidQuestionVisual | undefined =>
+  question.diagram ? { type: "mechanical-dynamics", kind: question.diagram } : undefined;
+const thermodynamicsVisual = (question: { diagram?: ThermodynamicsDiagramKind }): RapidQuestionVisual | undefined =>
+  question.diagram ? { type: "thermodynamics", kind: question.diagram } : undefined;
+const materialMechanicsVisual = (question: { diagram?: MaterialMechanicsDiagramKind }): RapidQuestionVisual | undefined =>
+  question.diagram ? { type: "material-mechanics", kind: question.diagram } : undefined;
+const smartControlVisual = (question: { diagramId?: SmartControlDiagramId }): RapidQuestionVisual | undefined =>
+  question.diagramId ? { type: "smart-control", kind: question.diagramId } : undefined;
+const digitalCircuitVisual = (question: { diagram?: DigitalCircuitAnyDiagramKind }): RapidQuestionVisual | undefined =>
+  question.diagram ? { type: "digital-circuit", kind: question.diagram } : undefined;
 
 const ENGLISH_CH18_ACTUAL_QUIZ_QUESTIONS: ExamLevelRapidSource[] = ENGLISH_CH18_QUIZ_ITEMS.map((item) => ({
   id: `actual-${item.id}`,
@@ -252,7 +278,11 @@ type ComprehensiveFormulaCard = {
   expandedFormula?: string;
 };
 
-function formulaCardPool(subjectId: SubjectId, cards: readonly ComprehensiveFormulaCard[]) {
+function formulaCardPool<T extends ComprehensiveFormulaCard>(
+  subjectId: SubjectId,
+  cards: readonly T[],
+  getVisual?: (card: T) => RapidQuestionVisual | undefined,
+) {
   const formulaBank = unique(cards.map((card) => card.formula));
   return buildChoicePool(subjectId, cards.map((card) => ({
     id: `rapid-card-${card.id}`,
@@ -274,6 +304,7 @@ function formulaCardPool(subjectId: SubjectId, cards: readonly ComprehensiveForm
     ].filter(Boolean).join(" "),
     studyHref: `/subjects/${subjectId}?mode=cards`,
     mathOptions: true,
+    visual: getVisual?.(card),
     difficulty: 3 as const,
     recommendedSeconds: 45,
     steps: ["問いの条件・記号を整理する。", `手掛かり「${card.cue}」から公式・定義を再現する。`, "各記号の意味と適用条件を確認する。"],
@@ -322,21 +353,25 @@ const MECHANICAL_RAPID = examLevelPool(
   "subject-3",
   [...MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, ...MECHANICAL_DYNAMICS_QUESTIONS, ...MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS],
   (question) => (question.difficulty ?? 1) >= 2,
+  mechanicalVisual,
 );
 const THERMODYNAMICS_RAPID = examLevelPool(
   "subject-4",
   [...THERMODYNAMICS_QUESTIONS, ...THERMODYNAMICS_EXAM_LEVEL_QUESTIONS],
   (question) => (question.difficulty ?? 1) >= 2,
+  thermodynamicsVisual,
 );
 const MATERIAL_MECHANICS_RAPID = examLevelPool(
   "subject-5",
   [...MATERIAL_MECHANICS_QUESTIONS, ...MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS],
   (question) => (question.difficulty ?? 1) >= 2,
+  materialMechanicsVisual,
 );
 const SMART_CONTROL_RAPID = examLevelPool(
   "subject-6",
   [...SMART_CONTROL_QUESTIONS, ...TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS, ...SMART_CONTROL_EXAM_LEVEL_QUESTIONS],
   (question) => (question.difficulty ?? 1) >= 2,
+  smartControlVisual,
 );
 const STATISTICS_RAPID = examLevelPool(
   "subject-7",
@@ -352,6 +387,7 @@ const DIGITAL_CIRCUITS_RAPID = examLevelPool(
   "subject-9",
   [...DIGITAL_CIRCUIT_ALL_QUESTIONS, ...DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS],
   (question) => (question.difficulty ?? 1) >= 2,
+  digitalCircuitVisual,
 );
 const STATIC_POOLS: Record<SubjectId, RapidQuestion[]> = {
   "subject-2": ENGLISH_RAPID,
@@ -381,20 +417,21 @@ const COMPREHENSIVE_POOLS: Record<SubjectId, RapidQuestion[]> = {
       "subject-3",
       [...MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, ...MECHANICAL_DYNAMICS_QUESTIONS, ...MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS],
       () => true,
+      mechanicalVisual,
     ),
-    formulaCardPool("subject-3", MECHANICAL_DYNAMICS_FORMULAS),
+    formulaCardPool("subject-3", MECHANICAL_DYNAMICS_FORMULAS, mechanicalVisual),
   ),
   "subject-4": combineRapidPools(
-    examLevelPool("subject-4", [...THERMODYNAMICS_QUESTIONS, ...THERMODYNAMICS_EXAM_LEVEL_QUESTIONS], () => true),
-    formulaCardPool("subject-4", THERMODYNAMICS_FORMULAS),
+    examLevelPool("subject-4", [...THERMODYNAMICS_QUESTIONS, ...THERMODYNAMICS_EXAM_LEVEL_QUESTIONS], () => true, thermodynamicsVisual),
+    formulaCardPool("subject-4", THERMODYNAMICS_FORMULAS, thermodynamicsVisual),
   ),
   "subject-5": combineRapidPools(
-    examLevelPool("subject-5", [...MATERIAL_MECHANICS_QUESTIONS, ...MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS], () => true),
-    formulaCardPool("subject-5", MATERIAL_MECHANICS_FORMULAS),
+    examLevelPool("subject-5", [...MATERIAL_MECHANICS_QUESTIONS, ...MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS], () => true, materialMechanicsVisual),
+    formulaCardPool("subject-5", MATERIAL_MECHANICS_FORMULAS, materialMechanicsVisual),
   ),
   "subject-6": combineRapidPools(
-    examLevelPool("subject-6", [...SMART_CONTROL_QUESTIONS, ...TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS, ...SMART_CONTROL_EXAM_LEVEL_QUESTIONS], () => true),
-    formulaCardPool("subject-6", [...SMART_CONTROL_CARDS, ...TEXTBOOK_RESPONSE_CARDS]),
+    examLevelPool("subject-6", [...SMART_CONTROL_QUESTIONS, ...TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS, ...SMART_CONTROL_EXAM_LEVEL_QUESTIONS], () => true, smartControlVisual),
+    formulaCardPool("subject-6", [...SMART_CONTROL_CARDS, ...TEXTBOOK_RESPONSE_CARDS], smartControlVisual),
   ),
   "subject-7": combineRapidPools(
     examLevelPool("subject-7", [...STATISTICS_QUESTIONS, ...STATISTICS_EXAM_LEVEL_QUESTIONS], () => true),
@@ -405,8 +442,8 @@ const COMPREHENSIVE_POOLS: Record<SubjectId, RapidQuestion[]> = {
     formulaCardPool("subject-8", APPLIED_MATH_FORMULAS),
   ),
   "subject-9": combineRapidPools(
-    examLevelPool("subject-9", [...DIGITAL_CIRCUIT_ALL_QUESTIONS, ...DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS], () => true),
-    formulaCardPool("subject-9", DIGITAL_CIRCUIT_ALL_FORMULAS),
+    examLevelPool("subject-9", [...DIGITAL_CIRCUIT_ALL_QUESTIONS, ...DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS], () => true, digitalCircuitVisual),
+    formulaCardPool("subject-9", DIGITAL_CIRCUIT_ALL_FORMULAS, digitalCircuitVisual),
   ),
 };
 export function getComprehensiveRapidPool(subjectId: SubjectId) {
@@ -445,7 +482,7 @@ export function createBalancedRapidSession(
   count: number,
   random: () => number = Math.random,
 ) {
-  if (count < 9 || count > 999 || count % 9 !== 0) return [];
+  if (count < 9 || count > COMPREHENSIVE_MAX_QUESTIONS || count % 9 !== 0) return [];
   if (RAPID_SUBJECT_IDS.some((subjectId) => !pools[subjectId]?.length)) return [];
   const perSubject = count / 9;
   const subjectQueues = Object.fromEntries(RAPID_SUBJECT_IDS.map((subjectId) => [
@@ -472,6 +509,6 @@ export function isRapidAnswerCorrect(question: RapidQuestion, selected: string |
 }
 
 export function normalizeOverallQuestionCount(value: number) {
-  const bounded = Math.min(999, Math.max(9, Math.round(value)));
-  return Math.min(999, Math.max(9, Math.round(bounded / 9) * 9));
+  const bounded = Math.min(COMPREHENSIVE_MAX_QUESTIONS, Math.max(9, Math.round(value)));
+  return Math.min(COMPREHENSIVE_MAX_QUESTIONS, Math.max(9, Math.round(bounded / 9) * 9));
 }
