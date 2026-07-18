@@ -700,7 +700,8 @@ export default function ThermodynamicsSubjectPage() {
           <span className="card-count-label"><i aria-hidden="true" /> {THERMODYNAMICS_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-4">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-4">基礎情報一覧</Link>
-          <Link className="outline-button header-link" href="/rapid/subject-4">時間制限 即答</Link>
+          <Link className="outline-button header-link" href="/rapid/subject-4">時間制限 即答練習</Link>
+          <Link className="outline-button header-link" href="/ranking/subject-4">公式ランキングテスト</Link>
           <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-4">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>

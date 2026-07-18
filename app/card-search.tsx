@@ -435,7 +435,8 @@ export default function CardSearch({
               </div>
               <div className="card-search-links">
                 <Link href={rapidSubjectMeta(current.subjectId).cardHref}>この教科の暗記帳を開く</Link>
-                <Link href={"/rapid/" + current.subjectId}>時間制限つき即答へ</Link>
+                <Link href={"/rapid/" + current.subjectId}>時間制限つき即答練習へ</Link>
+                <Link href={"/ranking/" + current.subjectId}>この教科の公式ランキングテストへ</Link>
               </div>
             </section>
         ) : hydrated ? (

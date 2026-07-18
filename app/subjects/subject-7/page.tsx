@@ -641,7 +641,8 @@ export default function StatisticsSubjectPage() {
           <span className="card-count-label"><i aria-hidden="true" /> {STATISTICS_EXAM_LEVEL_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-7">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-7">基礎情報一覧</Link>
-          <Link className="outline-button header-link" href="/rapid/subject-7">時間制限 即答</Link>
+          <Link className="outline-button header-link" href="/rapid/subject-7">時間制限 即答練習</Link>
+          <Link className="outline-button header-link" href="/ranking/subject-7">公式ランキングテスト</Link>
           <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-7">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>

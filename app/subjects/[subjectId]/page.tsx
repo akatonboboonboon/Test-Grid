@@ -259,7 +259,8 @@ export default function GenericSubjectPage() {
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {usableCards.length} CARDS</span>
           <Link className="outline-button header-link" href={"/cards?subject=" + subjectId}>暗記帳検索</Link>
-          <Link className="outline-button header-link" href={`/rapid/${subjectId}`}>時間制限 即答</Link>
+          <Link className="outline-button header-link" href={`/rapid/${subjectId}`}>時間制限 即答練習</Link>
+          <Link className="outline-button header-link" href={`/ranking/${subjectId}`}>公式ランキングテスト</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>
       </header>

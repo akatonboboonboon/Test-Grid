@@ -845,7 +845,8 @@ export default function EnglishSubjectPage() {
             <span>実物18点</span> Ch.18小テスト
           </button>
           <Link className="outline-button header-link" href="/cards?subject=subject-2">暗記帳検索</Link>
-          <Link className="outline-button header-link" href="/rapid/subject-2">時間制限 即答</Link>
+          <Link className="outline-button header-link" href="/rapid/subject-2">時間制限 即答練習</Link>
+          <Link className="outline-button header-link" href="/ranking/subject-2">公式ランキングテスト</Link>
           <Link className="outline-button header-link generated-practice-subject-link" href="/generated-practice?subject=subject-2">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link" href="/">科目一覧</Link>
         </div>

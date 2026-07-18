@@ -11,6 +11,14 @@ export type PublicLeaderboardEntry = {
   durationMs: number;
 };
 
+function formatRankingDuration(durationMs: number) {
+  const totalTenths = Math.max(0, Math.round(durationMs / 100));
+  const minutes = Math.floor(totalTenths / 600);
+  const seconds = (totalTenths % 600) / 10;
+  if (!minutes) return `${seconds.toFixed(1)}秒`;
+  return `${minutes}分${seconds.toFixed(1).padStart(4, "0")}秒`;
+}
+
 export default function RapidLeaderboard({ boardKey, refreshToken = 0 }: { boardKey: string; refreshToken?: number }) {
   const [entries, setEntries] = useState<PublicLeaderboardEntry[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "unavailable">("loading");
@@ -39,13 +47,13 @@ export default function RapidLeaderboard({ boardKey, refreshToken = 0 }: { board
   return (
     <section className="rapid-leaderboard" aria-labelledby="rapid-leaderboard-title">
       <div className="rapid-leaderboard-head">
-        <div><span>PLAYER RANKING</span><h3 id="rapid-leaderboard-title">みんなのランキング</h3></div>
-        <p>同じ問題数どうしで比較。挑戦前に決めた表示名と自己ベストを公開します。</p>
+        <div><span>OFFICIAL RANKING</span><h3 id="rapid-leaderboard-title">教科別・公式ランキング</h3></div>
+        <p>固定20問・固定総時間・同一問題セットで比較。点数優先、同点は短時間順です。</p>
       </div>
       {state === "loading" ? (
         <p className="rapid-leaderboard-note">ランキングを読み込み中…</p>
       ) : state === "unavailable" ? (
-        <p className="rapid-leaderboard-note">現在ランキングを取得できません。端末内の成績は保存されています。</p>
+        <p className="rapid-leaderboard-note">現在ランキングを取得できません。少し待ってから再読み込みしてください。</p>
       ) : entries.length === 0 ? (
         <p className="rapid-leaderboard-note">まだ記録がありません。最初のランクインを狙えます。</p>
       ) : (
@@ -56,7 +64,7 @@ export default function RapidLeaderboard({ boardKey, refreshToken = 0 }: { board
               <span>{entry.alias}</span>
               <b>{entry.correctCount}/{entry.questionCount}</b>
               <small>連続 {entry.bestStreak}</small>
-              <time>{(entry.durationMs / 1000).toFixed(1)}秒</time>
+              <time>{formatRankingDuration(entry.durationMs)}</time>
             </li>
           ))}
         </ol>

@@ -246,7 +246,7 @@ export default function DigitalCircuitSubjectPage() {
       <header className={styles.header}>
         <Link className={styles.back} href="/">← 9教科ホーム</Link>
         <span className={styles.brand}>TEST//GRID · SUBJECT 09</span>
-        <nav><Link className={styles.rapidLink} href="/foundations?subject=subject-9">基礎情報一覧</Link><Link className={styles.rapidLink} href="/generated-practice?subject=subject-9">自動生成問題</Link><Link className={styles.rapidLink} href="/subjects/subject-9/rapid">⚡ 時間制限ドリル</Link></nav>
+        <nav><Link className={styles.rapidLink} href="/foundations?subject=subject-9">基礎情報一覧</Link><Link className={styles.rapidLink} href="/generated-practice?subject=subject-9">自動生成問題</Link><Link className={styles.rapidLink} href="/rapid/subject-9">⚡ 時間制限ドリル（練習）</Link><Link className={styles.rapidLink} href="/ranking/subject-9">公式ランキングテスト</Link></nav>
       </header>
       <main className={styles.main}>
         <section className={styles.hero}>

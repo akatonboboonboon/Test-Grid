@@ -363,12 +363,14 @@ export default function StudyHub() {
                       <>
                         <Link className="subject-primary subject-memory-link" href="/subjects/network/cards">暗記帳を開く</Link>
                         <Link className="subject-secondary" href="/subjects/network">暗算・層即答</Link>
-                        <Link className="subject-secondary subject-rapid-link" href="/rapid/network">時間制限 即答</Link>
+                        <Link className="subject-secondary subject-rapid-link" href="/rapid/network">時間制限 即答練習</Link>
+                        <Link className="subject-secondary subject-ranking-link" href="/ranking/network">公式ランキングテスト</Link>
                       </>
                     ) : subject.configured ? (
                       <>
                         <Link className="subject-primary" href={`/subjects/${subject.id}`}>勉強を始める</Link>
-                        <Link className="subject-secondary subject-rapid-link" href={`/rapid/${subject.id}`}>時間制限 即答</Link>
+                        <Link className="subject-secondary subject-rapid-link" href={`/rapid/${subject.id}`}>時間制限 即答練習</Link>
+                        <Link className="subject-secondary subject-ranking-link" href={`/ranking/${subject.id}`}>公式ランキングテスト</Link>
                         {hasGeneratedPractice && (
                           <Link className="subject-secondary subject-generated-link" href={"/generated-practice?subject=" + subject.id}>
                             自動生成問題・共有履歴

@@ -127,7 +127,7 @@ export default function AccountSync({
   const [syncState, setSyncState] = useState<SyncState>("idle");
   const [statusText, setStatusText] = useState(user ? "進捗を確認中" : "端末内だけに保存中");
   const [rankingNameDraft, setRankingNameDraft] = useState(defaultRankingName);
-  const [rankingNameStatus, setRankingNameStatus] = useState("挑戦前に保存するとランキングで使われます");
+  const [rankingNameStatus, setRankingNameStatus] = useState("公式ランキングテストの挑戦前に保存すると使われます");
   const inFlightRef = useRef(false);
   const lastSnapshotRef = useRef("");
 
@@ -226,11 +226,11 @@ export default function AccountSync({
   const rankingNameEditor = (
     <form
       onSubmit={saveRankingName}
-      aria-label="ランキング表示名"
+      aria-label="公式ランキング表示名"
       style={{ alignItems: "end", display: "flex", flex: "1 1 280px", gap: 6, minWidth: 0 }}
     >
       <label style={{ display: "grid", flex: "1 1 180px", gap: 3, minWidth: 0 }}>
-        <span>ランキング表示名（挑戦前に設定）</span>
+        <span>公式ランキング表示名（挑戦前に設定）</span>
         <input
           type="text"
           autoComplete="nickname"

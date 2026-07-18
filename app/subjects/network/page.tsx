@@ -343,7 +343,8 @@ export default function Home() {
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {cards.filter((card) => card.enabled).length} CARDS</span>
           <Link className="outline-button header-link memory-open-button" href="/subjects/network/cards">暗記帳を開く</Link>
-          <Link className="outline-button header-link" href="/rapid/network">時間制限つき層即答・ランキング</Link>
+          <Link className="outline-button header-link" href="/rapid/network">時間制限つき層即答（練習）</Link>
+          <Link className="outline-button header-link" href="/ranking/network">公式ランキングテスト</Link>
           <button className="outline-button" type="button" onClick={() => setEditorOpen(true)} disabled={!["idle", "result"].includes(phase)}>
             カードを編集
           </button>
@@ -359,7 +360,10 @@ export default function Home() {
             <span>暗記帳</span><strong>層・正式名称・働きを覚える</strong><b aria-hidden="true">開く →</b>
           </Link>
           <Link className="network-memory-callout" href="/rapid/network">
-            <span>時間制限つき</span><strong>層を即答・連続正解・ランキング</strong><b aria-hidden="true">挑戦する →</b>
+            <span>時間制限つき練習</span><strong>層を即答・連続正解の練習</strong><b aria-hidden="true">練習する →</b>
+          </Link>
+          <Link className="network-memory-callout" href="/ranking/network">
+            <span>固定20問・固定時間</span><strong>ネットワーク公式ランキングテスト</strong><b aria-hidden="true">ランキングに挑戦 →</b>
           </Link>
         </section>
 

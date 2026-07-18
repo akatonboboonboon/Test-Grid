@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { RichMathText } from "./statistics-math";
 import RapidAnswerText from "./rapid-answer-text";
 import RapidQuestionVisual from "./rapid-question-visual";
@@ -13,18 +13,6 @@ import {
   rapidSubjectMeta,
   type RapidQuestionInstance,
 } from "./rapid-quiz-data";
-import {
-  historyForBoard,
-  loadRapidHistory,
-  loadRapidPlayerName,
-  makeRapidBoardKey,
-  normalizeRapidPlayerName,
-  publishRapidScore,
-  saveRapidPlayerName,
-  saveRapidAttempt,
-  type RapidAttemptSummary,
-} from "./rapid-ranking-data";
-import RapidLeaderboard from "./rapid-leaderboard";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
 import { type SubjectId } from "./study-data";
 
@@ -137,24 +125,14 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
   const [questionCount, setQuestionCount] = useState(10);
   const [limitSeconds, setLimitSeconds] = useState(defaultLimitSeconds);
   const [state, dispatch] = useRunnerState();
-  const [history, setHistory] = useState<RapidAttemptSummary[]>([]);
-  const [playerName, setPlayerName] = useState("");
-  const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
-  const [publishState, setPublishState] = useState<"idle" | "saved" | "sign-in-required" | "unavailable">("idle");
-  const startedAtRef = useRef(0);
   const deadlineRef = useRef(0);
-  const boardKey = makeRapidBoardKey(subjectId, questionCount);
   const currentQuestion = state.session[state.index];
   const currentResult = state.results[state.results.length - 1];
-  const localRanking = useMemo(() => historyForBoard(history, boardKey), [history, boardKey]);
-  const normalizedPlayerName = normalizeRapidPlayerName(playerName);
 
-  /* Device-local pools and synced ranking history are restored after mount. */
+  /* Device-local network cards are restored after mount for free practice. */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setPool(loadSubjectPool(subjectId));
-    setHistory(loadRapidHistory());
-    setPlayerName(loadRapidPlayerName());
   }, [subjectId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -178,18 +156,12 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
   }, [state.phase, state.index, limitSeconds, dispatch]);
 
   function start() {
-    const name = normalizeRapidPlayerName(playerName);
-    if (!name) return;
     const count = Math.min(100, Math.max(5, Math.round(questionCount)));
     const seconds = Math.min(300, Math.max(1, Math.round(limitSeconds)));
     const session = createRapidSession(pool, count);
     if (!session.length) return;
     setQuestionCount(count);
     setLimitSeconds(seconds);
-    setPlayerName(name);
-    saveRapidPlayerName(name);
-    setPublishState("idle");
-    startedAtRef.current = Date.now();
     dispatch({ type: "start", session, limitMs: seconds * 1000 });
   }
 
@@ -203,29 +175,13 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
     });
   }
 
-  async function finishAttempt() {
-    const durationMs = Math.max(1, Date.now() - startedAtRef.current);
-    const attempt: RapidAttemptSummary = {
-      id: `${boardKey}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      boardKey,
-      subjectName: meta.name,
-      correctCount: state.correctCount,
-      playerName: normalizedPlayerName ?? "以前の記録",
-      questionCount: state.session.length,
-      bestStreak: state.bestStreak,
-      durationMs,
-      completedAt: Date.now(),
-    };
-    setHistory(saveRapidAttempt(attempt));
+  function finishAttempt() {
     dispatch({ type: "finish" });
-    const published = await publishRapidScore(attempt);
-    setPublishState(published);
-    if (published === "saved") setLeaderboardRefresh((value) => value + 1);
   }
 
   function next() {
     if (state.index >= state.session.length - 1) {
-      void finishAttempt();
+      finishAttempt();
       return;
     }
     dispatch({ type: "next", limitMs: limitSeconds * 1000 });
@@ -233,7 +189,6 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
 
   function restart() {
     dispatch({ type: "reset" });
-    setPublishState("idle");
   }
 
   return (
@@ -256,7 +211,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
 
         <section className="rapid-hero">
           <div><span>TIME ATTACK / {meta.name}</span><h1>時間制限つき<br /><em>即答チャレンジ</em></h1></div>
-          <p>ネットワークの層即答と同じ感覚で、正解を時間内に選びます。挑戦前に表示名を決めると、連続正解数と自己ベストを名前つきでランキングへ記録できます。</p>
+          <p>問題数と1問の秒数を自由に変えられる練習モードです。記録を競うときは、各教科ページにある条件固定の「公式ランキングテスト」を使います。</p>
         </section>
 
         {state.phase === "setup" && (
@@ -268,10 +223,9 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
             {pool.length ? (
               <>
                 <div className="rapid-settings">
-                  <label className="rapid-player-name"><span>ランキング表示名</span><input type="text" maxLength={24} autoComplete="nickname" value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="例：おさと" required /><small>{normalizedPlayerName ? `「${normalizedPlayerName}」として記録します` : "1〜24文字で入力してください（必須）"}</small></label>
                   <label><span>問題数</span><input type="number" min="5" max="100" step="5" value={questionCount} onChange={(event) => setQuestionCount(Number(event.target.value))} /><small>5〜100問</small></label>
                   <label><span>1問の制限時間</span><input type="number" min="1" max="300" value={limitSeconds} onChange={(event) => setLimitSeconds(Number(event.target.value))} /><small>1〜300秒（本番水準は60〜90秒推奨）</small></label>
-                  <button type="button" onClick={start} disabled={!normalizedPlayerName}><span>START</span><strong>{normalizedPlayerName ? "即答を始める →" : "表示名を入力してください"}</strong></button>
+                  <button type="button" onClick={start}><span>START</span><strong>即答を始める →</strong></button>
                 </div>
                 <p className="rapid-pool-note">{pool.length}問の問題バンクを、足りない場合は重複を離して再抽選します。</p>
               </>
@@ -337,11 +291,6 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
               <div><span>REVIEW</span><strong>{state.session.length - state.correctCount}</strong><p>復習する問題</p></div>
               <button type="button" onClick={restart}>設定へ戻る</button>
             </div>
-            <p className="rapid-publish-status">
-              {publishState === "saved" ? `${normalizedPlayerName ?? "挑戦者"}さんの自己ベストをランキングへ登録しました。` :
-                publishState === "sign-in-required" ? "端末内に保存しました。表示名と端末情報を確認して再挑戦してください。" :
-                  publishState === "unavailable" ? "端末内に保存しました。ランキング登録は後で再挑戦できます。" : "成績を保存中…"}
-            </p>
             <div className="rapid-review-heading"><span>FULL REVIEW</span><h3>全問題の振り返り</h3><p>見出しを開くと、あなたの回答・正解・解説を確認できます。</p></div>
             <div className="rapid-review-list">
               {state.results.map((result, resultIndex) => (
@@ -358,16 +307,6 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
                 </details>
               ))}
             </div>
-          </section>
-        )}
-
-        {(state.phase === "setup" || state.phase === "result") && (
-          <section className="rapid-ranking-grid">
-            <section className="rapid-local-ranking" aria-labelledby="rapid-local-ranking-title">
-              <div className="rapid-leaderboard-head"><div><span>MY BEST</span><h3 id="rapid-local-ranking-title">自分のベストランキング</h3></div><p>表示名・点数・連続正解数をこの端末に保存します。</p></div>
-              {localRanking.length ? <ol>{localRanking.map((entry, index) => <li key={entry.id}><strong>{index + 1}</strong><span>{entry.playerName || "以前の記録"}</span><b>{entry.correctCount}/{entry.questionCount}</b><small>連続 {entry.bestStreak}</small><time>{(entry.durationMs / 1000).toFixed(1)}秒</time></li>)}</ol> : <p className="rapid-leaderboard-note">この問題数の記録はまだありません。</p>}
-            </section>
-            <RapidLeaderboard boardKey={boardKey} refreshToken={leaderboardRefresh} />
           </section>
         )}
       </main>

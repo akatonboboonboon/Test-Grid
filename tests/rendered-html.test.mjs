@@ -175,8 +175,10 @@ test("server-renders the preserved Layer Sum trainer", async () => {
   assert.match(html, /①〜⑦の用語を/);
   assert.match(html, /96(?:<!-- -->)? CARDS/);
   assert.match(html, /暗算を始める/);
-  assert.match(html, /時間制限つき層即答・ランキング/);
-  assert.match(html, /層を即答・連続正解・ランキング/);
+  assert.match(html, /時間制限つき層即答（練習）/);
+  assert.match(html, /層を即答・連続正解の練習/);
+  assert.match(html, /公式ランキングテスト/);
+  assert.match(html, /ネットワーク公式ランキングテスト/);
   assert.match(html, /カードを編集/);
 });
 
@@ -935,8 +937,9 @@ test("ships a named R2-backed leaderboard with account or device identity and no
   assert.match(route, /RAPID_CLIENT_TOKEN_HEADER/);
   assert.match(route, /normalizeRankingName/);
   assert.match(route, /sameSiteWriteAllowed/);
-  assert.match(route, /questionCount > 4_914/);
-  assert.match(route, /existing\.alias !== alias/);
+  assert.match(route, /CHALLENGE_ALREADY_SUBMITTED/);
+  assert.match(route, /existing\?\.alias !== entry\.alias/);
+  assert.match(route, /leaderboards\/official-v1\/scores/);
   assert.match(route, /STUDY_SNAPSHOTS\.list/);
   assert.match(route, /STUDY_SNAPSHOTS\.put/);
   assert.match(route, /scoreIsBetter/);
@@ -1024,8 +1027,10 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(networkPage, /cardLayers\(/);
   assert.match(networkPage, /cardLayerLabel\(/);
   assert.match(networkPage, /href="\/rapid\/network"/);
-  assert.match(networkPage, /時間制限つき層即答・ランキング/);
-  assert.match(networkPage, /層を即答・連続正解・ランキング/);
+  assert.match(networkPage, /時間制限つき層即答（練習）/);
+  assert.match(networkPage, /層を即答・連続正解の練習/);
+  assert.match(networkPage, /href="\/ranking\/network"/);
+  assert.match(networkPage, /ネットワーク公式ランキングテスト/);
   assert.doesNotMatch(networkPage, /type Mode|mode ===|identifyLimit|finishIdentify|phase === "identify"|id="identify-limit"/);
   assert.match(networkPage, /type="number"/);
   assert.doesNotMatch(networkPage, /selectedLayers|対象レイヤー/);

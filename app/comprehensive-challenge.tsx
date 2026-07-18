@@ -23,18 +23,6 @@ import {
   type RapidQuestionInstance,
   type RapidSubjectMeta,
 } from "./rapid-quiz-data";
-import {
-  historyForBoard,
-  loadRapidHistory,
-  loadRapidPlayerName,
-  makeRapidBoardKey,
-  normalizeRapidPlayerName,
-  publishRapidScore,
-  saveRapidPlayerName,
-  saveRapidAttempt,
-  type RapidAttemptSummary,
-} from "./rapid-ranking-data";
-import RapidLeaderboard from "./rapid-leaderboard";
 import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
 import { type StudySubject, type SubjectId } from "./study-data";
 
@@ -97,23 +85,12 @@ function clampLimitSeconds(value: number) {
   return Math.min(300, Math.max(1, Math.round(Number.isFinite(value) ? value : 90)));
 }
 
-function displayDuration(durationMs: number) {
-  if (durationMs < 60_000) return (durationMs / 1000).toFixed(1) + "秒";
-  const minutes = Math.floor(durationMs / 60_000);
-  const seconds = Math.floor((durationMs % 60_000) / 1000);
-  return minutes + "分" + String(seconds).padStart(2, "0") + "秒";
-}
-
 export default function ComprehensiveChallenge({ subjects }: { subjects: StudySubject[] }) {
   const [pools, setPools] = useState<Record<SubjectId, RapidQuestion[]>>(initialPools);
   const [hydrated, setHydrated] = useState(false);
   const [questionCount, setQuestionCount] = useState(18);
   const [limitSeconds, setLimitSeconds] = useState(90);
   const [runner, setRunner] = useState<OverallRunner>(INITIAL_RUNNER);
-  const [history, setHistory] = useState<RapidAttemptSummary[]>([]);
-  const [playerName, setPlayerName] = useState("");
-  const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
-  const [publishState, setPublishState] = useState<"idle" | "saved" | "sign-in-required" | "unavailable">("idle");
   const [pauseSaveState, setPauseSaveState] = useState<"idle" | "saved" | "unavailable">("idle");
   const [pausedAt, setPausedAt] = useState<number | null>(null);
   const [reviewVisibleCount, setReviewVisibleCount] = useState(REVIEW_BATCH_SIZE);
@@ -133,9 +110,6 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
     };
   }), [subjects]);
 
-  const boardKey = makeRapidBoardKey("overall", questionCount);
-  const localRanking = useMemo(() => historyForBoard(history, boardKey), [history, boardKey]);
-  const normalizedPlayerName = normalizeRapidPlayerName(playerName);
   const missingSubjects = useMemo(
     () => displaySubjects.filter((subject) => !pools[subject.id]?.length),
     [displaySubjects, pools],
@@ -176,9 +150,7 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
     function refreshPools() {
       const nextPools = loadOverallPools();
       setPools(nextPools);
-      setHistory(loadRapidHistory());
       if (!restoreAttemptedRef.current) {
-        setPlayerName(loadRapidPlayerName());
         restoreAttemptedRef.current = true;
         let rawSnapshot: string | null = null;
         try {
@@ -270,8 +242,6 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
   }
 
   function start() {
-    const name = normalizeRapidPlayerName(playerName);
-    if (!name) return;
     const count = normalizeOverallQuestionCount(questionCount);
     const seconds = clampLimitSeconds(limitSeconds);
     if (!hydrated || missingSubjects.length) return;
@@ -279,9 +249,6 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
     if (session.length !== count) return;
     setQuestionCount(count);
     setLimitSeconds(seconds);
-    setPlayerName(name);
-    saveRapidPlayerName(name);
-    setPublishState("idle");
     setPauseSaveState("idle");
     setPausedAt(null);
     setReviewVisibleCount(REVIEW_BATCH_SIZE);
@@ -337,35 +304,19 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
     setRunner((current) => current.phase === "paused" ? { ...current, phase: "playing" } : current);
   }
 
-  async function finishAttempt() {
-    const durationMs = Math.max(1, activeElapsedRef.current + Math.max(0, Date.now() - startedAtRef.current));
-    const attempt: RapidAttemptSummary = {
-      id: boardKey + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8),
-      boardKey,
-      subjectName: "9教科総合",
-      playerName: normalizedPlayerName ?? "以前の記録",
-      correctCount: runner.correctCount,
-      questionCount: runner.session.length,
-      bestStreak: runner.bestStreak,
-      durationMs,
-      completedAt: Date.now(),
-    };
-    setHistory(saveRapidAttempt(attempt));
+  function finishAttempt() {
     setRunner((current) => ({ ...current, phase: "result" }));
     try {
       window.localStorage.removeItem(OVERALL_PAUSE_STORAGE_KEY);
     } catch {
-      // Local results and ranking still work without browser storage.
+      // The result screen still works without browser storage.
     }
     setReviewVisibleCount(REVIEW_BATCH_SIZE);
-    const published = await publishRapidScore(attempt);
-    setPublishState(published);
-    if (published === "saved") setLeaderboardRefresh((value) => value + 1);
   }
 
   function next() {
     if (runner.index >= runner.session.length - 1) {
-      void finishAttempt();
+      finishAttempt();
       return;
     }
     answerLockedRef.current = false;
@@ -382,7 +333,6 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
     answerLockedRef.current = false;
     activeElapsedRef.current = 0;
     setRunner(INITIAL_RUNNER);
-    setPublishState("idle");
     setPauseSaveState("idle");
     setPausedAt(null);
     setReviewVisibleCount(REVIEW_BATCH_SIZE);
@@ -411,7 +361,6 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
           </div>
 
           <div className="rapid-settings overall-settings">
-            <label className="rapid-player-name"><span>ランキング表示名</span><input type="text" maxLength={24} autoComplete="nickname" value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="例：おさと" required /><small>{normalizedPlayerName ? `「${normalizedPlayerName}」として記録します` : "1〜24文字で入力してください（必須）"}</small></label>
             <label>
               <span>総問題数</span>
               <div className="overall-count-stepper">
@@ -435,8 +384,8 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
               <input type="number" min="1" max="300" inputMode="numeric" value={limitSeconds} onChange={(event) => setLimitSeconds(clampLimitSeconds(Number(event.target.value)))} />
               <small>1〜300秒（本番水準は1問90秒推奨）</small>
             </label>
-            <button type="button" onClick={start} disabled={!normalizedPlayerName || !hydrated || missingSubjects.length > 0}>
-              <span>START ALL</span><strong>{!normalizedPlayerName ? "表示名を入力してください" : hydrated ? missingSubjects.length ? "不足教材を追加してください" : "総合問題を始める →" : "教材を確認中…"}</strong>
+            <button type="button" onClick={start} disabled={!hydrated || missingSubjects.length > 0}>
+              <span>START ALL</span><strong>{hydrated ? missingSubjects.length ? "不足教材を追加してください" : "総合問題を始める →" : "教材を確認中…"}</strong>
             </button>
           </div>
 
@@ -542,12 +491,6 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
             <div><span>REVIEW</span><strong>{runner.session.length - runner.correctCount}</strong><p>復習する問題</p></div>
             <button type="button" onClick={restart}>設定へ戻る</button>
           </div>
-          <p className="rapid-publish-status">
-            {publishState === "saved" ? `${normalizedPlayerName ?? "挑戦者"}さんの自己ベストを総合ランキングへ登録しました。` :
-              publishState === "sign-in-required" ? "端末内に保存しました。表示名と端末情報を確認して再挑戦してください。" :
-                publishState === "unavailable" ? "端末内に保存しました。ランキング登録は後で再挑戦できます。" : "成績を保存中…"}
-          </p>
-
           <div className="overall-analysis-heading">
             <div><span>STRENGTH MAP</span><h3>9教科の得意・不得意</h3></div>
             <p><strong>得意：</strong>{strongestNames || "集計中"}（{strongestRate}%）<br /><strong>要復習：</strong>{weakestNames || "集計中"}（{weakestRate}%）</p>
@@ -596,17 +539,6 @@ export default function ComprehensiveChallenge({ subjects }: { subjects: StudySu
         </section>
       )}
 
-      {(runner.phase === "setup" || runner.phase === "result") && (
-        <section className="rapid-ranking-grid overall-ranking-grid">
-          <section className="rapid-local-ranking" aria-labelledby="overall-local-ranking-title">
-            <div className="rapid-leaderboard-head"><div><span>MY BEST / {questionCount} QUESTIONS</span><h3 id="overall-local-ranking-title">自分の総合ランキング</h3></div><p>同じ問題数で比較し、表示名・点数・連続正解数を保存します。</p></div>
-            {localRanking.length ? (
-              <ol>{localRanking.map((entry, index) => <li key={entry.id}><strong>{index + 1}</strong><span>{entry.playerName || "以前の記録"}</span><b>{entry.correctCount}/{entry.questionCount}</b><small>連続 {entry.bestStreak}</small><time>{displayDuration(entry.durationMs)}</time></li>)}</ol>
-            ) : <p className="rapid-leaderboard-note">総合{questionCount}問の記録はまだありません。</p>}
-          </section>
-          <RapidLeaderboard boardKey={boardKey} refreshToken={leaderboardRefresh} />
-        </section>
-      )}
     </section>
   );
 }

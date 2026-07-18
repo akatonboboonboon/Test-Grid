@@ -1,6 +1,5 @@
 import {
   RAPID_CLIENT_STORAGE_KEY,
-  RAPID_CLIENT_TOKEN_HEADER,
   RAPID_CLIENT_TOKEN_PATTERN,
   RAPID_PROFILE_STORAGE_KEY,
   normalizeRankingName,
@@ -180,29 +179,9 @@ export function makeRapidBoardKey(scope: string, questionCount: number) {
   return `rapid:${scope}:q${questionCount}`;
 }
 
-export async function publishRapidScore(attempt: RapidAttemptSummary) {
-  try {
-    const rankingName = normalizeRapidPlayerName(attempt.playerName)
-      ?? loadRapidRankingProfile()?.rankingName ?? undefined;
-    const response = await fetch("/api/leaderboard", {
-      method: "PUT",
-      headers: {
-        "content-type": "application/json",
-        [RAPID_CLIENT_TOKEN_HEADER]: getRapidClientToken(),
-      },
-      body: JSON.stringify({
-        boardKey: attempt.boardKey,
-        correctCount: attempt.correctCount,
-        questionCount: attempt.questionCount,
-        bestStreak: attempt.bestStreak,
-        durationMs: attempt.durationMs,
-        ...(rankingName ? { rankingName } : {}),
-      }),
-    });
-    if (response.ok) return "saved" as const;
-    if (response.status === 401) return "sign-in-required" as const;
-    return "unavailable" as const;
-  } catch {
-    return "unavailable" as const;
-  }
+export async function publishRapidScore(_attempt: RapidAttemptSummary) {
+  void _attempt;
+  // Variable-count rapid drills and the comprehensive practice are intentionally
+  // local-only. Public scores can only be created by the fixed official test.
+  return "unavailable" as const;
 }

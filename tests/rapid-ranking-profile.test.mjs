@@ -26,8 +26,8 @@ test("ranking names are normalized without allowing controls, newlines, or bidi 
   assert.equal(profile.normalizeRankingName("a\tb"), null);
   assert.equal(profile.normalizeRankingName("safe\u202Ename"), null);
   assert.equal(profile.normalizeRankingName(""), null);
-  assert.equal(profile.normalizeRankingName("あ".repeat(25)), null);
-  assert.equal(profile.normalizeRankingName("あ".repeat(24)), "あ".repeat(24));
+  assert.equal(profile.normalizeRankingName("名".repeat(25)), null);
+  assert.equal(profile.normalizeRankingName("名".repeat(24)), "名".repeat(24));
 });
 
 test("ranking profile merge preserves the newest value including an explicit clear", async () => {
@@ -40,35 +40,35 @@ test("ranking profile merge preserves the newest value including an explicit cle
   assert.deepEqual(profile.mergeRapidRankingProfiles(newer, older), newer);
 });
 
-test("named leaderboards support account or device identity and the 4914-question overall board", async () => {
-  const [route, rankingData, accountSync, layout, rapid, overall, publicBoard] = await Promise.all([
+test("named leaderboards only accept the fixed server-scored official subject tests", async () => {
+  const [route, rankingData, accountSync, layout, config, client, questionIds] = await Promise.all([
     readFile(new URL("../app/api/leaderboard/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/rapid-ranking-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/rapid-answer-drill.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/comprehensive-challenge.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/rapid-leaderboard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/official-ranking-config.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/official-ranking-client.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/official-ranking-question-ids.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(route, /RAPID_CLIENT_TOKEN_HEADER/);
   assert.match(route, /sameSiteWriteAllowed/);
-  assert.match(route, /questionCount > 4_914/);
-  assert.match(route, /existing\.alias !== alias/);
+  assert.match(route, /export async function POST/);
+  assert.match(route, /CHALLENGE_ALREADY_SUBMITTED/);
+  assert.match(route, /scoreOfficialRankingResponses/);
+  assert.match(route, /existing\?\.alias !== entry\.alias/);
   assert.match(route, /STUDY_SNAPSHOTS\.put/);
   assert.doesNotMatch(route, /Response\.json\([^)]*userKey/);
+  assert.doesNotMatch(route, /body\.correctCount|body\.bestStreak|body\.durationMs/);
+  assert.match(config, /OFFICIAL_RANKING_QUESTION_COUNT = 20/);
+  assert.match(config, /ranking:\$\{subjectId\}:v\$\{OFFICIAL_RANKING_VERSION\}/);
+  assert.match(questionIds, /deliberately pinned to explicit IDs/);
+  assert.match(client, /JSON\.stringify\(\{ challengeId, answers \}\)/);
+  assert.doesNotMatch(rankingData, /fetch\("\/api\/leaderboard"/);
   assert.match(rankingData, /playerName: string/);
   assert.match(rankingData, /normalizeRapidPlayerName/);
-  assert.match(rankingData, /以前の記録|\\u4ee5\\u524d\\u306e\\u8a18\\u9332/);
   assert.match(accountSync, /mergeRapidRankingProfiles/);
   assert.match(accountSync, /data-default-ranking-name/);
   assert.match(layout, /defaultRankingName: user\.fullName/);
   assert.doesNotMatch(layout, /defaultRankingName: user\.displayName/);
-  for (const client of [rapid, overall]) {
-    assert.match(client, /ランキング表示名/);
-    assert.match(client, /playerName/);
-    assert.match(client, /連続/);
-  }
-  assert.match(publicBoard, /PLAYER RANKING/);
-  assert.match(publicBoard, /entry\.alias/);
 });
