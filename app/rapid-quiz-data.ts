@@ -1,4 +1,5 @@
 import { ENGLISH_QUESTIONS } from "./english-data";
+import { ENGLISH_CH18_QUIZ_ITEMS } from "./english-ch18-quiz-data";
 import { ENGLISH_EXAM_LEVEL_QUESTIONS } from "./english-expected-exams-data";
 import { APPLIED_MATH_EXAM_LEVEL_QUESTIONS, APPLIED_MATH_FORMULAS, APPLIED_MATH_QUESTIONS } from "./applied-math-data";
 import { DIGITAL_CIRCUIT_ALL_FORMULAS, DIGITAL_CIRCUIT_ALL_QUESTIONS, DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS } from "./digital-circuits-extra-data";
@@ -203,7 +204,7 @@ function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource): Ch
     prompt: [question.context, question.prompt].filter(Boolean).join("\n"),
     answer: question.answer,
     options,
-    acceptedOptions: [question.answer],
+    acceptedOptions: question.accepted?.length ? question.accepted : [question.answer],
     explanation,
     studyHref: `/subjects/${subjectId}?mode=practice`,
     mathOptions,
@@ -228,6 +229,18 @@ function examLevelPool(
   return buildChoicePool(subjectId, selected.map((question) => examLevelSeed(subjectId, question)));
 }
 
+const ENGLISH_CH18_ACTUAL_QUIZ_QUESTIONS: ExamLevelRapidSource[] = ENGLISH_CH18_QUIZ_ITEMS.map((item) => ({
+  id: `actual-${item.id}`,
+  unit: "ch18",
+  group: "Chapter 18 実物小テスト",
+  difficulty: 3,
+  context: item.reference,
+  prompt: item.prompt,
+  answer: item.answer,
+  accepted: item.accepted,
+  steps: ["実物小テストの指定箇所と本文根拠を確認する。", "語形・文法・語順を照合して解答する。", "本文へ戻して意味と形を検算する。"],
+  explanation: item.explanation,
+}));
 type ComprehensiveFormulaCard = {
   id: string;
   title: string;
@@ -359,7 +372,7 @@ export function getStaticRapidPool(subjectId: SubjectId) {
 const COMPREHENSIVE_POOLS: Record<SubjectId, RapidQuestion[]> = {
   "subject-2": examLevelPool(
     "subject-2",
-    [...ENGLISH_QUESTIONS, ...ENGLISH_EXAM_LEVEL_QUESTIONS],
+    [...ENGLISH_QUESTIONS, ...ENGLISH_CH18_ACTUAL_QUIZ_QUESTIONS, ...ENGLISH_EXAM_LEVEL_QUESTIONS],
     (question) => ["ch15", "ch16", "ch18"].includes(question.unit ?? ""),
   ),
   network: networkCardsToRapid(DEFAULT_CARDS),

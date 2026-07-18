@@ -14,6 +14,7 @@ test("uses exam-level non-generated questions in rapid and comprehensive pools",
 
   for (const source of [
     "ENGLISH_EXAM_LEVEL_QUESTIONS",
+    "ENGLISH_CH18_ACTUAL_QUIZ_QUESTIONS",
     "MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS",
     "THERMODYNAMICS_EXAM_LEVEL_QUESTIONS",
     "MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS",
