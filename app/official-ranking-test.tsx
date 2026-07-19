@@ -56,6 +56,37 @@ function publicQuestionAsVisual(question: PublicOfficialRankingQuestion) {
   return question.visual;
 }
 
+function isEditableRankingKeyTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.matches("input, textarea, select")
+    || target.isContentEditable
+    || Boolean(target.closest('[contenteditable="true"], [contenteditable=""]'));
+}
+
+export function officialRankingOptionForNumberKey(question: PublicOfficialRankingQuestion, key: string) {
+  if (!/^[1-7]$/.test(key)) return null;
+  const number = Number(key);
+  if (question.subjectId === "network") {
+    const layerOption = question.options.find((option) => option.trim().toUpperCase() === `L${number}`);
+    if (layerOption) return layerOption;
+  }
+  if (question.options.length === 4 && number <= 4) return question.options[number - 1] ?? null;
+  return null;
+}
+
+function officialRankingOptionShortcut(question: PublicOfficialRankingQuestion, option: string, optionIndex: number) {
+  if (question.subjectId === "network") {
+    const layer = option.trim().toUpperCase().match(/^L([1-7])$/)?.[1];
+    if (layer) return layer;
+  }
+  return question.options.length === 4 ? String(optionIndex + 1) : null;
+}
+
+function officialRankingShortcutMaximum(question: PublicOfficialRankingQuestion) {
+  if (question.subjectId === "network" && question.options.some((option) => /^L[1-7]$/i.test(option.trim()))) return 7;
+  return question.options.length === 4 ? 4 : 0;
+}
+
 export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectId }) {
   const meta = rapidSubjectMeta(subjectId);
   const spec = getOfficialRankingSpec(subjectId);
@@ -72,6 +103,7 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
   const submissionLockedRef = useRef(false);
   const normalizedPlayerName = normalizeRapidPlayerName(playerName);
   const currentQuestion = challenge?.questions[questionIndex];
+  const shortcutMaximum = currentQuestion ? officialRankingShortcutMaximum(currentQuestion) : 0;
   const answeredCount = useMemo(
     () => answers.filter((answer) => answer.selected !== null).length,
     [answers],
@@ -148,14 +180,41 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
     setPhase("playing");
   }
 
-  function selectAnswer(selected: string) {
-    if (phase !== "playing" || !currentQuestion) return;
-    const nextAnswers = answers.map((answer, index) => (
+  const selectAnswer = useCallback((selected: string) => {
+    if (phase !== "playing" || !currentQuestion || submissionLockedRef.current) return;
+    const nextAnswers = answersRef.current.map((answer, index) => (
       index === questionIndex ? { ...answer, selected } : answer
     ));
     answersRef.current = nextAnswers;
     setAnswers(nextAnswers);
-  }
+  }, [currentQuestion, phase, questionIndex]);
+
+  useEffect(() => {
+    if (phase !== "playing" || !currentQuestion) return;
+
+    function handleRankingNumberKey(event: KeyboardEvent) {
+      if (
+        event.defaultPrevented
+        || event.repeat
+        || event.isComposing
+        || event.keyCode === 229
+        || event.altKey
+        || event.ctrlKey
+        || event.metaKey
+        || event.shiftKey
+        || submissionLockedRef.current
+        || isEditableRankingKeyTarget(event.target)
+      ) return;
+
+      const selected = officialRankingOptionForNumberKey(currentQuestion, event.key);
+      if (!selected) return;
+      event.preventDefault();
+      selectAnswer(selected);
+    }
+
+    window.addEventListener("keydown", handleRankingNumberKey);
+    return () => window.removeEventListener("keydown", handleRankingNumberKey);
+  }, [currentQuestion, phase, selectAnswer]);
 
   function moveQuestion(nextIndex: number) {
     if (phase !== "playing") return;
@@ -274,9 +333,20 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
                 <h2><RichMathText text={currentQuestion.prompt} /></h2>
               </header>
               <RapidQuestionVisual visual={publicQuestionAsVisual(currentQuestion)} />
-              <div className="rapid-options" role="radiogroup" aria-label="答えを選択">
-                {currentQuestion.options.map((option) => {
+              {phase === "playing" && shortcutMaximum > 0 && (
+                <p className="rapid-keyboard-hint">
+                  <span>KEYBOARD</span><kbd>1</kbd><b>〜</b><kbd>{shortcutMaximum}</kbd> の数字キーでも回答できます
+                </p>
+              )}
+              <div
+                className="rapid-options"
+                role="radiogroup"
+                aria-label="答えを選択"
+                style={{ "--rapid-option-count": currentQuestion.options.length } as CSSProperties}
+              >
+                {currentQuestion.options.map((option, optionIndex) => {
                   const selected = answers[questionIndex]?.selected === option;
+                  const shortcut = officialRankingOptionShortcut(currentQuestion, option, optionIndex);
                   return (
                     <button
                       type="button"
@@ -286,8 +356,10 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
                       className={selected ? "selected" : ""}
                       disabled={phase !== "playing"}
                       onClick={() => selectAnswer(option)}
+                      aria-keyshortcuts={shortcut ?? undefined}
                     >
-                      <RapidAnswerText value={option} mathOptions={currentQuestion.mathOptions} />
+                      {shortcut && <span className="rapid-option-shortcut" aria-hidden="true">{shortcut}</span>}
+                      <span className="rapid-option-value"><RapidAnswerText value={option} mathOptions={currentQuestion.mathOptions} /></span>
                     </button>
                   );
                 })}
