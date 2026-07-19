@@ -5,7 +5,7 @@ import { APPLIED_MATH_EXAM_LEVEL_QUESTIONS, APPLIED_MATH_FORMULAS, APPLIED_MATH_
 import { DIGITAL_CIRCUIT_ALL_FORMULAS, DIGITAL_CIRCUIT_ALL_QUESTIONS, DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS, type DigitalCircuitAnyDiagramKind } from "./digital-circuits-extra-data";
 import { MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS, MATERIAL_MECHANICS_FORMULAS, MATERIAL_MECHANICS_QUESTIONS, type MaterialMechanicsDiagramKind } from "./material-mechanics-data";
 import { MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS, MECHANICAL_DYNAMICS_FORMULAS, MECHANICAL_DYNAMICS_QUESTIONS, type MechanicalDynamicsDiagramKind } from "./mechanical-dynamics-data";
-import { ALL_LAYERS, DEFAULT_CARDS, cardLayers, type ProtocolCard } from "./protocols";
+import { ALL_LAYERS, DEFAULT_CARDS, cardLayers, type Layer, type ProtocolCard } from "./protocols";
 import { SMART_CONTROL_CARDS, SMART_CONTROL_EXAM_LEVEL_QUESTIONS, SMART_CONTROL_QUESTIONS } from "./smart-control-data";
 import { TEXTBOOK_RESPONSE_CARDS, TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS } from "./smart-control-textbook-data";
 import { STATISTICS_FORMULAS, STATISTICS_QUESTIONS } from "./statistics-data";
@@ -347,6 +347,18 @@ export function networkCardsToRapid(cards: ProtocolCard[]) {
       sourceBasis: "提供されたネットワーク層別一覧（本番の瞬時判定形式）",
     } satisfies RapidQuestion;
   });
+}
+
+export function filterNetworkRapidPoolByLayers(
+  pool: RapidQuestion[],
+  selectedLayers: readonly Layer[],
+) {
+  if (!selectedLayers.length) return pool;
+  const selectedLabels = new Set(selectedLayers.map((layer) => `L${layer}`));
+  return pool.filter((question) => (
+    question.subjectId === "network"
+    && question.acceptedOptions.some((option) => selectedLabels.has(option))
+  ));
 }
 
 const MECHANICAL_RAPID = examLevelPool(

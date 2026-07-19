@@ -1,19 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { RichMathText } from "./statistics-math";
 import RapidAnswerText from "./rapid-answer-text";
 import RapidQuestionVisual from "./rapid-question-visual";
 import {
   createRapidSession,
+  filterNetworkRapidPoolByLayers,
   getStaticRapidPool,
   isRapidAnswerCorrect,
   networkCardsToRapid,
   rapidSubjectMeta,
   type RapidQuestionInstance,
 } from "./rapid-quiz-data";
-import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
+import { ALL_LAYERS, DEFAULT_CARDS, normalizeCards, storageRead, type Layer } from "./protocols";
 import { type SubjectId } from "./study-data";
 
 type AnswerResult = {
@@ -121,18 +122,32 @@ function loadSubjectPool(subjectId: SubjectId) {
 export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }) {
   const meta = rapidSubjectMeta(subjectId);
   const defaultLimitSeconds = subjectId === "network" ? 8 : subjectId === "subject-2" ? 60 : 90;
-  const [pool, setPool] = useState(() => getStaticRapidPool(subjectId));
+  const [sourcePool, setSourcePool] = useState(() => getStaticRapidPool(subjectId));
+  const [selectedLayers, setSelectedLayers] = useState<Layer[]>([]);
   const [questionCount, setQuestionCount] = useState(10);
   const [limitSeconds, setLimitSeconds] = useState(defaultLimitSeconds);
   const [state, dispatch] = useRunnerState();
   const deadlineRef = useRef(0);
   const currentQuestion = state.session[state.index];
   const currentResult = state.results[state.results.length - 1];
+  const pool = useMemo(
+    () => subjectId === "network"
+      ? filterNetworkRapidPoolByLayers(sourcePool, selectedLayers)
+      : sourcePool,
+    [sourcePool, selectedLayers, subjectId],
+  );
+  const layerCounts = useMemo(
+    () => Object.fromEntries(ALL_LAYERS.map((layer) => [
+      layer,
+      filterNetworkRapidPoolByLayers(sourcePool, [layer]).length,
+    ])) as Record<Layer, number>,
+    [sourcePool],
+  );
 
   /* Device-local network cards are restored after mount for free practice. */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setPool(loadSubjectPool(subjectId));
+    setSourcePool(loadSubjectPool(subjectId));
   }, [subjectId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -163,6 +178,12 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
     setQuestionCount(count);
     setLimitSeconds(seconds);
     dispatch({ type: "start", session, limitMs: seconds * 1000 });
+  }
+
+  function toggleLayer(layer: Layer) {
+    setSelectedLayers((current) => current.includes(layer)
+      ? current.filter((candidate) => candidate !== layer)
+      : ALL_LAYERS.filter((candidate) => current.includes(candidate) || candidate === layer));
   }
 
   function answer(selected: string) {
@@ -220,14 +241,49 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
               <div><span>READY</span><h2 id="rapid-setup-title">出題設定</h2></div>
               <p>問題は教材の範囲内からランダムに出ます。</p>
             </div>
-            {pool.length ? (
+            {sourcePool.length ? (
               <>
+                {subjectId === "network" && (
+                  <section className="rapid-layer-filter" aria-labelledby="rapid-layer-filter-title">
+                    <div className="rapid-layer-filter-copy">
+                      <span>FILTER LAYERS</span>
+                      <h3 id="rapid-layer-filter-title">出題する層を選ぶ</h3>
+                      <p>複数選択できます。選んだ層のどれかに属するプロトコルだけを出題します。</p>
+                    </div>
+                    <div className="rapid-layer-filter-buttons" role="group" aria-label="出題するレイヤー（複数選択可）">
+                      <button
+                        type="button"
+                        className={selectedLayers.length === 0 ? "active" : ""}
+                        aria-pressed={selectedLayers.length === 0}
+                        onClick={() => setSelectedLayers([])}
+                      >
+                        <strong>全レイヤー</strong><small>{sourcePool.length}問</small>
+                      </button>
+                      {ALL_LAYERS.map((layer) => (
+                        <button
+                          type="button"
+                          key={layer}
+                          className={selectedLayers.includes(layer) ? "active" : ""}
+                          aria-pressed={selectedLayers.includes(layer)}
+                          onClick={() => toggleLayer(layer)}
+                        >
+                          <strong>L{layer}</strong><small>{layerCounts[layer]}問</small>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="rapid-layer-filter-status" aria-live="polite">
+                      {selectedLayers.length
+                        ? `${selectedLayers.map((layer) => `L${layer}`).join("・")} の ${pool.length}問を出題対象に設定`
+                        : `全7層の ${pool.length}問を出題対象に設定`}
+                    </p>
+                  </section>
+                )}
                 <div className="rapid-settings">
                   <label><span>問題数</span><input type="number" min="5" max="100" step="5" value={questionCount} onChange={(event) => setQuestionCount(Number(event.target.value))} /><small>5〜100問</small></label>
-                  <label><span>1問の制限時間</span><input type="number" min="1" max="300" value={limitSeconds} onChange={(event) => setLimitSeconds(Number(event.target.value))} /><small>1〜300秒（本番水準は60〜90秒推奨）</small></label>
+                  <label><span>1問の制限時間</span><input type="number" min="1" max="300" value={limitSeconds} onChange={(event) => setLimitSeconds(Number(event.target.value))} /><small>{subjectId === "network" ? "1〜300秒（層即答は8秒推奨）" : "1〜300秒（本番水準は60〜90秒推奨）"}</small></label>
                   <button type="button" onClick={start}><span>START</span><strong>即答を始める →</strong></button>
                 </div>
-                <p className="rapid-pool-note">{pool.length}問の問題バンクを、足りない場合は重複を離して再抽選します。</p>
+                <p className="rapid-pool-note">{pool.length}問の問題バンクを、足りない場合は重複を離して再抽選します。複数層のプロトコルは該当する各層に含まれます。</p>
               </>
             ) : (
               <div className="rapid-missing">

@@ -164,6 +164,95 @@ button:disabled {
   max-width: 430px;
 }
 
+.rapid-layer-filter {
+  align-items: end;
+  background: #fffdf7;
+  border: 2px solid var(--ink);
+  display: grid;
+  gap: 12px 22px;
+  grid-template-columns: minmax(210px, 0.68fr) minmax(0, 1.32fr);
+  margin-top: 24px;
+  padding: 18px;
+}
+
+.rapid-layer-filter-copy > span {
+  color: color-mix(in srgb, var(--rapid-accent) 70%, var(--ink));
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.rapid-layer-filter-copy h3 {
+  font-size: 22px;
+  letter-spacing: -0.04em;
+  margin: 7px 0 5px;
+}
+
+.rapid-layer-filter-copy p {
+  color: rgba(11, 14, 19, 0.58);
+  font-size: 10px;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.rapid-layer-filter-buttons {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1.45fr repeat(7, minmax(52px, 1fr));
+}
+
+.rapid-layer-filter-buttons button {
+  background: transparent;
+  border: 1px solid rgba(11, 14, 19, 0.34);
+  color: var(--ink);
+  cursor: pointer;
+  min-height: 58px;
+  padding: 9px 7px;
+}
+
+.rapid-layer-filter-buttons button:hover {
+  border-color: var(--ink);
+}
+
+.rapid-layer-filter-buttons button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.rapid-layer-filter-buttons button.active {
+  background: var(--rapid-accent);
+  border-color: var(--ink);
+  box-shadow: inset 0 -4px 0 rgba(11, 14, 19, 0.16);
+  color: var(--ink);
+}
+
+.rapid-layer-filter-buttons strong,
+.rapid-layer-filter-buttons small {
+  display: block;
+}
+
+.rapid-layer-filter-buttons strong {
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.rapid-layer-filter-buttons small {
+  font-size: 8px;
+  margin-top: 5px;
+  opacity: 0.58;
+}
+
+.rapid-layer-filter-status {
+  border-top: 1px solid rgba(11, 14, 19, 0.18);
+  color: rgba(11, 14, 19, 0.66);
+  font-family: var(--mono);
+  font-size: 8px;
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  padding-top: 10px;
+}
+
 .rapid-settings {
   align-items: end;
   display: grid;
@@ -724,6 +813,15 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .rapid-layer-filter {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .rapid-layer-filter-buttons {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .rapid-settings {
     grid-template-columns: 1fr 1fr;
   }
@@ -769,6 +867,14 @@ button:disabled {
   .rapid-section-heading > p,
   .rapid-leaderboard-head > p {
     margin-top: 8px;
+  }
+
+  .rapid-layer-filter {
+    padding: 14px;
+  }
+
+  .rapid-layer-filter-buttons button:first-child {
+    grid-column: span 2;
   }
 
   .rapid-settings,
