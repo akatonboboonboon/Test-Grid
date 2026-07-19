@@ -356,7 +356,7 @@ export const MECHANICAL_DYNAMICS_QUESTIONS: MechanicalDynamicsQuestion[] = [
   question({ id: "md-q-l2", topic: "laplace", genre: "一次遅れ", difficulty: 1, format: "text", prompt: "\\(\\frac{1}{s+3}\\)を逆ラプラス変換せよ。", answer: "\\(e^{-3t}\\)", accepted: ["e^-3t", "e^{-3t}"], keywords: ["-3t"], minKeywords: 1, formula: "\\mathcal L^{-1}\\!\\left\\{\\frac{1}{s+a}\\right\\}=e^{-at}", steps: ["a=3を読む"], explanation: "極s=-3に対応する指数減衰。", pages: [8] }),
   question({ id: "md-q-l3", topic: "laplace", genre: "ステップ応答", difficulty: 2, format: "derivation", prompt: "\\(G(s)=\\frac{1}{s+1}\\)へ単位ステップを入力した応答\\(y(t)\\)を求めよ。", answer: "\\(y(t)=1-e^{-t}\\)", accepted: ["1-e^-t", "1−e^{-t}"], keywords: ["1", "e", "-t"], minKeywords: 3, formula: "Y=\\frac{G}{s}", steps: ["\\(Y=\\frac{1}{s(s+1)}\\)", "\\(Y=\\frac{1}{s}-\\frac{1}{s+1}\\)", "逆変換"], explanation: "初期値0から最終値1へ近づく一次遅れ応答。", pages: [8] }),
   question({ id: "md-q-l4", topic: "laplace", genre: "部分分数", difficulty: 2, format: "derivation", prompt: "\\(\\frac{s+3}{s(s+1)(s+2)}\\)を部分分数分解せよ。", answer: "\\(\\frac{3}{2s}-\\frac{2}{s+1}+\\frac{1}{2(s+2)}\\)", accepted: ["3/(2s)-2/(s+1)+1/(2(s+2))"], keywords: ["3/2", "-2", "1/2"], minKeywords: 3, steps: ["\\(s=0\\)で\\(A=\\frac{3}{2}\\)", "\\(s=-1\\)で\\(B=-2\\)", "\\(s=-2\\)で\\(C=\\frac{1}{2}\\)"], explanation: "相異なる1次極なので代入法が使える。", pages: [9] }),
-  question({ id: "md-q-l5", topic: "laplace", genre: "逆変換", difficulty: 2, format: "text", prompt: "前問の逆ラプラス変換を求めよ。", context: "\\(F(s)=\\frac{3}{2s}-\\frac{2}{s+1}+\\frac{1}{2(s+2)}\\)", answer: "\\(f(t)=\\frac{3}{2}-2e^{-t}+\\frac{1}{2}e^{-2t}\\)", accepted: ["3/2-2e^-t+1/2e^-2t"], keywords: ["3/2", "-2", "-2t"], minKeywords: 3, steps: ["各項を基本変換へ対応させる"], explanation: "定数項は\\(\\frac{1}{s}\\)、各\\(\\frac{1}{s+a}\\)は\\(e^{-at}\\)。", pages: [9] }),
+  question({ id: "md-q-l5", topic: "laplace", genre: "逆変換", difficulty: 2, format: "text", prompt: "\\(F(s)=\\frac{3}{2s}-\\frac{2}{s+1}+\\frac{1}{2(s+2)}\\) を逆ラプラス変換せよ。", answer: "\\(f(t)=\\frac{3}{2}-2e^{-t}+\\frac{1}{2}e^{-2t}\\)", accepted: ["3/2-2e^-t+1/2e^-2t"], keywords: ["3/2", "-2", "-2t"], minKeywords: 3, steps: ["各項を基本変換へ対応させる"], explanation: "定数項は\\(\\frac{1}{s}\\)、各\\(\\frac{1}{s+a}\\)は\\(e^{-at}\\)。", pages: [9] }),
   question({ id: "md-q-l6", topic: "laplace", genre: "重根", difficulty: 1, format: "choice", prompt: "\\(\\frac{1}{(s+2)^2}\\)の逆ラプラス変換を選べ。 ", answer: "t e^{-2t}", options: ["t e^{-2t}", "e^{-2t}", "2e^{-2t}", "t²e^{-2t}"], steps: ["二重極はtを伴う"], explanation: "\\(\\frac{1}{(s+a)^2}\\leftrightarrow te^{-at}\\)。", pages: [9] }),
   question({ id: "md-q-l7", topic: "laplace", genre: "伝達関数", difficulty: 1, format: "choice", prompt: "入力U(s)と伝達関数G(s)から出力Y(s)を表す式を選べ。", answer: "Y(s)=G(s)U(s)", options: ["Y(s)=G(s)U(s)", "Y(s)=G(s)+U(s)", "\\(Y(s)=\\frac{U(s)}{G(s)}\\)", "\\(Y(s)=\\frac{dG}{ds}\\)"], steps: ["伝達関数は\\(\\frac{\\text{出力}}{\\text{入力}}\\)"], explanation: "初期値0の線形系ではs領域で積となる。", pages: [8] }),
 
@@ -379,7 +379,7 @@ export const MECHANICAL_DYNAMICS_QUESTIONS: MechanicalDynamicsQuestion[] = [
   question({ id: "md-q-r1", topic: "rotational", genre: "ねじり振動", difficulty: 2, format: "number", prompt: "m=4.00 kg、R=0.500 mの円板をkt=50.0 N·m/radのねじりばねで支持する。ωnを求めよ。", answer: "10.0 rad/s", numericAnswer: 10, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.02, formula: "\\omega_n=\\sqrt{\\frac{2k_t}{mR^2}}", steps: ["mR²=1.00", "\\(\\frac{2k_t}{mR^2}=100\\)", "√100=10"], explanation: "円板の慣性モーメントは\\(mR^2\\)ではなく\\(\\frac{mR^2}{2}\\)。", pages: [15] }),
   question({ id: "md-q-r2", topic: "rotational", genre: "レバー換算", difficulty: 1, format: "choice", prompt: "質量mが支点から距離lにあるときの回転慣性を選べ。", answer: "ml²", options: ["ml²", "ml", "\\(\\frac{m}{l^2}\\)", "m+l"], steps: ["速度v=lθdot", "運動エネルギーは\\(\\frac{ml^2\\dot\\theta^2}{2}\\)"], explanation: "点質量の支点まわり慣性モーメント。", pages: [15] }),
   question({ id: "md-q-r3", topic: "rotational", genre: "レバー減衰", difficulty: 2, format: "number", prompt: "m=2.00 kg、k=3000 N/m、l=0.200 m、l1=0.160 mのレバー系のωnを求めよ。", answer: "31.0 rad/s", numericAnswer: 30.984, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\omega_n=\\frac{l_1}{l}\\sqrt{\\frac{k}{m}}", steps: ["\\(\\frac{l_1}{l}=0.8\\)", "\\(\\sqrt{\\frac{3000}{2}}=38.73\\)", "積=30.98"], explanation: "質量とばねの作用腕が異なる。", diagram: "pinned-beam", pages: [15] }),
-  question({ id: "md-q-r4", topic: "rotational", genre: "レバー減衰", difficulty: 2, format: "number", prompt: "前問にc=200 N·s/m、l2=0.120 mを加える。減衰比を求めよ。", answer: "0.581", numericAnswer: 0.58095, tolerance: 0.002, formula: "\\zeta=\\frac{cl_2^2}{2ll_1\\sqrt{mk}}", steps: ["Cθ=cl2²", "J=ml²、Kθ=kl1²", "\\(\\zeta=\\frac{C_\\theta}{2\\sqrt{JK_\\theta}}=0.581\\)"], explanation: "ダンパの作用腕も二乗で換算する。", diagram: "pinned-beam", pages: [15] }),
+  question({ id: "md-q-r4", topic: "rotational", genre: "レバー減衰", difficulty: 2, format: "number", prompt: "m=2.00 kg、k=3000 N/m、質量の作用腕l=0.200 m、ばねの作用腕l1=0.160 mのレバー系に、c=200 N·s/mのダンパを作用腕l2=0.120 mで加える。減衰比を求めよ。", answer: "0.581", numericAnswer: 0.58095, tolerance: 0.002, formula: "\\zeta=\\frac{cl_2^2}{2ll_1\\sqrt{mk}}", steps: ["Cθ=cl2²", "J=ml²、Kθ=kl1²", "\\(\\zeta=\\frac{C_\\theta}{2\\sqrt{JK_\\theta}}=0.581\\)"], explanation: "ダンパの作用腕も二乗で換算する。", diagram: "pinned-beam", pages: [15] }),
   question({ id: "md-q-r5", topic: "rotational", genre: "倒立振り子", difficulty: 2, format: "derivation", prompt: "ばね付き倒立振り子が微小振動できる安定条件を示せ。", answer: "\\(kr^2>mgl\\)", accepted: ["kr^2>mgl", "kr²＞mgl"], keywords: ["kr", "mgl"], minKeywords: 2, formula: "J\\ddot\\theta+(kr^2-mgl)\\theta=0", steps: ["ばねは復元モーメントkr²θ", "重力は不安定化モーメントmglθ", "合成回転剛性を正にする"], explanation: "固有角振動数の二乗が正になる条件。", pages: [15] }),
   question({ id: "md-q-r6", topic: "rotational", genre: "単振り子", difficulty: 1, format: "number", prompt: "周期2.00 sの単振り子の長さを、g=9.80 m/s²、π=3.14として求めよ。", answer: "0.994 m", numericAnswer: 0.993955, expectedUnit: "m", acceptedUnits: { m: 1, cm: 0.01, mm: 0.001 }, requiresUnit: true, tolerance: 0.002, formula: "l=\\frac{gT^2}{4\\pi^2}", steps: ["\\(\\frac{9.80\\times2^2}{4\\times3.14^2}\\)", "l=0.993955"], explanation: "過去問の指定どおりπ=3.14を使う。", diagram: "simple-pendulum", pages: [4] }),
   question({ id: "md-q-r7", topic: "rotational", genre: "平行軸", difficulty: 2, format: "number", prompt: "重心まわりJG=0.200 kg·m²、m=3.00 kg、支点までd=0.400 mの剛体について支点まわりJを求めよ。", answer: "0.680 kg·m²", numericAnswer: 0.68, expectedUnit: "kg m^2", acceptedUnits: { "kg m^2": 1, "kg m²": 1, "kg·m²": 1, "kg·m^2": 1, "kg・m^2": 1 }, requiresUnit: true, tolerance: 0.002, formula: "J=J_G+md^2", steps: ["md²=3×0.16=0.48", "0.20+0.48=0.68"], explanation: "回転軸が重心から離れるほど慣性モーメントは増える。", pages: [4] }),
@@ -759,14 +759,26 @@ export const MECHANICAL_DYNAMICS_EXPECTED_EXAMS: MechanicalDynamicsExam[] =
  * Section conditions are copied onto every item so a shuffled question never loses its setup.
  */
 export const MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS: MechanicalDynamicsExamQuestion[] =
-  MECHANICAL_DYNAMICS_EXPECTED_EXAMS.flatMap((exam) => exam.sections.flatMap((section) =>
-    section.questions.map((question) => ({
-      ...question,
-      difficulty: 3,
-      steps: question.steps.length >= 3 ? question.steps : [...question.steps, "求めた中間値・単位・物理的な妥当性を答案上で照査する。"],
-      context: [section.context, question.context].filter(Boolean).join(" "),
-    })),
-  ));
+  MECHANICAL_DYNAMICS_EXPECTED_EXAMS.flatMap((exam) =>
+    exam.sections.flatMap((section) =>
+      section.questions.map((question, index) => {
+        const previousPrompts = section.questions
+          .slice(0, index)
+          .map((previous) => `大問${previous.major}(${previous.sub})：${previous.prompt}`)
+          .join(" ／ ");
+        return {
+          ...question,
+          difficulty: 3,
+          steps: question.steps.length >= 3 ? question.steps : [...question.steps, "求めた中間値・単位・物理的な妥当性を答案上で照査する。"],
+          context: [
+            section.context,
+            question.context,
+            previousPrompts ? `【同じ大問の前問】${previousPrompts}` : "",
+          ].filter(Boolean).join("\n"),
+        };
+      }),
+    ),
+  );
 
 export const MECHANICAL_DYNAMICS_EXAM_FORMATS = [
   {

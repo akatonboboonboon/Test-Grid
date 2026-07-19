@@ -378,14 +378,28 @@ export const MATERIAL_MECHANICS_EXPECTED_EXAMS: MaterialMechanicsExam[] = VARIAN
 
 /** Full-condition, linked-calculation items for the timed confirmation test. */
 export const MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS: MaterialMechanicsExamQuestion[] =
-  MATERIAL_MECHANICS_EXPECTED_EXAMS.flatMap((exam) => exam.sections.flatMap((section) =>
-    section.questions.map((question) => ({
-      ...question,
-      difficulty: 3,
-      steps: question.steps.length >= 3 ? question.steps : [...question.steps, "求めた中間値・単位・物理的な妥当性を答案上で照査する。"],
-      context: [section.context, question.context].filter(Boolean).join(" "),
-    })),
-  ));
+  MATERIAL_MECHANICS_EXPECTED_EXAMS.flatMap((exam) =>
+    exam.sections.flatMap((section) => {
+      const questionsById = new Map(section.questions.map((question) => [question.id, question]));
+      return section.questions.map((question) => {
+        const dependencyPrompts = question.dependsOn
+          ?.map((id) => questionsById.get(id))
+          .filter((dependency): dependency is MaterialMechanicsExamQuestion => Boolean(dependency))
+          .map((dependency) => `大問${dependency.major}(${dependency.sub})：${dependency.prompt}`)
+          .join(" ／ ");
+        return {
+          ...question,
+          difficulty: 3,
+          steps: question.steps.length >= 3 ? question.steps : [...question.steps, "求めた中間値・単位・物理的な妥当性を答案上で照査する。"],
+          context: [
+            section.context,
+            question.context,
+            dependencyPrompts ? `【この設問で参照する前問】${dependencyPrompts}` : "",
+          ].filter(Boolean).join("\n"),
+        };
+      });
+    }),
+  );
 
 export const MATERIAL_MECHANICS_EXAM_FORMATS = [
   { id: "definitions", title: "設計条件の立式", description: "公式名の単発暗記ではなく、応力・変形の各条件を許容荷重へ変換する。", strategy: "何が上限を支配するかを式の段階で明示する。" },

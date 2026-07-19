@@ -686,7 +686,7 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "工業仕事",
     difficulty: 2,
     format: "number",
-    prompt: "前問の境界仕事が143.5 kJ、比熱比が1.4のとき、工業仕事を求めよ。",
+    prompt: "断熱変化の境界仕事が143.5 kJ、比熱比が1.4のとき、工業仕事を求めよ。",
     answer: "200.9 kJ",
     numericAnswer: 200.9,
     expectedUnit: "kJ",
@@ -1089,7 +1089,7 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     genre: "熱量比",
     difficulty: 1,
     format: "number",
-    prompt: "前問のカルノー熱機関で" + inline("\\frac{Q_2}{Q_1}") + "を求めよ。",
+    prompt: "高温熱源500℃、低温熱源100℃のカルノー熱機関で" + inline("\\frac{Q_2}{Q_1}") + "を求めよ。",
     answer: numberText(PRACTICE_CARNOT_RATIO, 4),
     numericAnswer: PRACTICE_CARNOT_RATIO,
     tolerance: 0.002,
@@ -1509,14 +1509,26 @@ export const THERMODYNAMICS_EXPECTED_EXAMS: ThermodynamicsExpectedExam[] = Array
 
 /** Full-condition, multi-stage items for the timed confirmation test. */
 export const THERMODYNAMICS_EXAM_LEVEL_QUESTIONS: ThermodynamicsExamQuestion[] =
-  THERMODYNAMICS_EXPECTED_EXAMS.flatMap((exam) => exam.sections.flatMap((section) =>
-    section.questions.map((question) => ({
-      ...question,
-      difficulty: 3,
-      steps: question.steps.length >= 3 ? question.steps : [...question.steps, "求めた中間値・単位・物理的な妥当性を答案上で照査する。"],
-      context: [section.context, question.context].filter(Boolean).join(" "),
-    })),
-  ));
+  THERMODYNAMICS_EXPECTED_EXAMS.flatMap((exam) =>
+    exam.sections.flatMap((section) =>
+      section.questions.map((question, index) => {
+        const previousPrompts = section.questions
+          .slice(0, index)
+          .map((previous) => `大問${previous.major}(${previous.sub})：${previous.prompt}`)
+          .join(" ／ ");
+        return {
+          ...question,
+          difficulty: 3,
+          steps: question.steps.length >= 3 ? question.steps : [...question.steps, "求めた中間値・単位・物理的な妥当性を答案上で照査する。"],
+          context: [
+            section.context,
+            question.context,
+            previousPrompts ? `【同じ大問の前問】${previousPrompts}` : "",
+          ].filter(Boolean).join("\n"),
+        };
+      }),
+    ),
+  );
 
 export const THERMODYNAMICS_EXAM_FORMATS = [
   {

@@ -246,7 +246,7 @@ export const APPLIED_MATH_QUESTIONS: AppliedMathQuestion[] = [
 
   courseQuestion({ id: "am-q-gradient", topic: "gradient", genre: "勾配", difficulty: 1, format: "choice", prompt: "\\(\\phi=x^2+2y^2+3z\\) の勾配を選べ。", answer: "\\((2x,4y,3)\\)", options: ["\\((2x,4y,3)\\)", "\\((x,2y,3z)\\)", "\\((2,4,3)\\)", "\\((2x,2y,0)\\)"], formula: "\\nabla\\phi=(\\phi_x,\\phi_y,\\phi_z)", steps: ["x,y,zでそれぞれ偏微分"], explanation: "他の変数は定数として偏微分する。" }),
   courseQuestion({ id: "am-q-directional", topic: "gradient", genre: "方向微分", difficulty: 2, format: "number", prompt: "\\(\\phi=x^2+y^2+z^2\\) の点 \\((1,2,2)\\) における \\(\\mathbf e=(1,0,0)\\) 方向の方向微分を求めよ。", answer: "2", numericAnswer: 2, steps: ["\\(\\nabla\\phi=(2x,2y,2z)\\)", "点では \\((2,4,4)\\)", "\\((2,4,4)\\cdot(1,0,0)=2\\)"], explanation: "方向ベクトルはすでに単位ベクトル。" }),
-  courseQuestion({ id: "am-q-direction-max", topic: "gradient", genre: "最大方向微分", difficulty: 2, format: "number", prompt: "前問の点 \\((1,2,2)\\) における方向微分の最大値を求めよ。", context: "\\(\\phi=x^2+y^2+z^2\\)", answer: "6", numericAnswer: 6, steps: ["勾配は \\((2,4,4)\\)", "大きさは \\(\\sqrt{4+16+16}=6\\)"], explanation: "最大方向微分は勾配の大きさ。" }),
+  courseQuestion({ id: "am-q-direction-max", topic: "gradient", genre: "最大方向微分", difficulty: 2, format: "number", prompt: "スカラー場 \\(\\phi=x^2+y^2+z^2\\) の点 \\((1,2,2)\\) における方向微分の最大値を求めよ。", answer: "6", numericAnswer: 6, steps: ["勾配は \\((2,4,4)\\)", "大きさは \\(\\sqrt{4+16+16}=6\\)"], explanation: "最大方向微分は勾配の大きさ。" }),
   courseQuestion({ id: "am-q-level-normal", topic: "gradient", genre: "等位面", difficulty: 1, format: "text", prompt: "等位面 \\(\\phi(x,y,z)=c\\) に対して \\(\\nabla\\phi\\) はどの方向を向くか。", answer: "等位面に垂直な法線方向", accepted: ["等位面の法線方向", "等位面に垂直"], keywords: ["等位面", "垂直"], minKeywords: 2, steps: ["等位面上の接方向ではφは変化しない"], explanation: "接方向との内積が0になるため、勾配は法線。" }),
   courseQuestion({ id: "am-q-direction-unit", topic: "gradient", genre: "方向微分", difficulty: 1, format: "choice", prompt: "方向微分 \\(D_{\\mathbf e}\\phi=\\nabla\\phi\\cdot\\mathbf e\\) で必要な \\(\\mathbf e\\) の条件を選べ。", answer: "単位ベクトルである", options: ["単位ベクトルである", "ゼロベクトルである", "勾配と常に直交する", "長さは自由である"], steps: ["方向だけの変化率にするため長さを1にする"], explanation: "単位化しないと方向だけでなくベクトルの長さまで結果に掛かる。" }),
 
@@ -270,9 +270,9 @@ export const APPLIED_MATH_QUESTIONS: AppliedMathQuestion[] = [
   courseQuestion({ id: "am-q-source-curl", topic: "divergence-curl", genre: "追加範囲・回転", difficulty: 3, format: "text", prompt: "\\(\\mathbf a=(x^3z,-y^2z,xyz)\\) の回転を求めよ。", answer: "\\((xz+y^2,x^3-yz,0)\\)", accepted: ["(xz+y^2,x^3-yz,0)", "xz+y2,x3-yz,0"], keywords: ["xz", "y", "x", "yz", "0"], minKeywords: 4, formula: "\\nabla\\times\\mathbf a=(\\partial_ya_z-\\partial_za_y,\\partial_za_x-\\partial_xa_z,\\partial_xa_y-\\partial_ya_x)", steps: ["第1成分は \\(xz-(-y^2)=xz+y^2\\)", "第2成分は \\(x^3-yz\\)", "第3成分は \\(0-0=0\\)"], explanation: "回転の各成分は偏微分の差である。第1成分では二重のマイナスに注意する。" }),
 
   courseQuestion({ id: "am-q-scalar-line-ds", topic: "line-integrals", genre: "スカラー線積分", difficulty: 2, format: "number", prompt: "\\(C:\\mathbf r(t)=(\\cos t,\\sin t,1)\\), \\(0\\le t\\le\\pi\\) のとき \\(\\int_C(x^2+z)\\,ds\\) を \\(\\pi\\) の係数で答えよ。", answer: "\\(\\frac{3\\pi}{2}\\)（係数 \\(\\frac32\\)）", numericAnswer: 3 / 2, tolerance: 0.0001, formula: "\\int_C\\phi\\,ds=\\int_a^b\\phi(\\mathbf r(t))|\\mathbf r'(t)|dt", steps: ["\\(|\\mathbf r'(t)|=1\\)", "\\(x^2+z=\\cos^2t+1\\)", "\\(\\int_0^\\pi(\\cos^2t+1)\\,dt=\\frac{3\\pi}{2}\\)"], explanation: "入力欄には \\(\\pi\\) の係数 \\(\\frac32\\) を入力する。dsでは速さを掛ける。" }),
-  courseQuestion({ id: "am-q-scalar-line-dx", topic: "line-integrals", genre: "成分線積分", difficulty: 2, format: "number", prompt: "同じ曲線で \\(\\int_C(x^2+z)\\,dx\\) を求めよ。", context: "\\(\\mathbf r(t)=(\\cos t,\\sin t,1),\\ 0\\le t\\le\\pi\\)", answer: "\\(-\\frac83\\)", numericAnswer: -8 / 3, tolerance: 0.0001, formula: "\\int_C\\phi\\,dx=\\int_a^b\\phi(\\mathbf r(t))x'(t)dt", steps: ["\\(dx=x'(t)dt=-\\sin t\\,dt\\)", "\\(\\int_0^\\pi(\\cos^2t+1)(-\\sin t)\\,dt\\)", "\\(u=\\cos t\\) とおけば \\(\\int_1^{-1}(u^2+1)\\,du=-\\frac83\\)"], explanation: "dxでは曲線長ではなくx成分の変化を掛けるため、向きによって符号が変わる。" }),
+  courseQuestion({ id: "am-q-scalar-line-dx", topic: "line-integrals", genre: "成分線積分", difficulty: 2, format: "number", prompt: "曲線 \\(C:\\mathbf r(t)=(\\cos t,\\sin t,1)\\), \\(0\\le t\\le\\pi\\) に沿う \\(\\int_C(x^2+z)\\,dx\\) を求めよ。", answer: "\\(-\\frac83\\)", numericAnswer: -8 / 3, tolerance: 0.0001, formula: "\\int_C\\phi\\,dx=\\int_a^b\\phi(\\mathbf r(t))x'(t)dt", steps: ["\\(dx=x'(t)dt=-\\sin t\\,dt\\)", "\\(\\int_0^\\pi(\\cos^2t+1)(-\\sin t)\\,dt\\)", "\\(u=\\cos t\\) とおけば \\(\\int_1^{-1}(u^2+1)\\,du=-\\frac83\\)"], explanation: "dxでは曲線長ではなくx成分の変化を掛けるため、向きによって符号が変わる。" }),
   courseQuestion({ id: "am-q-scalar-line-helix-ds", topic: "line-integrals", genre: "スカラー線積分", difficulty: 3, format: "text", prompt: "\\(C:\\mathbf r(t)=(\\cos t,\\sin t,t)\\), \\(0\\le t\\le\\frac{\\pi}{2}\\) のとき \\(\\int_C(x+y^2)\\,ds\\) を求めよ。", answer: "\\(\\sqrt2\\left(1+\\frac{\\pi}{4}\\right)\\)", accepted: ["sqrt2(1+pi/4)", "√2(1+π/4)"], keywords: ["2", "1", "4"], minKeywords: 3, formula: "\\int_C\\phi\\,ds=\\int_a^b\\phi(\\mathbf r(t))|\\mathbf r'(t)|dt", steps: ["\\(|\\mathbf r'|=\\sqrt{\\sin^2t+\\cos^2t+1}=\\sqrt2\\)", "\\(x+y^2=\\cos t+\\sin^2t\\)", "\\(\\sqrt2\\int_0^{\\frac{\\pi}{2}}(\\cos t+\\sin^2t)\\,dt=\\sqrt2\\left(1+\\frac{\\pi}{4}\\right)\\)"], explanation: "らせんではz成分の導関数も速さに含めるため、面内の円より速さが \\(\\sqrt2\\) になる。" }),
-  courseQuestion({ id: "am-q-scalar-line-dy", topic: "line-integrals", genre: "成分線積分", difficulty: 3, format: "text", prompt: "同じ曲線で \\(\\int_C(x+y^2)\\,dy\\) を求めよ。", context: "\\(\\mathbf r(t)=(\\cos t,\\sin t,t),\\ 0\\le t\\le\\frac{\\pi}{2}\\)", answer: "\\(\\frac{\\pi}{4}+\\frac13\\)", accepted: ["pi/4+1/3", "π/4+1/3"], keywords: ["4", "1", "3"], minKeywords: 3, formula: "\\int_C\\phi\\,dy=\\int_a^b\\phi(\\mathbf r(t))y'(t)dt", steps: ["\\(dy=\\cos t\\,dt\\)", "\\(\\int_0^{\\frac{\\pi}{2}}(\\cos t+\\sin^2t)\\cos t\\,dt\\)", "\\(\\int_0^{\\frac{\\pi}{2}}\\cos^2t\\,dt+\\int_0^{\\frac{\\pi}{2}}\\sin^2t\\cos t\\,dt=\\frac{\\pi}{4}+\\frac13\\)"], explanation: "dyなのでyの導関数 \\(\\cos t\\) を掛ける。dsの \\(\\sqrt2\\) は使わない。" }),
+  courseQuestion({ id: "am-q-scalar-line-dy", topic: "line-integrals", genre: "成分線積分", difficulty: 3, format: "text", prompt: "曲線 \\(C:\\mathbf r(t)=(\\cos t,\\sin t,t)\\), \\(0\\le t\\le\\frac{\\pi}{2}\\) に沿う \\(\\int_C(x+y^2)\\,dy\\) を求めよ。", answer: "\\(\\frac{\\pi}{4}+\\frac13\\)", accepted: ["pi/4+1/3", "π/4+1/3"], keywords: ["4", "1", "3"], minKeywords: 3, formula: "\\int_C\\phi\\,dy=\\int_a^b\\phi(\\mathbf r(t))y'(t)dt", steps: ["\\(dy=\\cos t\\,dt\\)", "\\(\\int_0^{\\frac{\\pi}{2}}(\\cos t+\\sin^2t)\\cos t\\,dt\\)", "\\(\\int_0^{\\frac{\\pi}{2}}\\cos^2t\\,dt+\\int_0^{\\frac{\\pi}{2}}\\sin^2t\\cos t\\,dt=\\frac{\\pi}{4}+\\frac13\\)"], explanation: "dyなのでyの導関数 \\(\\cos t\\) を掛ける。dsの \\(\\sqrt2\\) は使わない。" }),
   courseQuestion({ id: "am-q-vector-line-one", topic: "line-integrals", genre: "ベクトル線積分", difficulty: 3, format: "number", prompt: "\\(C:\\mathbf r(t)=(t^2+1,2t,1)\\), \\(0\\le t\\le1\\)、\\(\\mathbf a=(xy,yz,zx)\\) の \\(\\int_C\\mathbf a\\cdot d\\mathbf r\\) を求めよ。", answer: "\\(\\frac{62}{15}\\)", numericAnswer: 62 / 15, tolerance: 0.0001, formula: "\\int_C\\mathbf a\\cdot d\\mathbf r=\\int_a^b\\mathbf a(\\mathbf r(t))\\cdot\\mathbf r'(t)dt", steps: ["\\(\\mathbf a(\\mathbf r(t))=(2t(t^2+1),2t,t^2+1)\\)", "\\(\\mathbf r'(t)=(2t,2,0)\\)", "内積は \\(4t^4+4t^2+4t\\)", "\\(\\int_0^1(4t^4+4t^2+4t)\\,dt=\\frac{62}{15}\\)"], explanation: "場へ曲線を代入してから接ベクトルとの内積を作り、最後にtで積分する。" }),
   courseQuestion({ id: "am-q-vector-line-two", topic: "line-integrals", genre: "ベクトル線積分", difficulty: 3, format: "number", prompt: "\\(C:\\mathbf r(t)=(t,t^2,t+t^2)\\), \\(1\\le t\\le2\\)、\\(\\mathbf a=(x-2y,2z,-x)\\) の線積分を求めよ。", answer: "15", numericAnswer: 15, formula: "\\int_C\\mathbf a\\cdot d\\mathbf r=\\int_a^b\\mathbf a(\\mathbf r(t))\\cdot\\mathbf r'(t)dt", steps: ["\\(\\mathbf a(\\mathbf r(t))=(t-2t^2,2t+2t^2,-t)\\)", "\\(\\mathbf r'(t)=(1,2t,1+2t)\\)", "内積を整理すると \\(4t^3\\)", "\\(\\int_1^2 4t^3dt=[t^4]_1^2=15\\)"], explanation: "展開時に2次項が打ち消し合う。積分区間が1から2であることにも注意する。" }),
   courseQuestion({ id: "am-q-gradient-theorem", topic: "line-integrals", genre: "勾配定理", difficulty: 1, format: "choice", prompt: "\\(\\mathbf a=\\nabla\\phi\\) のとき、点AからBへ至る曲線C上の線積分として正しいものを選べ。", answer: "\\(\\phi(B)-\\phi(A)\\)", options: ["\\(\\phi(B)-\\phi(A)\\)", "\\(\\phi(A)-\\phi(B)\\)", "\\(\\phi(A)+\\phi(B)\\)", "経路ごとに必ず異なる"], steps: ["合成関数の微分で被積分関数は \\(\\frac{d}{dt}\\phi(\\mathbf r(t))\\)", "端点で評価して \\(\\phi(B)-\\phi(A)\\)"], explanation: "勾配場の線積分は経路独立で、始点と終点のスカラー場の値だけで決まる。" }),
@@ -834,12 +834,29 @@ export const APPLIED_MATH_EXPECTED_EXAMS: AppliedMathExpectedExam[] = Array.from
 
 /** 予想模試と同じ連続計算・途中式量を通常演習にも供給する実戦プール。 */
 export const APPLIED_MATH_EXAM_LEVEL_QUESTIONS: AppliedMathQuestion[] = APPLIED_MATH_EXPECTED_EXAMS
-  .flatMap((exam) => exam.questions)
-  .filter((question) => question.difficulty >= 2)
-  .map((question) => ({
-    ...question,
-    prompt: `${question.prompt} 必要な前問相当の中間量も、上の条件から自分で導出すること。`,
-  }));
+  .flatMap((exam) =>
+    exam.sections.flatMap((section) =>
+      section.questions
+        .map((question, index) => {
+          const previousPrompts = section.questions
+            .slice(0, index)
+            .map((previous) => `大問${previous.major}(${previous.sub})：${previous.prompt}`)
+            .join(" ／ ");
+          return {
+            ...question,
+            context: [
+              section.context,
+              question.context,
+              previousPrompts ? `【同じ大問の前問】${previousPrompts}` : "",
+            ]
+              .filter(Boolean)
+              .join("\n"),
+            prompt: `${question.prompt} 必要な中間量は、GIVENの条件から自分で導出すること。`,
+          };
+        })
+        .filter((question) => question.difficulty >= 2),
+    ),
+  );
 
 export const APPLIED_MATH_EXAM_FORMATS = [
   {

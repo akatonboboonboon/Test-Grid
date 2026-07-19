@@ -577,12 +577,24 @@ export const EXPECTED_PAPERS_BY_ID = new Map(
 /** 予想模試と同じ計算密度を通常演習・ランダム確認でも使うためのプール。 */
 export const STATISTICS_EXAM_LEVEL_QUESTIONS: StatisticsQuestion[] = [
   ...EXPECTED_PAPERS_BY_ID.values(),
-].flatMap((paper) => paper.questions
-  .filter((question) => question.difficulty >= 2)
-  .map((question) => ({
-    ...question,
-    prompt: `${question.prompt} 必要な中間量は、前問の解答を与えられたものとせず、上の条件から自分で求めること。`,
-  })));
+].flatMap((paper) =>
+  paper.sections.flatMap((section) =>
+    section.questions
+      .map((question, index) => {
+        const previousPrompts = section.questions.slice(0, index)
+          .map((previous) => `大問${previous.major}(${previous.sub})：${previous.prompt}`)
+          .join(" ／ ");
+        return {
+          ...question,
+          context: [section.context, question.context !== section.context ? question.context : "",
+            question.linkedCalculation && previousPrompts ? `【同じ大問の前問】${previousPrompts}` : "",
+          ].filter(Boolean).join("\n"),
+          prompt: `${question.prompt} 必要な中間量は、GIVENの条件から自分で求めること。`,
+        };
+      })
+      .filter((question) => question.difficulty >= 2),
+  ),
+);
 
 export const STATISTICS_EXPECTED_EXAM_AUDIT = STATISTICS_EXPECTED_EXAMS.map((definition) => {
   const paper = EXPECTED_PAPERS_BY_ID.get(definition.id)!;
