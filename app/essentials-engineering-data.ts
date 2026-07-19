@@ -1,0 +1,291 @@
+import type { EssentialItem } from "./essentials-data";
+
+export const THERMODYNAMICS_ESSENTIALS: EssentialItem[] = [
+  {
+    id: "thermo-adiabatic-relations", kind: "formula", title: "可逆断熱の3関係",
+    value: "理想気体の断熱変化。使える2状態量の組を選ぶ。",
+    math: [
+      { tex: "PV^{\\kappa}=C" },
+      { tex: "TV^{\\kappa-1}=C" },
+      { tex: "\\frac{T}{P^{(\\kappa-1)/\\kappa}}=C" },
+    ],
+    cue: "『断熱』『理想気体』とあり、P・V・Tの状態1→2を求める。",
+    pitfall: "T–Vは指数 \\(\\kappa-1\\)、T–Pは \\((\\kappa-1)/\\kappa\\)。温度はKで使う。",
+  },
+  {
+    id: "thermo-adiabatic-work", kind: "formula", title: "断熱の境界仕事と工業仕事",
+    value: "膨張を正とする教材の符号規約。",
+    math: [{ tex: "W_b=\\frac{mR(T_1-T_2)}{\\kappa-1},\\qquad W_t=\\kappa W_b" }],
+    cue: "断熱膨張・圧縮で仕事量を温度差から求める。",
+    pitfall: "工業仕事は境界仕事の \\(\\kappa\\) 倍。圧縮では温度差と符号規約を確認する。",
+  },
+  {
+    id: "thermo-polytropic", kind: "rule", title: "ポリトロープ指数で変化を判定",
+    value: "\\(PV^n=C\\)。\\(n=0\\)：等圧、\\(n=1\\)：等温、\\(n=\\kappa\\)：断熱、\\(n\\to\\infty\\)：等容。",
+    cue: "問題にポリトロープ指数n、または変化の種類が示される。",
+    pitfall: "等温の指数1と断熱の指数 \\(\\kappa\\) を混同しない。",
+  },
+  {
+    id: "thermo-second-law", kind: "term", title: "熱力学第2法則の二つの表現",
+    value: "クラウジウス：熱は自然に低温→高温へ移らない。ケルビン・プランク：単一熱源の熱を周期的に全て仕事へできない。",
+    cue: "熱移動の向き、または100%熱機関が可能かを問う。",
+    pitfall: "第一法則のエネルギー保存だけでは、過程が起こる向きは決まらない。",
+  },
+  {
+    id: "thermo-efficiency", kind: "formula", title: "熱機関の効率",
+    value: "受熱 \\(Q_1\\) のうち仕事Wへ変わった割合。放熱 \\(Q_2\\) が必ず残る。",
+    math: [{ tex: "\\eta=\\frac{W}{Q_1}=1-\\frac{Q_2}{Q_1}<1" }],
+    cue: "高温熱源から受熱し、一部を低温熱源へ捨てる周期機関。",
+    pitfall: "\\(Q_2/Q_1\\) 自体を効率にしない。効率は1から引く。",
+  },
+  {
+    id: "thermo-entropy", kind: "formula", title: "エントロピーの定義",
+    value: "可逆に移動する微小熱量を、そのときの絶対温度で割った状態量。",
+    math: [
+      { tex: "dS=\\frac{\\delta Q_{\\mathrm{rev}}}{T}" },
+      { tex: "\\Delta S=S_2-S_1=\\int_1^2\\frac{\\delta Q_{\\mathrm{rev}}}{T}" },
+    ],
+    cue: "状態1→2のエントロピー変化、可逆経路が示される。",
+    pitfall: "温度は必ずK。熱量 \\(\\delta Q\\) は経路量だが、Sは状態量。",
+  },
+  {
+    id: "thermo-total-entropy", kind: "formula", title: "二熱源の全エントロピー変化",
+    value: "高温側は失い、低温側は受け取る。不可逆な自然熱移動では全体が増える。",
+    math: [{ tex: "\\Delta S_{total}=-\\frac{Q}{T_1}+\\frac{Q}{T_2}>0\\qquad(T_1>T_2)" }],
+    cue: "温度の異なる二物体間で熱量Qが移動する。",
+    pitfall: "高温側の項は負、低温側は正。摂氏温度を分母へ入れない。",
+  },
+  {
+    id: "thermo-otto-processes", kind: "rule", title: "オットーサイクルの4過程",
+    value: "1→2 断熱圧縮、2→3 定容加熱、3→4 断熱膨張、4→1 定容放熱。",
+    math: [{ tex: "1\\to2:Q=0,\\quad2\\to3:V=C,\\quad3\\to4:Q=0,\\quad4\\to1:V=C" }],
+    cue: "火花点火機関の理論サイクル、P–V図の状態番号。",
+    pitfall: "順番は『断熱・定容・断熱・定容』。加熱と放熱を逆にしない。",
+  },
+  {
+    id: "thermo-otto-efficiency", kind: "formula", title: "オットーの圧縮比と熱効率",
+    value: "最大体積を最小体積で割った圧縮比から理論効率を出す。",
+    math: [
+      { tex: "\\varepsilon=\\frac{V_1}{V_2}=\\frac{V_s+V_c}{V_c}" },
+      { tex: "\\eta_{th}=1-\\frac1{\\varepsilon^{\\kappa-1}},\\qquad T_2=T_1\\varepsilon^{\\kappa-1}" },
+    ],
+    cue: "行程容積・すきま容積、圧縮比、吸気温度が与えられる。",
+    pitfall: "圧縮比は行程容積 \\(V_s\\) だけを \\(V_c\\) で割らない。",
+  },
+  {
+    id: "thermo-carnot", kind: "formula", title: "カルノーサイクルと最大効率",
+    value: "等温→断熱→等温→断熱。二熱源間で到達できる理論最大効率。",
+    math: [
+      { tex: "\\frac{Q_2}{Q_1}=\\frac{T_2}{T_1}" },
+      { tex: "\\eta_c=1-\\frac{Q_2}{Q_1}=1-\\frac{T_2}{T_1}" },
+    ],
+    cue: "高温熱源 \\(T_1\\)、低温熱源 \\(T_2\\) が与えられる理想可逆機関。",
+    pitfall: "温度比は必ずK。低温÷高温の順で、最後に1から引く。",
+  },
+];
+
+export const MATERIAL_ESSENTIALS: EssentialItem[] = [
+  {
+    id: "material-shear-strain", kind: "formula", title: "ねじりのせん断ひずみ",
+    value: "軸中心から離れるほど、せん断ひずみは半径rに比例して増える。",
+    math: [{ tex: "\\gamma(r)=r\\frac{d\\theta}{dx}" }],
+    cue: "丸軸をねじり、半径方向のひずみ分布を問う。",
+    pitfall: "中心で0、外周で最大。断面全体で一定ではない。",
+  },
+  {
+    id: "material-shear-stress", kind: "formula", title: "ねじりのせん断応力",
+    value: "線形弾性範囲では、せん断応力はG×せん断ひずみ。",
+    math: [{ tex: "\\tau(r)=G\\gamma(r)=Gr\\frac{d\\theta}{dx}" }],
+    cue: "横弾性係数Gとねじれ率が与えられる。",
+    pitfall: "応力も半径に比例するため、最大値は必ず外周。",
+  },
+  {
+    id: "material-torque-rigidity", kind: "formula", title: "トルクとねじり剛性",
+    value: "\\(GI_p\\) が丸軸のねじり剛性。",
+    math: [{ tex: "T=GI_p\\frac{d\\theta}{dx}" }],
+    cue: "トルク、横弾性係数、断面量、単位長さ当たりのねじれを結ぶ。",
+    pitfall: "断面量は曲げのIではなく極断面二次モーメント \\(I_p\\)。",
+  },
+  {
+    id: "material-twist", kind: "formula", title: "一様丸軸のねじれ角",
+    value: "一定トルク・一定断面なら、ねじれ率を長さLにわたり積分する。",
+    math: [{ tex: "\\Theta=\\frac{TL}{GI_p}" }],
+    cue: "軸の長さ、トルク、G、直径から回転角を求める。",
+    pitfall: "degreeで与えられた角度はradへ直す。N·mとN·mmも揃える。",
+  },
+  {
+    id: "material-max-stress", kind: "formula", title: "最大せん断応力",
+    value: "外半径Rで最大。極断面係数 \\(Z_p=I_p/R\\) を使うと一行になる。",
+    math: [{ tex: "\\tau_{max}=\\frac{TR}{I_p}=\\frac{T}{Z_p}" }],
+    cue: "許容せん断応力から直径を設計する、または外周応力を求める。",
+    pitfall: "半径Rと直径dをそのまま入れ替えない。",
+  },
+  {
+    id: "material-solid-section", kind: "formula", title: "中実丸軸の断面量",
+    value: "極断面二次モーメントは直径4乗、極断面係数は直径3乗。",
+    math: [{ tex: "I_p=\\frac{\\pi d^4}{32},\\qquad Z_p=\\frac{\\pi d^3}{16}" }],
+    cue: "穴のない丸軸のねじり応力・角度・直径設計。",
+    pitfall: "\\(I_p\\) の分母32と \\(Z_p\\) の分母16を逆にしない。",
+  },
+  {
+    id: "material-hollow-section", kind: "formula", title: "中空丸軸の断面量",
+    value: "外側の中実円から内側の穴を差し引く。",
+    math: [{ tex: "I_p=\\frac{\\pi}{32}(d_o^4-d_i^4),\\qquad Z_p=\\frac{\\pi}{16d_o}(d_o^4-d_i^4)" }],
+    cue: "外径 \\(d_o\\) と内径 \\(d_i\\) が与えられる中空軸。",
+    pitfall: "外径4乗−内径4乗。\\(Z_p\\) は最外半径で割るので分母に \\(d_o\\)。",
+  },
+  {
+    id: "material-power-torque", kind: "formula", title: "軸動力とトルク",
+    value: "回転数Nがrpmなら、まず角速度rad/sへ変換する。",
+    math: [{ tex: "P=T\\omega,\\qquad \\omega=\\frac{2\\pi N}{60}" }],
+    cue: "kWとrpmから伝達トルク、または許容動力を求める。",
+    pitfall: "kW→W、N·m→N·mmの単位換算を計算途中で混ぜない。",
+  },
+  {
+    id: "material-coil-spring", kind: "formula", title: "密巻コイルばねの定数とたわみ",
+    value: "線径dは4乗で効き、巻数nと平均半径Rの3乗に反比例。",
+    math: [
+      { tex: "k=\\frac{Gd^4}{64nR^3}=\\frac{Gd^4}{8nD^3}" },
+      { tex: "\\delta=\\frac{P}{k}=\\frac{64nPR^3}{Gd^4}" },
+    ],
+    cue: "線径、コイル径、有効巻数、荷重からばね定数・たわみを求める。",
+    pitfall: "Rは平均半径、Dは平均直径。二つの式を混ぜて係数を誤らない。",
+  },
+  {
+    id: "material-load-resultant", kind: "formula", title: "分布荷重の合力と作用位置",
+    value: "荷重図の面積が合力、面積図心が作用位置。",
+    math: [{ tex: "W=\\int w(x)\\,dx,\\qquad \\bar{x}=\\frac{\\int xw(x)\\,dx}{W}" }],
+    cue: "等分布・三角形・台形の荷重を集中荷重へ置き換える。",
+    pitfall: "三角形荷重の作用点は大きい側から1/3、小さい側から2/3。",
+  },
+  {
+    id: "material-equilibrium", kind: "check", title: "はり反力は力とモーメントで解く",
+    value: "分布荷重を合力へ置換してから、つり合い式を立てる。",
+    math: [{ tex: "\\sum F_y=0,\\qquad \\sum M_O=0" }],
+    cue: "単純支持・片持ちばりの反力、固定端モーメント。",
+    pitfall: "モーメントの符号と作用距離を図上で確認する。合力の位置を端点に置かない。",
+  },
+  {
+    id: "material-wvm", kind: "formula", title: "荷重・せん断力・曲げモーメント",
+    value: "荷重wを積分してせん断力V、さらに積分して曲げモーメントM。",
+    math: [{ tex: "\\frac{dV}{dx}=-w(x),\\qquad \\frac{dM}{dx}=V(x)" }],
+    cue: "SFD・BMDを描く、区間ごとのV(x)・M(x)を求める。",
+    pitfall: "集中荷重でVが跳び、集中モーメントでMが跳ぶ。符号規約を途中で変えない。",
+  },
+];
+
+export const SMART_CONTROL_ESSENTIALS: EssentialItem[] = [
+  {
+    id: "smart-input-transfer", kind: "formula", title: "標準入力と伝達関数",
+    value: "初期値0で、出力÷入力が伝達関数。",
+    math: [
+      { tex: "\\mathcal L\\{\\delta(t)\\}=1,\\qquad \\mathcal L\\{1\\}=\\frac1s" },
+      { tex: "G(s)=\\frac{Y(s)}{U(s)},\\qquad Y(s)=G(s)U(s)" },
+    ],
+    cue: "インパルス応答・ステップ応答、入力Uと出力Yが与えられる。",
+    pitfall: "ステップ応答はG(s)そのものの逆変換ではなく、\\(G(s)/s\\) を逆変換する。",
+  },
+  {
+    id: "smart-tank", kind: "formula", title: "液面系の保存式と伝達関数",
+    value: "蓄積＝流入−流出。ゲインはR、時定数はCR。",
+    math: [
+      { tex: "C\\frac{dH}{dt}=Q_i-Q_o,\\qquad Q_o=\\frac{H}{R}" },
+      { tex: "\\frac{H(s)}{Q_i(s)}=\\frac{R}{CRs+1}" },
+    ],
+    cue: "タンクの水位H、流入 \\(Q_i\\)、流動抵抗R、容量C。",
+    pitfall: "流入−流出の符号を逆にしない。分母の時定数はC/RではなくCR。",
+  },
+  {
+    id: "smart-first-order", kind: "formula", title: "一次遅れのインパルス・ステップ応答",
+    value: "\\(G(s)=K/(Ts+1)\\)。ステップ応答の最終値はK、\\(t=T\\) で約63.2%。",
+    math: [
+      { label: "インパルス", tex: "g(t)=\\frac KT e^{-t/T}" },
+      { label: "ステップ", tex: "y(t)=K\\left(1-e^{-t/T}\\right)" },
+    ],
+    cue: "一次遅れ、ゲインK、時定数Tが出る応答問題。",
+    pitfall: "インパルス応答の係数はK/T。ステップ応答は0からKへ上がる。",
+  },
+  {
+    id: "smart-inverse-basic", kind: "formula", title: "逆ラプラスの基本3組",
+    value: "まず分母を標準形へ合わせ、係数を分子へ揃える。",
+    math: [{ tex: "\\frac1s\\leftrightarrow1,\\qquad\\frac1{s^2}\\leftrightarrow t,\\qquad\\frac1{s+a}\\leftrightarrow e^{-at}" }],
+    cue: "部分分数分解後の各項を時間関数へ戻す。",
+    pitfall: "\\(s-a\\) なら \\(e^{at}\\)。分母の符号を指数へそのまま写さない。",
+  },
+  {
+    id: "smart-inverse-oscillation", kind: "formula", title: "正弦・余弦とs平行移動",
+    value: "分子が \\(\\omega\\) ならsin、sならcos。\\(s+a\\) への移動で \\(e^{-at}\\) が付く。",
+    math: [
+      { tex: "\\frac{\\omega}{s^2+\\omega^2}\\leftrightarrow\\sin\\omega t,\\qquad\\frac{s}{s^2+\\omega^2}\\leftrightarrow\\cos\\omega t" },
+      { tex: "\\frac{\\omega}{(s+a)^2+\\omega^2}\\leftrightarrow e^{-at}\\sin\\omega t" },
+    ],
+    cue: "分母が2次式で、平方完成すると \\((s+a)^2+\\omega^2\\)。",
+    pitfall: "sin項は分子を \\(\\omega\\) に合わせる。足りない係数を外へ出す。",
+  },
+  {
+    id: "smart-partial-fractions", kind: "check", title: "部分分数とヘビサイド法",
+    value: "単根は1項、重根は1乗から最高次数まで全ての項を置く。",
+    math: [
+      { tex: "A=\\lim_{s\\to p}(s-p)F(s)" },
+      { tex: "\\frac{A}{s}+\\frac{B}{s+1}+\\frac{C}{(s+1)^2}" },
+    ],
+    cue: "逆ラプラスの前に分母を因数分解する。",
+    pitfall: "\\((s+1)^2\\) に対して \\(C/(s+1)^2\\) だけを置かず、\\(B/(s+1)\\) も置く。",
+  },
+  {
+    id: "smart-poles-stability", kind: "rule", title: "極と安定判別",
+    value: "極は約分後に残る分母を0にするs。この授業では全極の実部が負なら安定。",
+    math: [{ tex: "D(s)=0\\Rightarrow s=p_i,\\qquad \\operatorname{Re}(p_i)<0\\quad(\\text{all }i)" }],
+    cue: "伝達関数の極配置から安定・不安定を判定する。",
+    pitfall: "分子の零点と混同しない。虚軸上や右半平面の極を安定にしない。",
+  },
+  {
+    id: "smart-response-map", kind: "term", title: "図5.1 時間指標マップ",
+    value: "\\(t_d\\)：50%到達、\\(t_r\\)：10→90%、\\(t_p\\)：最大値到達、\\(t_s\\)：±5%帯へ整定。",
+    math: [{ tex: "t_d:0.5y_\\infty,\\quad t_r=t_{90}-t_{10},\\quad y(t_p)=y_{max}" }],
+    cue: "ステップ応答グラフから各時刻を読み取る。",
+    pitfall: "整定時間は最初に帯へ入った時刻ではなく、その後二度と帯外へ出ない最初の時刻。",
+    keywords: ["教科書赤文字", "図5.1"],
+  },
+  {
+    id: "smart-overshoot-settling", kind: "formula", title: "オーバーシュートと±5%整定帯",
+    value: "行き過ぎは定常値に対する割合で比較する。",
+    math: [
+      { tex: "O_s=\\frac{y_{max}-y_\\infty}{y_\\infty}\\times100\\%" },
+      { tex: "0.95y_\\infty\\le y(t)\\le1.05y_\\infty\\quad(t\\ge t_s)" },
+    ],
+    cue: "定常値、最大値、応答曲線から減衰性を評価する。",
+    pitfall: "差 \\(y_{max}-y_\\infty\\) だけを%としない。必ず定常値で割る。",
+    keywords: ["教科書赤文字", "図5.1"],
+  },
+  {
+    id: "smart-feedback", kind: "formula", title: "負帰還と特性方程式",
+    value: "前向きG、帰還Hの負帰還。閉ループの極は分母＝0で決める。",
+    math: [
+      { tex: "G_{cl}(s)=\\frac{G(s)}{1+G(s)H(s)}" },
+      { tex: "1+G(s)H(s)=0" },
+    ],
+    cue: "加え合わせ点が負符号のフィードバックループ。",
+    pitfall: "負帰還の分母は \\(1+GH\\)。正帰還では \\(1-GH\\)。",
+  },
+  {
+    id: "smart-block-rules", kind: "rule", title: "ブロック線図の等価変換",
+    value: "直列は積、並列は和差。加え合わせ点・引き出し点をGの後ろから前へ動かす補償を区別する。",
+    math: [
+      { tex: "G_{series}=G_2G_1,\\qquad G_{parallel}=G_1\\pm G_2" },
+      { tex: "\\text{加え合わせ点}:\\frac1G,\\qquad\\text{引き出し点}:G" },
+    ],
+    cue: "複雑なブロック線図を一つの伝達関数へ整理する。",
+    pitfall: "点を移動する方向が逆なら補償も逆。信号が元と同じになるかで検算する。",
+  },
+  {
+    id: "smart-gain-stability", kind: "rule", title: "Kで安定化する典型2形",
+    value: "単位負帰還へして閉ループ分母を作り、極の実部が負となるKを選ぶ。",
+    math: [
+      { tex: "\\frac{K}{s-1}\\Rightarrow G_{cl}=\\frac{K}{s-1+K},\\quad K>1" },
+      { tex: "\\frac{K}{s(s+1)}\\Rightarrow G_{cl}=\\frac{K}{s^2+s+K},\\quad K>0" },
+    ],
+    cue: "ゲインKの範囲で閉ループ安定性を問う。",
+    pitfall: "開ループの極だけで判定せず、必ず閉ループ分母を作る。",
+  },
+];

@@ -250,6 +250,7 @@ export default function StudyHub() {
         </Link>
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {configuredCount} / 9 NAMED</span>
+          <Link className="outline-button header-link" href="/essentials">これだけは覚える</Link>
           <Link className="outline-button header-link hub-generated-header-link" href="/generated-practice">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-7">基礎公式一覧</Link>
           <Link className="outline-button header-link hub-memory-header-link" href="/cards">全教科の暗記帳検索</Link>
@@ -269,6 +270,19 @@ export default function StudyHub() {
             <b aria-hidden="true">→</b>
           </Link>
         </section>
+
+        <Link
+          className="hub-memory-launch hub-essentials-launch"
+          href="/essentials"
+          style={{ background: "var(--lime)", boxShadow: "9px 9px 0 var(--cyan)" }}
+        >
+          <span>
+            <small>EXAM EVE / 9 SUBJECTS</small>
+            <strong>試験直前、これだけは覚える。</strong>
+            <em>全教科の最重要単語・公式・見分け方を、一目で確認</em>
+          </span>
+          <b aria-hidden="true">開く →</b>
+        </Link>
 
         <Link className="hub-memory-launch" href="/cards">
           <span>
@@ -362,6 +376,7 @@ export default function StudyHub() {
                     {subject.module === "network" ? (
                       <>
                         <Link className="subject-primary subject-memory-link" href="/subjects/network/cards">暗記帳を開く</Link>
+                        <Link className="subject-secondary" href="/essentials?subject=network">必須単語・公式</Link>
                         <Link className="subject-secondary" href="/subjects/network">暗算・層即答</Link>
                         <Link className="subject-secondary subject-rapid-link" href="/rapid/network">時間制限 即答練習</Link>
                         <Link className="subject-secondary subject-ranking-link" href="/ranking/network">公式ランキングテスト</Link>
@@ -369,6 +384,7 @@ export default function StudyHub() {
                     ) : subject.configured ? (
                       <>
                         <Link className="subject-primary" href={`/subjects/${subject.id}`}>勉強を始める</Link>
+                        <Link className="subject-secondary" href={`/essentials?subject=${subject.id}`}>必須単語・公式</Link>
                         <Link className="subject-secondary subject-rapid-link" href={`/rapid/${subject.id}`}>時間制限 即答練習</Link>
                         <Link className="subject-secondary subject-ranking-link" href={`/ranking/${subject.id}`}>公式ランキングテスト</Link>
                         {hasGeneratedPractice && (
