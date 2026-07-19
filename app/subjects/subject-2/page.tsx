@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import CardDeckSearch from "../../card-deck-search";
+import CardFaceList from "../../card-face-list";
 import {
   ENGLISH_PASSAGES,
   ENGLISH_QUESTIONS,
@@ -925,6 +926,24 @@ export default function EnglishSubjectPage() {
                 currentId={currentCard?.id}
                 label="英単語・日本語訳を検索"
                 placeholder="英単語、日本語、覚え方を入力"
+                onSelect={jumpToVocabCard}
+              />
+              <CardFaceList
+                items={filteredVocab.map((card) => ({
+                  id: card.id,
+                  eyebrow: unitLabel(card.unit),
+                  meta: cardProgress[card.id] === "mastered" ? "覚えた" : cardProgress[card.id] === "learning" ? "未暗記" : "未判定",
+                  front: <strong>{cardDirection === "ja-en" ? card.ja : card.en}</strong>,
+                  back: (
+                    <div>
+                      <strong>{cardDirection === "ja-en" ? card.en : card.ja}</strong>
+                      {card.note && <p>{card.note}</p>}
+                    </div>
+                  ),
+                  explanation: <EnglishVocabInsight card={card} />,
+                }))}
+                title={`${cardDirection === "ja-en" ? "日本語 → 英語" : "英語 → 日本語"}の表・裏一覧`}
+                description="選択中のChapterだけを、問題面・答え・意味や活用の解説まで一度に確認できます。"
                 onSelect={jumpToVocabCard}
               />
 

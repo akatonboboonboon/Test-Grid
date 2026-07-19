@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import CardDeckSearch from "../../card-deck-search";
+import CardFaceList from "../../card-face-list";
 import SmartControlDiagram from "../../smart-control-diagrams";
 import SmartControlExams from "../../smart-control-exams";
 import SmartControlResponseGraph from "../../smart-control-response-graph";
@@ -824,6 +825,19 @@ export default function SmartControlSubjectPage() {
                 }))}
                 currentId={currentCard?.id}
                 label="スマート制御の公式・教科書カードを検索"
+                onSelect={jumpToSmartCard}
+              />
+              <CardFaceList
+                items={filteredCards.map((card) => ({
+                  id: card.id,
+                  eyebrow: card.title,
+                  meta: `${card.id.startsWith("textbook-response-") ? "教科書 p.65〜68" : topicLabel(card.topic)} · ${progress[card.id] === "mastered" ? "覚えた" : progress[card.id] === "learning" ? "もう一度" : "未判定"}`,
+                  front: <div><RichMathText text={card.prompt} />{smartControlDiagramIdFor(card) && <small>図付きカード</small>}</div>,
+                  back: <div><DisplayMath tex={card.formula} ariaLabel={card.title + "の公式"} /><p><RichMathText text={card.cue} /></p></div>,
+                  explanation: <p><RichMathText text={card.explanation} />{card.example ? <><br /><b>例：</b><RichMathText text={card.example} /></> : null}</p>,
+                }))}
+                title="スマート制御の暗記カード 表・裏一覧"
+                description="現在選択中の範囲公式・教科書カードを、問題・答え・使いどころ・解説まで並べて確認できます。図は「1枚で練習」から表示します。"
                 onSelect={jumpToSmartCard}
               />
               <div className="generic-progress english-card-progress statistics-card-progress">

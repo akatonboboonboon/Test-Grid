@@ -44,6 +44,37 @@ type RunnerAction =
   | { type: "finish" }
   | { type: "reset" };
 
+function isEditableKeyboardTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.matches("input, textarea, select")
+    || target.isContentEditable
+    || Boolean(target.closest('[contenteditable="true"], [contenteditable=""]'));
+}
+
+export function rapidOptionForNumberKey(question: RapidQuestionInstance, key: string) {
+  if (!/^[1-7]$/.test(key)) return null;
+  const number = Number(key);
+  if (question.subjectId === "network") {
+    const layerOption = question.options.find((option) => option.trim().toUpperCase() === `L${number}`);
+    if (layerOption) return layerOption;
+  }
+  if (question.options.length === 4 && number <= 4) return question.options[number - 1] ?? null;
+  return null;
+}
+
+function optionNumberShortcut(question: RapidQuestionInstance, option: string, optionIndex: number) {
+  if (question.subjectId === "network") {
+    const layer = option.trim().toUpperCase().match(/^L([1-7])$/)?.[1];
+    if (layer) return layer;
+  }
+  return question.options.length === 4 ? String(optionIndex + 1) : null;
+}
+
+function keyboardShortcutMaximum(question: RapidQuestionInstance) {
+  if (question.subjectId === "network" && question.options.some((option) => /^L[1-7]$/i.test(option.trim()))) return 7;
+  return question.options.length === 4 ? 4 : 0;
+}
+
 const INITIAL_RUNNER: RunnerState = {
   phase: "setup",
   session: [],
@@ -128,8 +159,10 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
   const [limitSeconds, setLimitSeconds] = useState(defaultLimitSeconds);
   const [state, dispatch] = useRunnerState();
   const deadlineRef = useRef(0);
+  const answerLockRef = useRef(false);
   const currentQuestion = state.session[state.index];
   const currentResult = state.results[state.results.length - 1];
+  const shortcutMaximum = currentQuestion ? keyboardShortcutMaximum(currentQuestion) : 0;
   const pool = useMemo(
     () => subjectId === "network"
       ? filterNetworkRapidPoolByLayers(sourcePool, selectedLayers)
@@ -144,12 +177,53 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
     [sourcePool],
   );
 
+  const answer = useCallback((selected: string) => {
+    if (state.phase !== "playing" || answerLockRef.current) return;
+    answerLockRef.current = true;
+    dispatch({
+      type: "answer",
+      selected,
+      timedOut: false,
+      elapsedMs: Math.max(0, limitSeconds * 1000 - state.remainingMs),
+    });
+  }, [dispatch, limitSeconds, state.phase, state.remainingMs]);
+
   /* Device-local network cards are restored after mount for free practice. */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setSourcePool(loadSubjectPool(subjectId));
   }, [subjectId]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (state.phase === "playing") answerLockRef.current = false;
+  }, [state.index, state.phase]);
+
+  useEffect(() => {
+    if (state.phase !== "playing" || !currentQuestion) return;
+
+    function handleNumberKey(event: KeyboardEvent) {
+      if (
+        event.defaultPrevented
+        || event.repeat
+        || event.isComposing
+        || event.keyCode === 229
+        || event.altKey
+        || event.ctrlKey
+        || event.metaKey
+        || event.shiftKey
+        || isEditableKeyboardTarget(event.target)
+      ) return;
+
+      const selected = rapidOptionForNumberKey(currentQuestion, event.key);
+      if (!selected) return;
+      event.preventDefault();
+      answer(selected);
+    }
+
+    window.addEventListener("keydown", handleNumberKey);
+    return () => window.removeEventListener("keydown", handleNumberKey);
+  }, [answer, currentQuestion, state.phase]);
 
   useEffect(() => {
     if (state.phase !== "playing") return;
@@ -159,6 +233,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
       dispatch({ type: "tick", remainingMs });
       if (remainingMs <= 0) {
         window.clearInterval(timer);
+        answerLockRef.current = true;
         dispatch({
           type: "answer",
           selected: null,
@@ -184,16 +259,6 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
     setSelectedLayers((current) => current.includes(layer)
       ? current.filter((candidate) => candidate !== layer)
       : ALL_LAYERS.filter((candidate) => current.includes(candidate) || candidate === layer));
-  }
-
-  function answer(selected: string) {
-    if (state.phase !== "playing") return;
-    dispatch({
-      type: "answer",
-      selected,
-      timedOut: false,
-      elapsedMs: Math.max(0, limitSeconds * 1000 - state.remainingMs),
-    });
   }
 
   function finishAttempt() {
@@ -310,16 +375,28 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
             <article className="rapid-question">
               <header><span>{currentQuestion.topicLabel} · 難度{currentQuestion.difficulty} · 推奨{currentQuestion.recommendedSeconds}秒</span><h2><RichMathText text={currentQuestion.prompt} /></h2></header>
               <RapidQuestionVisual visual={currentQuestion.visual} solution={state.phase === "feedback"} />
-              <div className="rapid-options" role="group" aria-label="答えを選択">
-                {currentQuestion.options.map((option) => {
+              {state.phase === "playing" && shortcutMaximum > 0 && (
+                <p className="rapid-keyboard-hint">
+                  <span>KEYBOARD</span><kbd>1</kbd><b>〜</b><kbd>{shortcutMaximum}</kbd> の数字キーでも回答できます
+                </p>
+              )}
+              <div
+                className="rapid-options"
+                role="group"
+                aria-label="答えを選択"
+                style={{ "--rapid-option-count": currentQuestion.options.length } as CSSProperties}
+              >
+                {currentQuestion.options.map((option, optionIndex) => {
                   const selected = currentResult?.selected === option;
                   const actual = currentQuestion.acceptedOptions.includes(option);
+                  const shortcut = optionNumberShortcut(currentQuestion, option, optionIndex);
                   const className = state.phase === "feedback"
                     ? selected ? (actual ? "correct" : "wrong") : actual ? "actual" : ""
                     : "";
                   return (
-                    <button type="button" key={option} disabled={state.phase !== "playing"} className={className} onClick={() => answer(option)}>
-                      <RapidAnswerText value={option} mathOptions={currentQuestion.mathOptions} />
+                    <button type="button" key={option} disabled={state.phase !== "playing"} className={className} onClick={() => answer(option)} aria-keyshortcuts={shortcut ?? undefined}>
+                      {shortcut && <span className="rapid-option-shortcut" aria-hidden="true">{shortcut}</span>}
+                      <span className="rapid-option-value"><RapidAnswerText value={option} mathOptions={currentQuestion.mathOptions} /></span>
                     </button>
                   );
                 })}

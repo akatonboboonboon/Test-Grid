@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import CardDeckSearch from "../../card-deck-search";
+import CardFaceList from "../../card-face-list";
 import { RichMathText } from "../../statistics-math";
 import { shuffle, storageRead, storageWrite } from "../../protocols";
 import {
@@ -306,6 +307,18 @@ export default function GenericSubjectPage() {
               currentId={currentCard.id}
               label={(subject?.name ?? "この教科") + "の暗記カードを検索"}
               placeholder="問題・用語・答えを入力"
+              onSelect={jumpToStudyCard}
+            />
+            <CardFaceList
+              items={usableCards.map((card) => ({
+                id: card.id,
+                eyebrow: subject.name,
+                meta: progress[card.id] === "mastered" ? "覚えた" : progress[card.id] === "learning" ? "もう一度" : "未判定",
+                front: <strong><RichMathText text={card.prompt} /></strong>,
+                back: <strong><RichMathText text={card.answer} /></strong>,
+              }))}
+              title={`${subject.name}の表・裏一覧`}
+              description="現在出題できる暗記カードの問題面と答えを、まとめて確認できます。"
               onSelect={jumpToStudyCard}
             />
             <div className="generic-deck-meta"><span>CARD {index + 1} / {deck.length}</span><span>{progress[currentCard.id] === "mastered" ? "覚えた" : progress[currentCard.id] === "learning" ? "復習" : "未判定"}</span></div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import CardDeckSearch from "../../card-deck-search";
+import CardFaceList from "../../card-face-list";
 import ThermodynamicsExpectedExams from "../../thermodynamics-expected-exams";
 import ThermodynamicsDiagram from "../../thermodynamics-diagrams";
 import { DisplayMath, RichMathText } from "../../statistics-math";
@@ -790,6 +791,19 @@ export default function ThermodynamicsSubjectPage() {
                 }))}
                 currentId={currentCard?.id}
                 label="熱・流体力学の公式カードを検索"
+                onSelect={jumpToFormulaCard}
+              />
+              <CardFaceList
+                items={filteredCards.map((card) => ({
+                  id: card.id,
+                  eyebrow: card.title,
+                  meta: `${topicLabel(card.topic)} · ${progress[card.id] === "mastered" ? "覚えた" : progress[card.id] === "learning" ? "もう一度" : "未判定"}`,
+                  front: <div><RichMathText text={card.prompt} />{card.diagram && <small>図付きカード</small>}</div>,
+                  back: <div><DisplayMath tex={card.formula} ariaLabel={card.title + "の公式"} /><p><RichMathText text={card.cue} /></p></div>,
+                  explanation: <p><RichMathText text={card.explanation} />{card.example ? <><br /><b>例：</b><RichMathText text={card.example} /></> : null}</p>,
+                }))}
+                title="熱・流体力学の公式カード 表・裏一覧"
+                description="選択中の単元について、問題・公式・使いどころ・解説を並べて確認できます。図は「1枚で練習」から表示します。"
                 onSelect={jumpToFormulaCard}
               />
               <div className="generic-progress english-card-progress statistics-card-progress">

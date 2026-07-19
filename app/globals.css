@@ -440,22 +440,70 @@ button:disabled {
   margin: 14px 0 28px;
 }
 
+.rapid-keyboard-hint {
+  align-items: center;
+  color: rgba(244, 240, 230, 0.68);
+  display: flex;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 8px;
+  gap: 6px;
+  justify-content: flex-end;
+  letter-spacing: 0.08em;
+  margin: -10px 0 12px;
+}
+
+.rapid-keyboard-hint > span {
+  color: var(--rapid-accent);
+  font-weight: 900;
+}
+
+.rapid-keyboard-hint kbd,
+.rapid-option-shortcut {
+  background: var(--rapid-accent);
+  border: 1px solid var(--rapid-accent);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-weight: 950;
+}
+
+.rapid-keyboard-hint kbd {
+  padding: 3px 6px;
+}
+
 .rapid-options {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--rapid-option-count, 4), minmax(0, 1fr));
 }
 
 .rapid-options button {
+  align-items: center;
   background: transparent;
   border: 1px solid rgba(244, 240, 230, 0.28);
   color: var(--paper);
   cursor: pointer;
+  display: flex;
   font-size: 13px;
   font-weight: 800;
+  gap: 10px;
+  justify-content: center;
   min-height: 64px;
+  min-width: 0;
   overflow-wrap: anywhere;
-  padding: 13px;
+  padding: 13px 11px;
+}
+
+.rapid-option-shortcut {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 24px;
+  height: 24px;
+  justify-content: center;
+}
+
+.rapid-option-value {
+  min-width: 0;
 }
 
 .rapid-options button:hover:not(:disabled) {
@@ -822,6 +870,10 @@ button:disabled {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .rapid-options {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .rapid-settings {
     grid-template-columns: 1fr 1fr;
   }
@@ -888,7 +940,7 @@ button:disabled {
   }
 
   .rapid-options {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .rapid-feedback > div:last-child {

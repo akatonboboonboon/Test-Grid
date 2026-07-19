@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import CardFaceList from "./card-face-list";
 import { DisplayMath, RichMathText } from "./statistics-math";
 import { ENGLISH_QUESTIONS } from "./english-data";
 import { MECHANICAL_DYNAMICS_QUESTIONS } from "./mechanical-dynamics-data";
@@ -408,6 +409,29 @@ export default function CardSearch({
             );
           })}
         </div>
+
+        <CardFaceList
+          items={filtered.map((card) => ({
+            id: cardKey(card),
+            eyebrow: rapidSubjectMeta(card.subjectId).name,
+            meta: card.topicLabel,
+            front: <RichMathText text={card.prompt} />,
+            back: card.mathOptions
+              ? <DisplayMath tex={card.answer} />
+              : <RichMathText text={card.answer} />,
+            explanation: <RichMathText text={card.explanation} />,
+          }))}
+          title="全教科のカード表・裏一覧"
+          description="選択中の教科と検索語に一致するカードだけを、表面・裏面・解説までまとめて表示します。"
+          pageSize={50}
+          onSelect={(key) => {
+            setCurrentKey(key);
+            setFlipped(false);
+            window.setTimeout(() => {
+              document.getElementById("card-search-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 0);
+          }}
+        />
 
         {current ? (
             <section className="card-search-workspace" id="card-search-workspace" aria-live="polite">

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import CardFaceList from "../../../card-face-list";
 import {
   ALL_LAYERS,
   cardLayers,
@@ -335,6 +336,16 @@ export default function CardsPage() {
     setAnnouncement(`未暗記の${remaining.length}枚だけで復習を始めます。`);
   }
 
+  function openCardFromList(cardId: string) {
+    const nextIndex = filteredCards.findIndex((card) => card.id === cardId);
+    if (nextIndex < 0) return;
+    setDeck(filteredCards);
+    setIndex(nextIndex);
+    setFlipped(false);
+    setAnnouncement(`${filteredCards[nextIndex].label}を1枚練習で開きました。`);
+    focusCard();
+  }
+
   function resetProgress() {
     if (!resetArmed) {
       setResetArmed(true);
@@ -498,6 +509,38 @@ export default function CardsPage() {
           <div className="memory-progress-track" aria-hidden="true"><i style={{ width: `${completion}%` }} /></div>
           <div className="memory-progress-meta"><span>{completion}% 完了</span><span>復習 {learningCount}枚</span></div>
         </section>
+
+        <CardFaceList
+          items={filteredCards.map((card) => {
+            const state = progress[card.id];
+            const statusLabel = state === "mastered" ? "覚えた" : state === "learning" ? "復習" : "未判定";
+            return {
+              id: card.id,
+              eyebrow: "PROTOCOL",
+              meta: statusLabel,
+              front: <strong>{card.label}</strong>,
+              back: (
+                <>
+                  <strong>{cardLayerLabel(card)}</strong>
+                  <p>{card.fullName?.trim() || "正式名称未登録"}</p>
+                </>
+              ),
+              explanation: (
+                <>
+                  <p>{card.description?.trim() || "働きの説明はまだ登録されていません。"}</p>
+                  {card.note?.trim() && <small>{card.note}</small>}
+                  <p><strong>暗記状態：</strong>{statusLabel}</p>
+                </>
+              ),
+            };
+          })}
+          tone="dark"
+          title="プロトコルの表・裏を一覧で確認"
+          description="現在の検索とレイヤー絞り込みに一致するカードだけを、略語・層・正式名称・働きまで並べて表示します。"
+          emptyMessage="現在の検索・レイヤー条件に一致するプロトコルカードはありません。"
+          onSelect={openCardFromList}
+          selectLabel="このプロトコルを1枚で練習"
+        />
 
         {currentCard ? (
           <section className="memory-workspace" aria-label="暗記カード">

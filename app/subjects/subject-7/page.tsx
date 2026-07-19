@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import CardDeckSearch from "../../card-deck-search";
+import CardFaceList from "../../card-face-list";
 import StatisticsExpectedExams from "../../statistics-expected-exams";
 import { STATISTICS_EXAM_LEVEL_QUESTIONS } from "../../statistics-expected-exams-data";
 import { DisplayMath, RichMathText } from "../../statistics-math";
@@ -731,6 +732,25 @@ export default function StatisticsSubjectPage() {
                 }))}
                 currentId={currentCard?.id}
                 label="確率統計の公式カードを検索"
+                onSelect={jumpToFormulaCard}
+              />
+              <CardFaceList
+                items={filteredCards.map((card) => ({
+                  id: card.id,
+                  eyebrow: card.title,
+                  meta: `${topicLabel(card.topic)} · ${progress[card.id] === "mastered" ? "覚えた" : progress[card.id] === "learning" ? "もう一度" : "未判定"}`,
+                  front: <RichMathText text={card.prompt} />,
+                  back: (
+                    <div>
+                      <DisplayMath tex={card.formula} ariaLabel={card.title + "の公式"} />
+                      {card.expandedFormula && <><small>Σなしで書くと</small><DisplayMath tex={card.expandedFormula} ariaLabel={card.title + "をΣなしで展開した公式"} /></>}
+                      <p><RichMathText text={card.cue} /></p>
+                    </div>
+                  ),
+                  explanation: <p><RichMathText text={card.explanation} />{card.example ? <><br /><b>例：</b><RichMathText text={card.example} /></> : null}</p>,
+                }))}
+                title="確率統計の公式カード 表・裏一覧"
+                description="選択中の単元について、問題・公式・Σなしの展開・使いどころ・解説を並べて確認できます。"
                 onSelect={jumpToFormulaCard}
               />
               <div className="generic-progress english-card-progress statistics-card-progress">

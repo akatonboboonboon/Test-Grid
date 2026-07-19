@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import CardFaceList from "../../card-face-list";
 import DigitalCircuitExpectedExams from "../../digital-circuits-expected-exams";
 import DigitalCircuitStudyDiagram from "../../digital-circuits-extra-diagrams";
 import {
@@ -282,6 +283,20 @@ export default function DigitalCircuitSubjectPage() {
               <input className={styles.select} value={cardQuery} onChange={(event) => setCardQuery(event.target.value)} placeholder="カード名・式・うろ覚え語を検索（例：りっぷる、1001、Q+=D）" />
               {cardQuery && <div className={styles.resultList}>{cardCandidates.map((candidate) => <button className={styles.secondary} type="button" key={candidate.id} onClick={() => selectCard(candidate.id)}>{candidate.title} · {topicLabel(candidate.topic)}</button>)}</div>}
             </div>
+            <CardFaceList
+              items={cards.map((item) => ({
+                id: item.id,
+                eyebrow: item.title,
+                meta: `${topicLabel(item.topic)} · ${progress[item.id] === "mastered" ? "覚えた" : progress[item.id] === "learning" ? "もう一度" : "未判定"}`,
+                front: <div><RichMathText text={item.prompt} />{item.diagram && <small>図付きカード</small>}</div>,
+                back: <div><DisplayMath tex={item.formula} ariaLabel={item.title + "の公式"} /><p><RichMathText text={item.cue} /></p></div>,
+                explanation: <p><RichMathText text={item.explanation} />{item.example ? <><br /><b>例：</b><RichMathText text={item.example} /></> : null}<br /><small>出典：{item.sourceRefs.map((source) => `${source.filename} p.${source.page}`).join(" / ")}</small></p>,
+              }))}
+              title="デジタル回路の暗記カード 表・裏一覧"
+              description="選択中の範囲について、問題・公式・使いどころ・解説を並べて確認できます。図は「1枚で練習」から表示します。"
+              tone="dark"
+              onSelect={selectCard}
+            />
             {card ? <>
               <div className={styles.cardMeta}><span>CARD {cardIndex + 1} / {cards.length}</span><span>{topicLabel(card.topic)} · {progress[card.id] ?? "未判定"}</span></div>
               <button className={styles.flipCard} type="button" onClick={() => setFlipped((value) => !value)}>
