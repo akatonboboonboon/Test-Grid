@@ -1,19 +1,17 @@
-import { env } from "cloudflare:workers";
+import { getD1 } from "../../../db";
 import { getChatGPTUser } from "../../chatgpt-auth";
 import {
   getOfficialRankingSpec,
   isOfficialRankingSubjectId,
-  officialRankingPayloadMatchesSpec,
   officialRankingSpecFromBoardKey,
   type OfficialRankingSpec,
 } from "../../official-ranking-config";
 import {
-  getOfficialRankingQuestionIds,
+  getOfficialRankingQuestion,
   getOfficialRankingQuestions,
-  officialRankingQuestionSetMatches,
-  scoreOfficialRankingResponses,
+  scoreOfficialRankingAnswer,
   toPublicOfficialRankingQuestion,
-  type OfficialRankingResponse,
+  updateOfficialRankingStreak,
 } from "../../official-ranking-questions";
 import {
   RAPID_CLIENT_TOKEN_HEADER,
@@ -23,49 +21,22 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const MAX_LIST_PAGES = 5;
-const SUBMISSION_GRACE_MS = 30_000;
-const CHALLENGE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const MAX_QUESTION_ID_LENGTH = 240;
+const MAX_SELECTED_LENGTH = 2_000;
+const SESSION_UPDATE_RETRIES = 4;
 
 type StartPayload = {
   subjectId?: unknown;
   rankingName?: unknown;
 };
 
-type SubmitPayload = {
-  challengeId?: unknown;
-  answers?: unknown;
-};
-
-type OfficialChallengeRecord = {
-  challengeId: string;
-  subjectId: OfficialRankingSpec["subjectId"];
-  mode: OfficialRankingSpec["mode"];
-  version: OfficialRankingSpec["version"];
-  boardKey: string;
-  questionCount: number;
-  timeLimitMs: number;
-  seed: string;
-  questionIds: string[];
-  rankingName: string;
-  startedAt: number;
-  expiresAt: number;
-  completedAt?: number;
-};
-
-type LeaderboardEntry = {
-  alias: string;
-  subjectId: OfficialRankingSpec["subjectId"];
-  mode: OfficialRankingSpec["mode"];
-  version: OfficialRankingSpec["version"];
-  boardKey: string;
-  questionCount: number;
-  timeLimitMs: number;
-  seed: string;
-  correctCount: number;
-  bestStreak: number;
-  durationMs: number;
-  updatedAt: number;
+type AnswerPayload = {
+  subjectId?: unknown;
+  sessionId?: unknown;
+  attemptId?: unknown;
+  questionId?: unknown;
+  selected?: unknown;
 };
 
 type RankingIdentity = {
@@ -73,18 +44,38 @@ type RankingIdentity = {
   defaultRankingName: string | null;
 };
 
-function boundedInteger(value: unknown, minimum: number, maximum: number) {
-  return typeof value === "number" && Number.isInteger(value) && value >= minimum && value <= maximum
-    ? value
-    : null;
-}
+type SessionRow = {
+  session_id: string;
+  board_key: string;
+  subject_id: string;
+  version: number;
+  alias: string;
+  current_streak: number;
+  best_streak: number;
+  total_answered: number;
+  total_correct: number;
+  current_question_id: string;
+  current_attempt_id: string;
+  last_question_id: string | null;
+  revision: number;
+  created_at: number;
+  updated_at: number;
+};
+
+type EntryRow = {
+  alias: string;
+  streak_count: number;
+  achieved_at: number;
+  updated_at: number;
+};
 
 function sameSiteWriteAllowed(request: Request) {
   const requestUrl = new URL(request.url);
   const origin = request.headers.get("origin");
   const fetchSite = request.headers.get("sec-fetch-site");
-  return (!origin || origin === requestUrl.origin)
-    && (!fetchSite || fetchSite === "same-origin" || fetchSite === "same-site");
+  if (!origin || !fetchSite) return false;
+  return origin === requestUrl.origin
+    && (fetchSite === "same-origin" || fetchSite === "same-site");
 }
 
 function jsonWriteAllowed(request: Request) {
@@ -113,183 +104,94 @@ async function userIdentity(request: Request): Promise<RankingIdentity | null> {
   };
 }
 
-function officialLeaderboardPrefix(boardKey: string) {
-  return `leaderboards/official-v1/scores/${encodeURIComponent(boardKey)}/`;
-}
-
-function scoreObjectKey(boardKey: string, userKey: string) {
-  return `${officialLeaderboardPrefix(boardKey)}${userKey}.json`;
-}
-
-function challengeObjectKey(userKey: string, challengeId: string) {
-  return `leaderboards/official-v1/challenges/${userKey}/${challengeId}.json`;
-}
-
 function storageUnavailable() {
   return Response.json({ error: "LEADERBOARD_UNAVAILABLE" }, { status: 503 });
 }
 
-function scoreIsBetter(candidate: LeaderboardEntry, current: LeaderboardEntry) {
-  return candidate.correctCount > current.correctCount
-    || (candidate.correctCount === current.correctCount && candidate.durationMs < current.durationMs)
-    || (candidate.correctCount === current.correctCount
-      && candidate.durationMs === current.durationMs
-      && candidate.bestStreak > current.bestStreak);
-}
-
-function parseStoredEntry(value: unknown, expectedSpec?: OfficialRankingSpec): LeaderboardEntry | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const item = value as Record<string, unknown>;
-  const spec = officialRankingSpecFromBoardKey(item.boardKey);
-  if (!spec || (expectedSpec && spec.boardKey !== expectedSpec.boardKey)) return null;
-  if (!officialRankingPayloadMatchesSpec(item, spec)) return null;
-  if (typeof item.alias !== "string") return null;
-  const alias = normalizeRankingName(item.alias) ?? (item.alias.length <= 40 ? item.alias : null);
-  if (!alias) return null;
-  const correctCount = boundedInteger(item.correctCount, 0, spec.questionCount);
-  const bestStreak = boundedInteger(item.bestStreak, 0, spec.questionCount);
-  const durationMs = boundedInteger(item.durationMs, 1, spec.timeLimitMs);
-  const updatedAt = boundedInteger(item.updatedAt, 1, Number.MAX_SAFE_INTEGER);
-  if (correctCount === null || bestStreak === null || durationMs === null || updatedAt === null) return null;
-  return {
-    alias,
-    subjectId: spec.subjectId,
-    mode: spec.mode,
-    version: spec.version,
-    boardKey: spec.boardKey,
-    questionCount: spec.questionCount,
-    timeLimitMs: spec.timeLimitMs,
-    seed: spec.seed,
-    correctCount,
-    bestStreak,
-    durationMs,
-    updatedAt,
-  };
-}
-
-function entryFromMetadata(metadata: Record<string, string> | undefined, spec: OfficialRankingSpec) {
-  if (!metadata) return null;
-  return parseStoredEntry({
-    alias: metadata.alias,
-    subjectId: metadata.subjectId,
-    mode: metadata.mode,
-    version: Number(metadata.version),
-    boardKey: metadata.boardKey,
-    questionCount: Number(metadata.questionCount),
-    timeLimitMs: Number(metadata.timeLimitMs),
-    seed: metadata.seed,
-    correctCount: Number(metadata.correctCount),
-    bestStreak: Number(metadata.bestStreak),
-    durationMs: Number(metadata.durationMs),
-    updatedAt: Number(metadata.updatedAt),
-  }, spec);
-}
-
-async function storeEntry(key: string, entry: LeaderboardEntry) {
-  await env.STUDY_SNAPSHOTS.put(key, JSON.stringify(entry), {
-    httpMetadata: { contentType: "application/json" },
-    customMetadata: {
-      alias: entry.alias,
-      subjectId: entry.subjectId,
-      mode: entry.mode,
-      version: String(entry.version),
-      boardKey: entry.boardKey,
-      questionCount: String(entry.questionCount),
-      timeLimitMs: String(entry.timeLimitMs),
-      seed: entry.seed,
-      correctCount: String(entry.correctCount),
-      bestStreak: String(entry.bestStreak),
-      durationMs: String(entry.durationMs),
-      updatedAt: String(entry.updatedAt),
-    },
-  });
-}
-
-function parseChallengeRecord(value: unknown): { record: OfficialChallengeRecord; spec: OfficialRankingSpec } | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const item = value as Record<string, unknown>;
-  if (!isOfficialRankingSubjectId(item.subjectId)) return null;
-  const spec = getOfficialRankingSpec(item.subjectId);
-  if (!officialRankingPayloadMatchesSpec(item, spec)) return null;
-  if (typeof item.challengeId !== "string" || !CHALLENGE_ID_PATTERN.test(item.challengeId)) return null;
-  if (typeof item.rankingName !== "string" || !normalizeRankingName(item.rankingName)) return null;
-  if (!Array.isArray(item.questionIds) || !officialRankingQuestionSetMatches(spec.subjectId, item.questionIds)) return null;
-  const startedAt = boundedInteger(item.startedAt, 1, Number.MAX_SAFE_INTEGER);
-  const expiresAt = boundedInteger(item.expiresAt, 1, Number.MAX_SAFE_INTEGER);
-  const completedAt = item.completedAt === undefined
-    ? undefined
-    : boundedInteger(item.completedAt, 1, Number.MAX_SAFE_INTEGER) ?? undefined;
-  if (startedAt === null || expiresAt === null || expiresAt !== startedAt + spec.timeLimitMs + SUBMISSION_GRACE_MS) {
-    return null;
+function chooseQuestion(
+  spec: OfficialRankingSpec,
+  currentQuestionId?: string | null,
+  lastQuestionId?: string | null,
+) {
+  const pool = getOfficialRankingQuestions(spec.subjectId);
+  if (pool.length < 2) {
+    throw new Error(`Official ranking pool for ${spec.subjectId} needs at least two questions.`);
   }
+  let eligible = pool.filter((question) => (
+    question.id !== currentQuestionId && question.id !== lastQuestionId
+  ));
+  if (!eligible.length) {
+    eligible = pool.filter((question) => question.id !== currentQuestionId);
+  }
+  if (!eligible.length) throw new Error("NO_OFFICIAL_RANKING_QUESTION");
+  const random = new Uint32Array(1);
+  crypto.getRandomValues(random);
+  return eligible[random[0] % eligible.length];
+}
+
+async function readSession(
+  database: ReturnType<typeof getD1>,
+  userKey: string,
+  boardKey: string,
+) {
+  return database.prepare(`
+      SELECT session_id, board_key, subject_id, version, alias,
+             current_streak, best_streak, total_answered, total_correct,
+             current_question_id, current_attempt_id, last_question_id,
+             revision, created_at, updated_at
+      FROM official_ranking_sessions
+      WHERE user_key = ? AND board_key = ?
+    `).bind(userKey, boardKey).first<SessionRow>();
+}
+
+function sessionPayload(
+  row: SessionRow,
+  spec: OfficialRankingSpec,
+  resumed: boolean,
+  question = getOfficialRankingQuestion(spec.subjectId, row.current_question_id),
+) {
+  if (!question) throw new Error("MISSING_OFFICIAL_RANKING_QUESTION");
   return {
+    sessionId: row.session_id,
+    attemptId: row.current_attempt_id,
     spec,
-    record: {
-      challengeId: item.challengeId,
-      subjectId: spec.subjectId,
-      mode: spec.mode,
-      version: spec.version,
-      boardKey: spec.boardKey,
-      questionCount: spec.questionCount,
-      timeLimitMs: spec.timeLimitMs,
-      seed: spec.seed,
-      questionIds: item.questionIds as string[],
-      rankingName: normalizeRankingName(item.rankingName) as string,
-      startedAt,
-      expiresAt,
-      ...(completedAt ? { completedAt } : {}),
-    },
+    resumed,
+    alias: row.alias,
+    currentStreak: row.current_streak,
+    bestStreak: row.best_streak,
+    totalAnswered: row.total_answered,
+    totalCorrect: row.total_correct,
+    question: toPublicOfficialRankingQuestion(question),
   };
-}
-
-function normalizeAnswers(value: unknown, spec: OfficialRankingSpec): OfficialRankingResponse[] | null {
-  if (!Array.isArray(value) || value.length !== spec.questionCount) return null;
-  const answers: OfficialRankingResponse[] = [];
-  for (const item of value) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
-    const response = item as Record<string, unknown>;
-    if (typeof response.questionId !== "string" || response.questionId.length > 240) return null;
-    if (response.selected !== null && (typeof response.selected !== "string" || response.selected.length > 2_000)) {
-      return null;
-    }
-    answers.push({ questionId: response.questionId, selected: response.selected as string | null });
-  }
-  return officialRankingQuestionSetMatches(spec.subjectId, answers.map((answer) => answer.questionId))
-    ? answers
-    : null;
 }
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const spec = officialRankingSpecFromBoardKey(url.searchParams.get("board"));
+  const spec = officialRankingSpecFromBoardKey(new URL(request.url).searchParams.get("board"));
   if (!spec) return Response.json({ error: "INVALID_OFFICIAL_BOARD" }, { status: 400 });
 
   try {
-    const collected: LeaderboardEntry[] = [];
-    let cursor: string | undefined;
-    for (let pageNumber = 0; pageNumber < MAX_LIST_PAGES; pageNumber += 1) {
-      const page = await env.STUDY_SNAPSHOTS.list({
-        prefix: officialLeaderboardPrefix(spec.boardKey),
-        cursor,
-        limit: 1000,
-        include: ["customMetadata"],
-      });
-      for (const object of page.objects) {
-        const entry = entryFromMetadata(object.customMetadata, spec);
-        if (entry) collected.push(entry);
-      }
-      if (!page.truncated || !page.cursor) break;
-      cursor = page.cursor;
-    }
-    const entries = collected
-      .sort((left, right) => right.correctCount - left.correctCount
-        || left.durationMs - right.durationMs
-        || right.bestStreak - left.bestStreak
-        || left.updatedAt - right.updatedAt)
-      .slice(0, 20)
-      .map((entry, index) => ({ rank: index + 1, ...entry }));
-    return Response.json({ boardKey: spec.boardKey, spec, entries }, {
-      headers: { "cache-control": "public, max-age=30" },
+    const result = await getD1().prepare(`
+        SELECT alias, streak_count, achieved_at, updated_at
+        FROM official_ranking_entries
+        WHERE board_key = ?
+        ORDER BY streak_count DESC, achieved_at ASC, user_key ASC
+        LIMIT 20
+      `).bind(spec.boardKey).all<EntryRow>();
+    const entries = (result.results ?? []).map((entry: EntryRow, index: number) => ({
+      rank: index + 1,
+      alias: entry.alias,
+      streakCount: Number(entry.streak_count),
+      bestStreak: Number(entry.streak_count),
+      achievedAt: Number(entry.achieved_at),
+      updatedAt: Number(entry.updated_at),
+    }));
+    return Response.json({
+      boardKey: spec.boardKey,
+      spec,
+      metric: spec.scoring,
+      entries,
+    }, {
+      headers: { "cache-control": "public, max-age=10" },
     });
   } catch {
     return storageUnavailable();
@@ -297,114 +199,283 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!sameSiteWriteAllowed(request)) return Response.json({ error: "CROSS_SITE_WRITE_BLOCKED" }, { status: 403 });
-  if (!jsonWriteAllowed(request)) return Response.json({ error: "JSON_REQUIRED" }, { status: 415 });
+  if (!sameSiteWriteAllowed(request)) {
+    return Response.json({ error: "CROSS_SITE_WRITE_BLOCKED" }, { status: 403 });
+  }
+  if (!jsonWriteAllowed(request)) {
+    return Response.json({ error: "JSON_REQUIRED" }, { status: 415 });
+  }
+
+  let body: StartPayload;
+  try {
+    body = await request.json() as StartPayload;
+  } catch {
+    return Response.json({ error: "INVALID_RANKING_REQUEST" }, { status: 400 });
+  }
+
   try {
     const identity = await userIdentity(request);
     if (!identity) return Response.json({ error: "RANKING_IDENTITY_REQUIRED" }, { status: 401 });
-    const body = await request.json() as StartPayload;
     if (!isOfficialRankingSubjectId(body.subjectId)) {
       return Response.json({ error: "INVALID_OFFICIAL_SUBJECT" }, { status: 400 });
     }
-    const requestedRankingName = body.rankingName === undefined ? null : normalizeRankingName(body.rankingName);
+    const requestedRankingName = body.rankingName === undefined
+      ? null
+      : normalizeRankingName(body.rankingName);
     if (body.rankingName !== undefined && !requestedRankingName) {
       return Response.json({ error: "INVALID_RANKING_NAME" }, { status: 400 });
     }
-    const rankingName = requestedRankingName ?? identity.defaultRankingName;
-    if (!rankingName) return Response.json({ error: "RANKING_NAME_REQUIRED" }, { status: 400 });
 
     const spec = getOfficialRankingSpec(body.subjectId);
-    const questions = getOfficialRankingQuestions(spec.subjectId);
-    const challengeId = crypto.randomUUID();
-    const startedAt = Date.now();
-    const challenge: OfficialChallengeRecord = {
-      ...spec,
-      challengeId,
-      questionIds: getOfficialRankingQuestionIds(spec.subjectId),
-      rankingName,
-      startedAt,
-      expiresAt: startedAt + spec.timeLimitMs + SUBMISSION_GRACE_MS,
-    };
-    await env.STUDY_SNAPSHOTS.put(
-      challengeObjectKey(identity.userKey, challengeId),
-      JSON.stringify(challenge),
-      { httpMetadata: { contentType: "application/json" } },
-    );
-    return Response.json({
-      challengeId,
-      spec,
-      startedAt,
-      expiresAt: startedAt + spec.timeLimitMs,
-      questions: questions.map(toPublicOfficialRankingQuestion),
-    });
+    const database = getD1();
+    for (let retry = 0; retry < SESSION_UPDATE_RETRIES; retry += 1) {
+      const existing = await readSession(database, identity.userKey, spec.boardKey);
+      const now = Date.now();
+      if (existing) {
+        if (existing.subject_id !== spec.subjectId || existing.version !== spec.version) {
+          return Response.json({ error: "INVALID_RANKING_SESSION" }, { status: 409 });
+        }
+        const rankingName = requestedRankingName ?? existing.alias ?? identity.defaultRankingName;
+        if (!rankingName) return Response.json({ error: "RANKING_NAME_REQUIRED" }, { status: 400 });
+        const question = chooseQuestion(spec, existing.current_question_id, existing.last_question_id);
+        const attemptId = crypto.randomUUID();
+        const update = await database.prepare(`
+            UPDATE official_ranking_sessions
+            SET alias = ?,
+                last_question_id = current_question_id,
+                current_question_id = ?,
+                current_attempt_id = ?,
+                revision = revision + 1,
+                updated_at = ?
+            WHERE session_id = ? AND user_key = ? AND board_key = ? AND revision = ?
+          `).bind(
+          rankingName,
+          question.id,
+          attemptId,
+          now,
+          existing.session_id,
+          identity.userKey,
+          spec.boardKey,
+          existing.revision,
+        ).run();
+        if (!Number(update.meta.changes ?? 0)) continue;
+        await database.prepare(`
+            UPDATE official_ranking_entries
+            SET alias = ?, updated_at = ?
+            WHERE user_key = ? AND board_key = ?
+          `).bind(rankingName, now, identity.userKey, spec.boardKey).run();
+        return Response.json(sessionPayload({
+          ...existing,
+          alias: rankingName,
+          last_question_id: existing.current_question_id,
+          current_question_id: question.id,
+          current_attempt_id: attemptId,
+          revision: existing.revision + 1,
+          updated_at: now,
+        }, spec, true, question));
+      }
+
+      const rankingName = requestedRankingName ?? identity.defaultRankingName;
+      if (!rankingName) return Response.json({ error: "RANKING_NAME_REQUIRED" }, { status: 400 });
+      const question = chooseQuestion(spec);
+      const sessionId = crypto.randomUUID();
+      const attemptId = crypto.randomUUID();
+      const insert = await database.prepare(`
+          INSERT OR IGNORE INTO official_ranking_sessions
+            (session_id, user_key, board_key, subject_id, version, alias,
+             current_streak, best_streak, total_answered, total_correct,
+             current_question_id, current_attempt_id, last_question_id,
+             revision, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, ?, ?, NULL, 0, ?, ?)
+        `).bind(
+        sessionId,
+        identity.userKey,
+        spec.boardKey,
+        spec.subjectId,
+        spec.version,
+        rankingName,
+        question.id,
+        attemptId,
+        now,
+        now,
+      ).run();
+      if (!Number(insert.meta.changes ?? 0)) continue;
+      return Response.json({
+        sessionId,
+        attemptId,
+        spec,
+        resumed: false,
+        alias: rankingName,
+        currentStreak: 0,
+        bestStreak: 0,
+        totalAnswered: 0,
+        totalCorrect: 0,
+        question: toPublicOfficialRankingQuestion(question),
+      });
+    }
+    return Response.json({ error: "RANKING_SESSION_CONFLICT" }, { status: 409 });
   } catch {
     return storageUnavailable();
   }
 }
 
 export async function PUT(request: Request) {
-  if (!sameSiteWriteAllowed(request)) return Response.json({ error: "CROSS_SITE_WRITE_BLOCKED" }, { status: 403 });
-  if (!jsonWriteAllowed(request)) return Response.json({ error: "JSON_REQUIRED" }, { status: 415 });
+  if (!sameSiteWriteAllowed(request)) {
+    return Response.json({ error: "CROSS_SITE_WRITE_BLOCKED" }, { status: 403 });
+  }
+  if (!jsonWriteAllowed(request)) {
+    return Response.json({ error: "JSON_REQUIRED" }, { status: 415 });
+  }
+
+  let body: AnswerPayload;
+  try {
+    body = await request.json() as AnswerPayload;
+  } catch {
+    return Response.json({ error: "INVALID_OFFICIAL_ANSWER" }, { status: 400 });
+  }
+
   try {
     const identity = await userIdentity(request);
     if (!identity) return Response.json({ error: "RANKING_IDENTITY_REQUIRED" }, { status: 401 });
-    const body = await request.json() as SubmitPayload;
-    if (typeof body.challengeId !== "string" || !CHALLENGE_ID_PATTERN.test(body.challengeId)) {
-      return Response.json({ error: "INVALID_CHALLENGE" }, { status: 400 });
+    if (
+      !isOfficialRankingSubjectId(body.subjectId)
+      || typeof body.sessionId !== "string"
+      || !ID_PATTERN.test(body.sessionId)
+      || typeof body.attemptId !== "string"
+      || !ID_PATTERN.test(body.attemptId)
+      || typeof body.questionId !== "string"
+      || body.questionId.length > MAX_QUESTION_ID_LENGTH
+      || typeof body.selected !== "string"
+      || body.selected.length > MAX_SELECTED_LENGTH
+    ) {
+      return Response.json({ error: "INVALID_OFFICIAL_ANSWER" }, { status: 400 });
     }
-    const challengeKey = challengeObjectKey(identity.userKey, body.challengeId);
-    const challengeObject = await env.STUDY_SNAPSHOTS.get(challengeKey);
-    if (!challengeObject) return Response.json({ error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
-    const parsed = parseChallengeRecord(JSON.parse(await challengeObject.text()));
-    if (!parsed || parsed.record.challengeId !== body.challengeId) {
-      return Response.json({ error: "INVALID_CHALLENGE" }, { status: 400 });
-    }
-    const { record: challenge, spec } = parsed;
-    if (challenge.completedAt) return Response.json({ error: "CHALLENGE_ALREADY_SUBMITTED" }, { status: 409 });
-    const completedAt = Date.now();
-    if (completedAt > challenge.expiresAt) return Response.json({ error: "CHALLENGE_EXPIRED" }, { status: 410 });
-    const answers = normalizeAnswers(body.answers, spec);
-    if (!answers) return Response.json({ error: "INVALID_OFFICIAL_ANSWERS" }, { status: 400 });
 
-    const { correctCount, bestStreak, review } = scoreOfficialRankingResponses(spec, answers);
-    const durationMs = Math.min(spec.timeLimitMs, Math.max(1, completedAt - challenge.startedAt));
-    const key = scoreObjectKey(spec.boardKey, identity.userKey);
-    const existingObject = await env.STUDY_SNAPSHOTS.get(key);
-    const existing = existingObject ? parseStoredEntry(JSON.parse(await existingObject.text()), spec) : null;
-    const entry: LeaderboardEntry = {
-      alias: challenge.rankingName,
-      subjectId: spec.subjectId,
-      mode: spec.mode,
-      version: spec.version,
-      boardKey: spec.boardKey,
-      questionCount: spec.questionCount,
-      timeLimitMs: spec.timeLimitMs,
-      seed: spec.seed,
-      correctCount,
-      bestStreak,
-      durationMs,
-      updatedAt: completedAt,
-    };
-    const improved = !existing || scoreIsBetter(entry, existing);
-    const nameUpdated = existing?.alias !== entry.alias;
-    if (improved) await storeEntry(key, entry);
-    else if (existing && nameUpdated) await storeEntry(key, { ...existing, alias: entry.alias });
-    await env.STUDY_SNAPSHOTS.put(
-      challengeKey,
-      JSON.stringify({ ...challenge, completedAt }),
-      { httpMetadata: { contentType: "application/json" } },
+    const spec = getOfficialRankingSpec(body.subjectId);
+    const database = getD1();
+    const existing = await readSession(database, identity.userKey, spec.boardKey);
+    if (!existing || existing.session_id !== body.sessionId) {
+      return Response.json({ error: "RANKING_SESSION_NOT_FOUND" }, { status: 404 });
+    }
+    if (
+      existing.current_attempt_id !== body.attemptId
+      || existing.current_question_id !== body.questionId
+    ) {
+      return Response.json({ error: "ATTEMPT_ALREADY_ANSWERED" }, { status: 409 });
+    }
+
+    const answeredQuestion = getOfficialRankingQuestion(spec.subjectId, body.questionId);
+    if (!answeredQuestion || !answeredQuestion.options.includes(body.selected)) {
+      return Response.json({ error: "INVALID_OFFICIAL_ANSWER" }, { status: 400 });
+    }
+    const { correct, feedback } = scoreOfficialRankingAnswer(answeredQuestion, body.selected);
+    const streak = updateOfficialRankingStreak(
+      existing.current_streak,
+      existing.best_streak,
+      correct,
     );
+    const nextQuestion = chooseQuestion(
+      spec,
+      existing.current_question_id,
+      existing.last_question_id,
+    );
+    const nextAttemptId = crypto.randomUUID();
+    const now = Date.now();
+    const totalAnswered = existing.total_answered + 1;
+    const totalCorrect = existing.total_correct + (correct ? 1 : 0);
+    const improved = streak.bestStreak > existing.best_streak;
+
+    const sessionUpdate = database.prepare(`
+        UPDATE official_ranking_sessions
+        SET current_streak = ?,
+            best_streak = ?,
+            total_answered = ?,
+            total_correct = ?,
+            last_question_id = current_question_id,
+            current_question_id = ?,
+            current_attempt_id = ?,
+            revision = revision + 1,
+            updated_at = ?
+        WHERE session_id = ?
+          AND user_key = ?
+          AND board_key = ?
+          AND revision = ?
+          AND current_attempt_id = ?
+          AND current_question_id = ?
+      `).bind(
+      streak.currentStreak,
+      streak.bestStreak,
+      totalAnswered,
+      totalCorrect,
+      nextQuestion.id,
+      nextAttemptId,
+      now,
+      existing.session_id,
+      identity.userKey,
+      spec.boardKey,
+      existing.revision,
+      body.attemptId,
+      body.questionId,
+    );
+
+    let updateChanges = 0;
+    if (improved) {
+      const entryUpdate = database.prepare(`
+          INSERT INTO official_ranking_entries
+            (user_key, board_key, subject_id, version, alias,
+             streak_count, achieved_at, updated_at)
+          SELECT ?, ?, ?, ?, ?, ?, ?, ?
+          FROM official_ranking_sessions
+          WHERE session_id = ?
+            AND user_key = ?
+            AND board_key = ?
+            AND revision = ?
+            AND current_attempt_id = ?
+            AND current_question_id = ?
+          ON CONFLICT(user_key, board_key) DO UPDATE SET
+            alias = excluded.alias,
+            streak_count = excluded.streak_count,
+            achieved_at = excluded.achieved_at,
+            updated_at = excluded.updated_at
+          WHERE excluded.streak_count > official_ranking_entries.streak_count
+        `).bind(
+        identity.userKey,
+        spec.boardKey,
+        spec.subjectId,
+        spec.version,
+        existing.alias,
+        streak.bestStreak,
+        now,
+        now,
+        existing.session_id,
+        identity.userKey,
+        spec.boardKey,
+        existing.revision + 1,
+        nextAttemptId,
+        nextQuestion.id,
+      );
+      const results = await database.batch([sessionUpdate, entryUpdate]);
+      updateChanges = Number(results[0]?.meta.changes ?? 0);
+    } else {
+      const result = await sessionUpdate.run();
+      updateChanges = Number(result.meta.changes ?? 0);
+    }
+    if (!updateChanges) {
+      return Response.json({ error: "ATTEMPT_ALREADY_ANSWERED" }, { status: 409 });
+    }
+
     return Response.json({
-      saved: true,
+      sessionId: existing.session_id,
+      attemptId: nextAttemptId,
+      spec,
+      alias: existing.alias,
+      currentStreak: streak.currentStreak,
+      bestStreak: streak.bestStreak,
+      totalAnswered,
+      totalCorrect,
+      feedback,
+      question: toPublicOfficialRankingQuestion(nextQuestion),
       improved,
-      nameUpdated,
-      alias: entry.alias,
-      boardKey: spec.boardKey,
-      correctCount,
-      questionCount: spec.questionCount,
-      bestStreak,
-      durationMs,
-      review,
     });
   } catch {
     return storageUnavailable();

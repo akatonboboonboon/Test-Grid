@@ -40,30 +40,31 @@ test("ranking profile merge preserves the newest value including an explicit cle
   assert.deepEqual(profile.mergeRapidRankingProfiles(newer, older), newer);
 });
 
-test("named leaderboards only accept the fixed server-scored official subject tests", async () => {
-  const [route, rankingData, accountSync, layout, config, client, questionIds] = await Promise.all([
+test("named leaderboards only accept server-scored official streak attempts", async () => {
+  const [route, rankingData, accountSync, layout, config, client] = await Promise.all([
     readFile(new URL("../app/api/leaderboard/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/rapid-ranking-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/account-sync.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/official-ranking-config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/official-ranking-client.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/official-ranking-question-ids.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(route, /RAPID_CLIENT_TOKEN_HEADER/);
   assert.match(route, /sameSiteWriteAllowed/);
   assert.match(route, /export async function POST/);
-  assert.match(route, /CHALLENGE_ALREADY_SUBMITTED/);
-  assert.match(route, /scoreOfficialRankingResponses/);
-  assert.match(route, /existing\?\.alias !== entry\.alias/);
-  assert.match(route, /STUDY_SNAPSHOTS\.put/);
+  assert.match(route, /export async function PUT/);
+  assert.match(route, /scoreOfficialRankingAnswer/);
+  assert.match(route, /official_ranking_sessions/);
+  assert.match(route, /official_ranking_entries/);
   assert.doesNotMatch(route, /Response\.json\([^)]*userKey/);
   assert.doesNotMatch(route, /body\.correctCount|body\.bestStreak|body\.durationMs/);
-  assert.match(config, /OFFICIAL_RANKING_QUESTION_COUNT = 20/);
-  assert.match(config, /ranking:\$\{subjectId\}:v\$\{OFFICIAL_RANKING_VERSION\}/);
-  assert.match(questionIds, /deliberately pinned to explicit IDs/);
-  assert.match(client, /JSON\.stringify\(\{ challengeId, answers \}\)/);
+  assert.match(config, /OFFICIAL_RANKING_MODE = "official-ranking-streak"/);
+  assert.match(config, /OFFICIAL_RANKING_VERSION = 2/);
+  assert.match(config, /streak:v/);
+  assert.match(client, /sessionId: session\.sessionId/);
+  assert.match(client, /attemptId: session\.attemptId/);
+  assert.match(client, /questionId: session\.question\.id/);
   assert.doesNotMatch(rankingData, /fetch\("\/api\/leaderboard"/);
   assert.match(rankingData, /playerName: string/);
   assert.match(rankingData, /normalizeRapidPlayerName/);

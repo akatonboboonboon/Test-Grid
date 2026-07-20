@@ -363,7 +363,7 @@ export default function Home() {
             <span>時間制限つき練習</span><strong>層を即答・連続正解の練習</strong><b aria-hidden="true">練習する →</b>
           </Link>
           <Link className="network-memory-callout" href="/ranking/network">
-            <span>固定20問・固定時間</span><strong>ネットワーク公式ランキングテスト</strong><b aria-hidden="true">ランキングに挑戦 →</b>
+            <span>問題数無制限・中断再開</span><strong>ネットワーク連続正解ランキング</strong><b aria-hidden="true">ランキングに挑戦 →</b>
           </Link>
         </section>
 

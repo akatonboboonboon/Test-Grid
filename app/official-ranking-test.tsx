@@ -1,19 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
-  startOfficialRankingChallenge,
-  submitOfficialRankingChallenge,
-  type OfficialRankingChallenge,
-  type OfficialRankingResult,
+  startOfficialRankingSession,
+  submitOfficialRankingAnswer,
+  type OfficialRankingFeedback,
+  type OfficialRankingSessionState,
 } from "./official-ranking-client";
 import { getOfficialRankingSpec } from "./official-ranking-config";
-import type {
-  OfficialRankingResponse,
-  OfficialRankingReviewItem,
-  PublicOfficialRankingQuestion,
-} from "./official-ranking-questions";
+import type { PublicOfficialRankingQuestion } from "./official-ranking-questions";
 import RapidAnswerText from "./rapid-answer-text";
 import RapidLeaderboard from "./rapid-leaderboard";
 import { loadRapidPlayerName, normalizeRapidPlayerName, saveRapidPlayerName } from "./rapid-ranking-data";
@@ -22,38 +18,25 @@ import RapidQuestionVisual from "./rapid-question-visual";
 import { RichMathText } from "./statistics-math";
 import type { SubjectId } from "./study-data";
 
-type OfficialRankingPhase = "setup" | "starting" | "playing" | "submitting" | "result" | "error";
-
-function formatClock(durationMs: number) {
-  const totalSeconds = Math.max(0, Math.ceil(durationMs / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
-function formatDuration(durationMs: number) {
-  const totalSeconds = Math.max(1, Math.round(durationMs / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return minutes ? `${minutes}分${String(seconds).padStart(2, "0")}秒` : `${seconds}秒`;
-}
+type OfficialRankingPhase = "setup" | "starting" | "playing" | "checking" | "feedback" | "error";
 
 function rankingErrorMessage(error: string) {
   const messages: Record<string, string> = {
     RANKING_NAME_REQUIRED: "ランキング表示名を入力してください。",
-    INVALID_RANKING_NAME: "表示名は改行や制御文字を含まない1〜24文字にしてください。",
+    INVALID_RANKING_NAME: "表示名に改行や制御文字を含めず、1〜24文字にしてください。",
     RANKING_IDENTITY_REQUIRED: "この端末を確認できませんでした。ページを再読み込みしてください。",
-    CHALLENGE_EXPIRED: "制限時間と提出猶予を過ぎました。新しいテストを開始してください。",
-    CHALLENGE_ALREADY_SUBMITTED: "この答案はすでに提出済みです。新しいテストを開始してください。",
-    CHALLENGE_NOT_FOUND: "テスト情報が見つかりません。新しいテストを開始してください。",
-    INVALID_OFFICIAL_ANSWERS: "答案を確認できませんでした。ページを再読み込みして再挑戦してください。",
+    SESSION_NOT_FOUND: "続行中のセッションを確認できませんでした。もう一度開始してください。",
+    RANKING_SESSION_NOT_FOUND: "続行中のセッションを確認できませんでした。もう一度開始してください。",
+    INVALID_RANKING_SESSION: "保存済みのランキング情報が現在の版と一致しません。もう一度開始してください。",
+    RANKING_SESSION_CONFLICT: "別の画面でセッションが更新されました。もう一度開始してください。",
+    INVALID_OFFICIAL_SESSION: "ランキングセッションを確認できませんでした。もう一度開始してください。",
+    INVALID_ATTEMPT: "表示中の問題を確認できませんでした。セッションを再取得してください。",
+    STALE_ATTEMPT: "この問題はすでに採点済みです。セッションを再取得してください。",
+    ATTEMPT_ALREADY_ANSWERED: "この問題はすでに採点済みです。セッションを再取得してください。",
+    INVALID_OFFICIAL_ANSWER: "回答を確認できませんでした。セッションを再取得してください。",
     LEADERBOARD_UNAVAILABLE: "ランキングサーバーへ接続できませんでした。少し待って再試行してください。",
   };
-  return messages[error] ?? "処理に失敗しました。通信状態を確認して再試行してください。";
-}
-
-function publicQuestionAsVisual(question: PublicOfficialRankingQuestion) {
-  return question.visual;
+  return messages[error] ?? "処理に失敗しました。通信状況を確認して再試行してください。";
 }
 
 function isEditableRankingKeyTarget(target: EventTarget | null) {
@@ -92,23 +75,18 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
   const spec = getOfficialRankingSpec(subjectId);
   const [phase, setPhase] = useState<OfficialRankingPhase>("setup");
   const [playerName, setPlayerName] = useState("");
-  const [challenge, setChallenge] = useState<OfficialRankingChallenge | null>(null);
-  const [answers, setAnswers] = useState<OfficialRankingResponse[]>([]);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [remainingMs, setRemainingMs] = useState(spec.timeLimitMs);
-  const [result, setResult] = useState<OfficialRankingResult | null>(null);
+  const [session, setSession] = useState<OfficialRankingSessionState | null>(null);
+  const [answeredQuestion, setAnsweredQuestion] = useState<PublicOfficialRankingQuestion | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<OfficialRankingFeedback | null>(null);
+  const [resumeNotice, setResumeNotice] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
-  const answersRef = useRef<OfficialRankingResponse[]>([]);
-  const submissionLockedRef = useRef(false);
+  const answerLockedRef = useRef(false);
   const normalizedPlayerName = normalizeRapidPlayerName(playerName);
-  const currentQuestion = challenge?.questions[questionIndex];
+  const currentQuestion = session?.question ?? null;
+  const displayedQuestion = phase === "feedback" ? answeredQuestion : currentQuestion;
   const shortcutMaximum = currentQuestion ? officialRankingShortcutMaximum(currentQuestion) : 0;
-  const answeredCount = useMemo(
-    () => answers.filter((answer) => answer.selected !== null).length,
-    [answers],
-  );
-  const review: OfficialRankingReviewItem[] = result?.review ?? [];
 
   /* eslint-disable react-hooks/set-state-in-effect -- restore one shared nickname after mount */
   useEffect(() => {
@@ -116,81 +94,54 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const submitAnswers = useCallback(async (
-    challengeToSubmit: OfficialRankingChallenge,
-    answersToSubmit: OfficialRankingResponse[],
-    timedOut: boolean,
-  ) => {
-    if (submissionLockedRef.current) return;
-    submissionLockedRef.current = true;
-    setPhase("submitting");
-    setErrorMessage("");
-    const submission = await submitOfficialRankingChallenge(challengeToSubmit.challengeId, answersToSubmit);
-    if (submission.ok) {
-      setResult(submission.value);
-      setRemainingMs(Math.max(0, challengeToSubmit.expiresAt - Date.now()));
-      setPhase("result");
-      setLeaderboardRefresh((value) => value + 1);
-      return;
-    }
-    submissionLockedRef.current = false;
-    setErrorMessage(rankingErrorMessage(submission.error));
-    setPhase(timedOut ? "error" : "playing");
-  }, []);
-
-  useEffect(() => {
-    if (phase !== "playing" || !challenge) return;
-    const update = () => {
-      const nextRemaining = Math.max(0, challenge.expiresAt - Date.now());
-      setRemainingMs(nextRemaining);
-      if (nextRemaining <= 0) {
-        window.clearInterval(timer);
-        void submitAnswers(challenge, answersRef.current, true);
-      }
-    };
-    const timer = window.setInterval(update, 100);
-    update();
-    return () => window.clearInterval(timer);
-  }, [challenge, phase, submitAnswers]);
-
-  async function start() {
+  const start = useCallback(async () => {
     const name = normalizeRapidPlayerName(playerName);
-    if (!name) return;
+    if (!name || phase === "starting") return;
     saveRapidPlayerName(name);
     setPlayerName(name);
     setPhase("starting");
     setErrorMessage("");
-    setResult(null);
-    submissionLockedRef.current = false;
-    const started = await startOfficialRankingChallenge(subjectId, name);
+    setFeedback(null);
+    setAnsweredQuestion(null);
+    setSelectedAnswer(null);
+    answerLockedRef.current = false;
+    const started = await startOfficialRankingSession(subjectId, name);
     if (!started.ok) {
       setErrorMessage(rankingErrorMessage(started.error));
       setPhase("setup");
       return;
     }
-    const initialAnswers = started.value.questions.map((question) => ({
-      questionId: question.id,
-      selected: null,
-    }));
-    answersRef.current = initialAnswers;
-    setChallenge(started.value);
-    setAnswers(initialAnswers);
-    setQuestionIndex(0);
-    setRemainingMs(Math.max(0, started.value.expiresAt - Date.now()));
+    setSession(started.value);
+    setPlayerName(started.value.alias);
+    saveRapidPlayerName(started.value.alias);
+    setResumeNotice(started.value.resumed);
     setPhase("playing");
-  }
+  }, [phase, playerName, subjectId]);
 
-  const selectAnswer = useCallback((selected: string) => {
-    if (phase !== "playing" || !currentQuestion || submissionLockedRef.current) return;
-    const nextAnswers = answersRef.current.map((answer, index) => (
-      index === questionIndex ? { ...answer, selected } : answer
-    ));
-    answersRef.current = nextAnswers;
-    setAnswers(nextAnswers);
-  }, [currentQuestion, phase, questionIndex]);
+  const answer = useCallback(async (selected: string) => {
+    if (phase !== "playing" || !session || answerLockedRef.current) return;
+    answerLockedRef.current = true;
+    const question = session.question;
+    setAnsweredQuestion(question);
+    setSelectedAnswer(selected);
+    setErrorMessage("");
+    setPhase("checking");
+    const submitted = await submitOfficialRankingAnswer(session, selected);
+    if (!submitted.ok) {
+      answerLockedRef.current = false;
+      setErrorMessage(rankingErrorMessage(submitted.error));
+      setPhase("error");
+      return;
+    }
+    setSession(submitted.value);
+    setFeedback(submitted.value.feedback);
+    setPhase("feedback");
+    if (submitted.value.improved) setLeaderboardRefresh((value) => value + 1);
+  }, [phase, session]);
 
   useEffect(() => {
     if (phase !== "playing" || !currentQuestion) return;
+    const keyboardQuestion = currentQuestion;
 
     function handleRankingNumberKey(event: KeyboardEvent) {
       if (
@@ -202,44 +153,37 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
         || event.ctrlKey
         || event.metaKey
         || event.shiftKey
-        || submissionLockedRef.current
+        || answerLockedRef.current
         || isEditableRankingKeyTarget(event.target)
       ) return;
 
-      const selected = officialRankingOptionForNumberKey(currentQuestion, event.key);
+      const selected = officialRankingOptionForNumberKey(keyboardQuestion, event.key);
       if (!selected) return;
       event.preventDefault();
-      selectAnswer(selected);
+      void answer(selected);
     }
 
     window.addEventListener("keydown", handleRankingNumberKey);
     return () => window.removeEventListener("keydown", handleRankingNumberKey);
-  }, [currentQuestion, phase, selectAnswer]);
+  }, [answer, currentQuestion, phase]);
 
-  function moveQuestion(nextIndex: number) {
-    if (phase !== "playing") return;
-    setQuestionIndex(Math.min(spec.questionCount - 1, Math.max(0, nextIndex)));
+  function nextQuestion() {
+    if (phase !== "feedback" || !session) return;
+    answerLockedRef.current = false;
+    setAnsweredQuestion(null);
+    setSelectedAnswer(null);
+    setFeedback(null);
+    setResumeNotice(false);
+    setPhase("playing");
   }
 
-  function submitNow() {
-    if (!challenge || phase !== "playing") return;
-    void submitAnswers(challenge, answersRef.current, false);
-  }
-
-  function retrySubmission() {
-    if (!challenge) return;
-    submissionLockedRef.current = false;
-    void submitAnswers(challenge, answersRef.current, true);
-  }
-
-  function reset() {
-    submissionLockedRef.current = false;
-    answersRef.current = [];
-    setChallenge(null);
-    setAnswers([]);
-    setQuestionIndex(0);
-    setRemainingMs(spec.timeLimitMs);
-    setResult(null);
+  function recoverSession() {
+    answerLockedRef.current = false;
+    setSession(null);
+    setAnsweredQuestion(null);
+    setSelectedAnswer(null);
+    setFeedback(null);
+    setResumeNotice(false);
     setErrorMessage("");
     setPhase("setup");
   }
@@ -249,7 +193,7 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
       <header className="topbar">
         <Link className="brand" href="/" aria-label="9教科の一覧へ戻る">
           <span className="brand-mark hub-brand-mark" aria-hidden="true">R/K</span>
-          <span><strong>TEST//GRID</strong><small>OFFICIAL RANKING</small></span>
+          <span><strong>TEST//GRID</strong><small>OFFICIAL STREAK RANKING</small></span>
         </Link>
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> VERSION {spec.version}</span>
@@ -259,171 +203,157 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
 
       <main className="rapid-main official-ranking-main">
         <nav className="subject-breadcrumb" aria-label="現在位置">
-          <Link href="/">科目一覧</Link><span>/</span><Link href={meta.href}>{meta.name}</Link><span>/</span><strong aria-current="page">公式ランキングテスト</strong>
+          <Link href="/">科目一覧</Link><span>/</span><Link href={meta.href}>{meta.name}</Link><span>/</span><strong aria-current="page">連続正解ランキング</strong>
         </nav>
 
         <section className="rapid-hero official-ranking-hero">
-          <div><span>FIXED RULES / {meta.name}</span><h1>条件固定の<br /><em>公式ランキングテスト</em></h1></div>
-          <p>全員が同じ20問・同じ総制限時間・同じ問題セットで挑戦します。通常の即答練習や総合問題の成績は、このランキングには入りません。</p>
+          <div><span>ENDLESS STREAK / {meta.name}</span><h1>正解をつないで、<br /><em>自己ベストを伸ばす。</em></h1></div>
+          <p>問題数と総制限時間はありません。1問ごとにサーバーで採点し、その場で正誤と解説を確認できます。中断して戻ってきても連続正解数は続き、表示問題は新しい問題へ切り替わります。</p>
         </section>
 
         {(phase === "setup" || phase === "starting") && (
-          <>
-            <section className="rapid-setup official-ranking-setup" aria-labelledby="official-ranking-setup-title">
-              <div className="rapid-section-heading">
-                <div><span>OFFICIAL RULES</span><h2 id="official-ranking-setup-title">変更できない挑戦条件</h2></div>
-                <p>開始ボタンを押して問題を受信した時点から、サーバー側でも時間を計測します。</p>
-              </div>
-              <div className="official-ranking-rules" aria-label="公式ランキングテストの固定条件">
-                <div><span>QUESTIONS</span><strong>{spec.questionCount}</strong><small>全員同じ問題数</small></div>
-                <div><span>TOTAL TIME</span><strong>{formatClock(spec.timeLimitMs)}</strong><small>全体の制限時間</small></div>
-                <div><span>QUESTION SET</span><strong>V{spec.version}</strong><small>全員同じ固定セット</small></div>
-                <div><span>ORDER</span><strong>点数 → 時間</strong><small>同点なら短時間が上位</small></div>
-              </div>
-              <div className="official-ranking-start">
-                <label>
-                  <span>ランキング表示名</span>
-                  <input type="text" maxLength={24} autoComplete="nickname" value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="例：おさと" required />
-                  <small>{normalizedPlayerName ? `「${normalizedPlayerName}」として記録します` : "1〜24文字で入力してください（必須）"}</small>
-                </label>
-                <button type="button" onClick={start} disabled={!normalizedPlayerName || phase === "starting"}>
-                  <span>{phase === "starting" ? "PREPARING" : "START OFFICIAL"}</span>
-                  <strong>{phase === "starting" ? "公式問題を準備中…" : "ランキングテストを開始 →"}</strong>
-                </button>
-              </div>
-              {errorMessage && <p className="official-ranking-error" role="alert">{errorMessage}</p>}
-              <p className="rapid-pool-note">不公平な可変設定を廃止しました。点数と経過時間は提出後にサーバーが採点し、旧ランキング記録とは混ぜません。</p>
-            </section>
-            <RapidLeaderboard boardKey={spec.boardKey} refreshToken={leaderboardRefresh} />
-          </>
+          <section className="rapid-setup official-ranking-setup" aria-labelledby="official-ranking-setup-title">
+            <div className="rapid-section-heading">
+              <div><span>STREAK RULES</span><h2 id="official-ranking-setup-title">連続正解で競うランキング</h2></div>
+              <p>同じ科目の続きが保存されている場合は、開始ボタンで現在の連続正解数から再開します。</p>
+            </div>
+            <div className="official-ranking-rules" aria-label="連続正解ランキングの条件">
+              <div><span>QUESTIONS</span><strong>∞</strong><small>問題数の上限なし</small></div>
+              <div><span>RANKING</span><strong>STREAK</strong><small>最高連続正解数で順位決定</small></div>
+              <div><span>FEEDBACK</span><strong>NOW</strong><small>1問ごとに正誤・解説</small></div>
+              <div><span>RESUME</span><strong>KEEP</strong><small>中断後も連続数を続投</small></div>
+            </div>
+            <div className="official-ranking-start">
+              <label>
+                <span>ランキング表示名</span>
+                <input type="text" maxLength={24} autoComplete="nickname" value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="例：おさと" required />
+                <small>{normalizedPlayerName ? `「${normalizedPlayerName}」として記録します` : "1〜24文字で入力してください（必須）"}</small>
+              </label>
+              <button type="button" onClick={() => void start()} disabled={!normalizedPlayerName || phase === "starting"}>
+                <span>{phase === "starting" ? "PREPARING" : "START / RESUME"}</span>
+                <strong>{phase === "starting" ? "セッションを確認中…" : "開始・続きから再開 →"}</strong>
+              </button>
+            </div>
+            {errorMessage && <p className="official-ranking-error" role="alert">{errorMessage}</p>}
+            <p className="rapid-pool-note">中断中に表示していた問題は再開時に破棄され、別の問題へ切り替わります。連続正解数と自己ベストは失われません。</p>
+          </section>
         )}
 
-        {(phase === "playing" || phase === "submitting") && challenge && currentQuestion && (
-          <section className="rapid-runner official-ranking-runner" aria-live="polite" aria-busy={phase === "submitting"}>
-            <div className="rapid-runner-status">
-              <span>QUESTION <strong>{questionIndex + 1}</strong> / {spec.questionCount}</span>
-              <span>回答済み <strong>{answeredCount}</strong> / {spec.questionCount}</span>
-              <span>未回答 <strong>{spec.questionCount - answeredCount}</strong></span>
-              <span>VERSION <strong>{spec.version}</strong></span>
-            </div>
-            <div className="rapid-timer official-ranking-total-timer" data-warning={remainingMs <= 60_000}>
-              <div><span>TOTAL TIME LEFT</span><strong>{formatClock(remainingMs)}</strong></div>
-              <progress value={remainingMs} max={spec.timeLimitMs} aria-label={`総残り時間 ${formatClock(remainingMs)}`} />
+        {(phase === "playing" || phase === "checking" || phase === "feedback") && session && displayedQuestion && (
+          <section className="rapid-runner official-ranking-runner" aria-live="polite" aria-busy={phase === "checking"}>
+            <div className="rapid-runner-status official-ranking-streak-status">
+              <span>CURRENT STREAK <strong>{session.currentStreak}</strong></span>
+              <span>BEST <strong>{session.bestStreak}</strong></span>
+              <span>ANSWERED <strong>{session.totalAnswered}</strong></span>
+              <span>CORRECT <strong>{session.totalCorrect}</strong></span>
             </div>
 
-            <nav className="official-ranking-question-nav" aria-label="問題番号">
-              {challenge.questions.map((question, index) => (
-                <button
-                  type="button"
-                  key={question.id}
-                  className={index === questionIndex ? "is-current" : answers[index]?.selected !== null ? "is-answered" : ""}
-                  aria-current={index === questionIndex ? "step" : undefined}
-                  aria-label={`第${index + 1}問${answers[index]?.selected !== null ? " 回答済み" : " 未回答"}`}
-                  onClick={() => moveQuestion(index)}
-                  disabled={phase !== "playing"}
-                >
-                  {index + 1}
-                </button>
-              ))}
-            </nav>
+            {resumeNotice && (
+              <div className="official-ranking-resume-notice" role="status">
+                <span>SESSION RESTORED</span>
+                <strong>{session.currentStreak}連続正解から続投します</strong>
+                <small>前回表示していた問題から、新しい問題へ切り替えました。</small>
+              </div>
+            )}
+
+            <div className="official-ranking-runner-actions">
+              <p><strong>{session.alias}</strong> さんの自己ベスト：{session.bestStreak}連続</p>
+              <Link href={meta.href}>中断して{meta.name}へ戻る</Link>
+            </div>
 
             <article className="rapid-question official-ranking-question">
               <header>
-                <span>{currentQuestion.topicLabel} · 難度{currentQuestion.difficulty}</span>
-                <h2><RichMathText text={currentQuestion.prompt} /></h2>
+                <span>{displayedQuestion.topicLabel} ・ 難度{displayedQuestion.difficulty}</span>
+                <h2><RichMathText text={displayedQuestion.prompt} /></h2>
               </header>
-              <RapidQuestionVisual visual={publicQuestionAsVisual(currentQuestion)} />
+              {displayedQuestion.reference?.quote && (
+                <section className="official-ranking-reference official-ranking-question-reference" aria-label="問題の参照本文">
+                  <span>{displayedQuestion.reference.label || "REFERENCE"}</span>
+                  <blockquote><RichMathText text={displayedQuestion.reference.quote} /></blockquote>
+                </section>
+              )}
+              <RapidQuestionVisual visual={displayedQuestion.visual} solution={phase === "feedback"} />
               {phase === "playing" && shortcutMaximum > 0 && (
                 <p className="rapid-keyboard-hint">
-                  <span>KEYBOARD</span><kbd>1</kbd><b>〜</b><kbd>{shortcutMaximum}</kbd> の数字キーでも回答できます
+                  <span>KEYBOARD</span><kbd>1</kbd><b>〜</b><kbd>{shortcutMaximum}</kbd> の数字キーで回答できます
                 </p>
               )}
               <div
                 className="rapid-options"
                 role="radiogroup"
                 aria-label="答えを選択"
-                style={{ "--rapid-option-count": currentQuestion.options.length } as CSSProperties}
+                style={{ "--rapid-option-count": displayedQuestion.options.length } as CSSProperties}
               >
-                {currentQuestion.options.map((option, optionIndex) => {
-                  const selected = answers[questionIndex]?.selected === option;
-                  const shortcut = officialRankingOptionShortcut(currentQuestion, option, optionIndex);
+                {displayedQuestion.options.map((option, optionIndex) => {
+                  const selected = selectedAnswer === option;
+                  const actual = feedback?.acceptedOptions.includes(option) ?? false;
+                  const className = phase === "feedback"
+                    ? selected ? (actual ? "correct" : "wrong") : actual ? "actual" : ""
+                    : selected ? "selected" : "";
+                  const shortcut = officialRankingOptionShortcut(displayedQuestion, option, optionIndex);
                   return (
                     <button
                       type="button"
                       role="radio"
                       aria-checked={selected}
                       key={option}
-                      className={selected ? "selected" : ""}
+                      className={className}
                       disabled={phase !== "playing"}
-                      onClick={() => selectAnswer(option)}
+                      onClick={() => void answer(option)}
                       aria-keyshortcuts={shortcut ?? undefined}
                     >
                       {shortcut && <span className="rapid-option-shortcut" aria-hidden="true">{shortcut}</span>}
-                      <span className="rapid-option-value"><RapidAnswerText value={option} mathOptions={currentQuestion.mathOptions} /></span>
+                      <span className="rapid-option-value"><RapidAnswerText value={option} mathOptions={displayedQuestion.mathOptions} /></span>
                     </button>
                   );
                 })}
               </div>
             </article>
 
-            <div className="official-ranking-controls">
-              <button type="button" onClick={() => moveQuestion(questionIndex - 1)} disabled={phase !== "playing" || questionIndex === 0}>← 前の問題</button>
-              {questionIndex < spec.questionCount - 1 ? (
-                <button type="button" onClick={() => moveQuestion(questionIndex + 1)} disabled={phase !== "playing"}>次の問題 →</button>
-              ) : (
-                <button className="official-ranking-submit" type="button" onClick={submitNow} disabled={phase !== "playing"}>答案を提出する</button>
-              )}
-            </div>
-            {phase === "submitting" && <p className="official-ranking-submitting" role="status">答案をサーバーで採点しています…</p>}
+            {phase === "checking" && <p className="official-ranking-submitting" role="status">この1問をサーバーで採点しています…</p>}
+
+            {phase === "feedback" && feedback && (
+              <aside className={`rapid-feedback official-ranking-feedback ${feedback.correct ? "correct" : "wrong"}`}>
+                <div>
+                  <span>{feedback.correct ? "CORRECT" : "REVIEW"}</span>
+                  <h3>{feedback.correct ? `${session.currentStreak}連続正解！` : "ここから、また連続正解をつなげよう。"}</h3>
+                  <p>あなたの回答：{feedback.selected ? <RapidAnswerText value={feedback.selected} mathOptions={feedback.mathOptions} /> : "未回答"}</p>
+                  {!feedback.correct && <p>正解：<RapidAnswerText value={feedback.answer} mathOptions={feedback.mathOptions} emphasizeRichText /></p>}
+                </div>
+                <div>
+                  <strong>解法・解説</strong>
+                  {feedback.steps.length > 0 && <ol>{feedback.steps.map((step) => <li key={step}><RichMathText text={step} /></li>)}</ol>}
+                  <p><RichMathText text={feedback.explanation} /></p>
+                  {feedback.reference?.translation && (
+                    <section className="official-ranking-reference official-ranking-translation" aria-label="参照和訳">
+                      <span>{feedback.reference.label || "REFERENCE"}</span>
+                      <p><strong>参照和訳</strong><RichMathText text={feedback.reference.translation} /></p>
+                    </section>
+                  )}
+                  <small>出題根拠：{feedback.sourceBasis}</small>
+                </div>
+                <div>
+                  <Link href={feedback.studyHref}>この問題を復習する</Link>
+                  <button type="button" onClick={nextQuestion}>次の問題へ →</button>
+                </div>
+              </aside>
+            )}
           </section>
         )}
 
         {phase === "error" && (
           <section className="rapid-result official-ranking-error-panel">
-            <span>SUBMISSION ERROR</span>
-            <h2>答案を送信できませんでした。</h2>
+            <span>SESSION ERROR</span>
+            <h2>セッションを再取得してください。</h2>
             <p role="alert">{errorMessage}</p>
-            <div><button type="button" onClick={retrySubmission}>提出を再試行</button><button type="button" onClick={reset}>新しくやり直す</button></div>
+            <div><button type="button" onClick={recoverSession}>開始画面へ戻る</button><Link className="outline-button" href={meta.href}>{meta.name}へ戻る</Link></div>
           </section>
         )}
 
-        {phase === "result" && result && (
-          <>
-            <section className="rapid-result official-ranking-result" aria-labelledby="official-ranking-result-title">
-              <div className="rapid-result-summary">
-                <div><span>OFFICIAL SCORE</span><h2 id="official-ranking-result-title">{result.correctCount}<small> / {result.questionCount}</small></h2><p>正答率 {Math.round((result.correctCount / result.questionCount) * 100)}%</p></div>
-                <div><span>SERVER TIME</span><strong>{formatDuration(result.durationMs)}</strong><p>サーバー計測</p></div>
-                <div><span>BEST STREAK</span><strong>{result.bestStreak}</strong><p>最高連続正解</p></div>
-                <button type="button" onClick={reset}>もう一度挑戦</button>
-              </div>
-              <p className="rapid-publish-status">{result.improved ? `${result.alias}さんの自己ベストを更新しました。` : `${result.alias}さんの結果を採点しました。自己ベストは維持されています。`}</p>
-
-              <div className="rapid-review-heading">
-                <span>OFFICIAL REVIEW</span><h3>全{result.questionCount}問の振り返り</h3>
-                <p>提出後に初めて正解・解法・出題根拠を表示します。間違えた問題は開いた状態です。</p>
-              </div>
-              <div className="rapid-review-list">
-                {review.map((item, index) => (
-                  <details key={item.questionId} className={item.correct ? "correct" : "wrong"} open={!item.correct}>
-                    <summary><span>{String(index + 1).padStart(2, "0")}</span><strong>{item.topicLabel}</strong><b>{item.correct ? "○ 正解" : item.selected === null ? "× 未回答" : "× 不正解"}</b></summary>
-                    <div>
-                      <h4><RichMathText text={item.prompt} /></h4>
-                      <RapidQuestionVisual visual={item.visual} solution compact />
-                      <p><span>あなたの回答</span>{item.selected ? <RapidAnswerText value={item.selected} mathOptions={item.mathOptions} /> : "未回答"}</p>
-                      <p><span>正解</span><RapidAnswerText value={item.answer} mathOptions={item.mathOptions} emphasizeRichText /></p>
-                      <aside><span>解法・解説</span><ol>{item.steps.map((step) => <li key={step}><RichMathText text={step} /></li>)}</ol><RichMathText text={item.explanation} /><small>出題根拠：{item.sourceBasis}</small></aside>
-                      <Link href={item.studyHref}>{item.correct ? "暗記帳・演習で確認" : "間違えた問題を復習 →"}</Link>
-                    </div>
-                  </details>
-                ))}
-              </div>
-            </section>
-            <RapidLeaderboard boardKey={spec.boardKey} refreshToken={leaderboardRefresh} />
-          </>
-        )}
+        <RapidLeaderboard boardKey={spec.boardKey} refreshToken={leaderboardRefresh} />
       </main>
 
-      <footer><span>TEST//GRID</span><p>FIXED QUESTIONS · FIXED TOTAL TIME · SERVER SCORING</p><span>RANK V{spec.version}</span></footer>
+      <footer><span>TEST//GRID</span><p>ENDLESS QUESTIONS ・ INSTANT FEEDBACK ・ STREAK SAVED</p><span>RANK V{spec.version}</span></footer>
     </div>
   );
 }

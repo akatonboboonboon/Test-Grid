@@ -1,29 +1,15 @@
 import type { SubjectId } from "./study-data";
 
-export const OFFICIAL_RANKING_MODE = "official-ranking-test" as const;
-export const OFFICIAL_RANKING_VERSION = 1 as const;
-export const OFFICIAL_RANKING_QUESTION_COUNT = 20 as const;
+export const OFFICIAL_RANKING_MODE = "official-ranking-streak" as const;
+export const OFFICIAL_RANKING_VERSION = 2 as const;
+export const OFFICIAL_RANKING_SCORING = "consecutive-correct" as const;
 
 export type OfficialRankingSpec = {
   subjectId: SubjectId;
   mode: typeof OFFICIAL_RANKING_MODE;
   version: typeof OFFICIAL_RANKING_VERSION;
-  questionCount: typeof OFFICIAL_RANKING_QUESTION_COUNT;
-  timeLimitMs: number;
-  seed: string;
   boardKey: string;
-};
-
-const SUBJECT_TIME_LIMITS_MS: Record<SubjectId, number> = {
-  "subject-2": 15 * 60_000,
-  network: 3 * 60_000,
-  "subject-3": 30 * 60_000,
-  "subject-4": 30 * 60_000,
-  "subject-5": 30 * 60_000,
-  "subject-6": 30 * 60_000,
-  "subject-7": 30 * 60_000,
-  "subject-8": 30 * 60_000,
-  "subject-9": 30 * 60_000,
+  scoring: typeof OFFICIAL_RANKING_SCORING;
 };
 
 export const OFFICIAL_RANKING_SUBJECT_IDS = [
@@ -43,10 +29,8 @@ function makeOfficialRankingSpec(subjectId: SubjectId): OfficialRankingSpec {
     subjectId,
     mode: OFFICIAL_RANKING_MODE,
     version: OFFICIAL_RANKING_VERSION,
-    questionCount: OFFICIAL_RANKING_QUESTION_COUNT,
-    timeLimitMs: SUBJECT_TIME_LIMITS_MS[subjectId],
-    seed: `test-grid-ranking-${subjectId}-v${OFFICIAL_RANKING_VERSION}`,
-    boardKey: `ranking:${subjectId}:v${OFFICIAL_RANKING_VERSION}`,
+    boardKey: `ranking:${subjectId}:streak:v${OFFICIAL_RANKING_VERSION}`,
+    scoring: OFFICIAL_RANKING_SCORING,
   });
 }
 
@@ -64,7 +48,7 @@ export function getOfficialRankingSpec(subjectId: SubjectId) {
 }
 
 export function officialRankingSpecFromBoardKey(value: unknown) {
-  if (typeof value !== "string" || value.length > 64) return null;
+  if (typeof value !== "string" || value.length > 80) return null;
   return OFFICIAL_RANKING_SUBJECT_IDS
     .map((subjectId) => OFFICIAL_RANKING_SPECS[subjectId])
     .find((spec) => spec.boardKey === value) ?? null;
@@ -76,9 +60,7 @@ export function officialRankingPayloadMatchesSpec(
     mode?: unknown;
     version?: unknown;
     boardKey?: unknown;
-    questionCount?: unknown;
-    timeLimitMs?: unknown;
-    seed?: unknown;
+    scoring?: unknown;
   },
   spec: OfficialRankingSpec,
 ) {
@@ -86,7 +68,5 @@ export function officialRankingPayloadMatchesSpec(
     && payload.mode === spec.mode
     && payload.version === spec.version
     && payload.boardKey === spec.boardKey
-    && payload.questionCount === spec.questionCount
-    && payload.timeLimitMs === spec.timeLimitMs
-    && payload.seed === spec.seed;
+    && payload.scoring === spec.scoring;
 }

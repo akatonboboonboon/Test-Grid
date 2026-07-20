@@ -12,6 +12,12 @@ export type EnglishVocabCard = {
   note?: string;
 };
 
+export type EnglishQuestionReference = {
+  label: string;
+  quote: string;
+  translation?: string;
+};
+
 export type EnglishQuestion = {
   id: string;
   unit: string;
@@ -25,6 +31,7 @@ export type EnglishQuestion = {
   tokens?: string[];
   explanation?: string;
   passageId?: string;
+  reference?: EnglishQuestionReference;
 };
 
 export type EnglishPassage = {
@@ -1099,8 +1106,9 @@ const PASSAGE_ORDER_QUESTIONS: EnglishQuestion[] = [
     tokens: ["The software", "can determine", "which families or genera", "new species", "belong to"],
     answer: "The software can determine which families or genera new species belong to.",
   },
-].map((question) => ({
+].map((question): EnglishQuestion => ({
   ...question,
+  format: "order",
   tokens: question.answer.trim().split(/\s+/u),
 }));
 
@@ -1117,6 +1125,65 @@ const PASSAGE_TRANSLATION_QUESTIONS: EnglishQuestion[] = ENGLISH_PASSAGES.flatMa
   })),
 );
 
+function withEnglishQuestionReference(question: EnglishQuestion): EnglishQuestion {
+  if (question.reference) return question;
+  if (question.format === "order") {
+    if (!question.id.startsWith("passage-order-")) return question;
+    const passage = ENGLISH_PASSAGES.find((candidate) => candidate.unit === question.unit);
+    const paragraphNumber = Number(question.prompt.match(/第(\d+)段落/u)?.[1]);
+    const paragraphIndex = paragraphNumber - 1;
+    if (!passage || !Number.isInteger(paragraphIndex) || !passage.paragraphs[paragraphIndex]) {
+      return question;
+    }
+    const contextStart = Math.max(0, paragraphIndex - 1);
+    const contextEnd = Math.min(passage.paragraphs.length, paragraphIndex + 2);
+    const context = passage.paragraphs.slice(contextStart, contextEnd);
+    const quote = context.map((paragraph, offset) => {
+      const actualIndex = contextStart + offset;
+      if (actualIndex !== paragraphIndex) return `${actualIndex + 1}. ${paragraph.en}`;
+      const redacted = paragraph.en.includes(question.answer)
+        ? paragraph.en.replace(question.answer, "［並べ替え対象文］")
+        : "［並べ替え対象文］";
+      return `${actualIndex + 1}. ${redacted}`;
+    }).join("\n");
+    const translation = context
+      .map((paragraph, offset) => `${contextStart + offset + 1}. ${paragraph.ja}`)
+      .join("\n");
+    return {
+      ...question,
+      reference: {
+        label: `${passage.title} 第${paragraphNumber}段落の周辺本文（対象文は伏せています）`,
+        quote,
+        translation,
+      },
+    };
+  }
+  if (!question.passageId) return question;
+
+  const passage = ENGLISH_PASSAGES.find((candidate) => candidate.id === question.passageId);
+  if (!passage) return question;
+  const sourcePrompt = question.prompt
+    .replace(/^次の英文を自然な日本語に訳す：/u, "")
+    .trim();
+  const paragraphIndex = passage.paragraphs.findIndex((paragraph) => (
+    paragraph.en === sourcePrompt
+    || paragraph.en.includes(sourcePrompt)
+    || sourcePrompt.includes(paragraph.en)
+    || paragraph.ja === question.answer
+  ));
+  const paragraph = paragraphIndex >= 0 ? passage.paragraphs[paragraphIndex] : undefined;
+  return {
+    ...question,
+    reference: {
+      label: paragraph
+        ? `${passage.title} 第${paragraphIndex + 1}段落`
+        : `${passage.title} 本文`,
+      quote: paragraph?.en ?? passage.paragraphs.map((item) => item.en).join("\n"),
+      translation: paragraph?.ja ?? passage.paragraphs.map((item) => item.ja).join("\n"),
+    },
+  };
+}
+
 export const ENGLISH_QUESTIONS: EnglishQuestion[] = [
   ...CORE_QUESTIONS,
   ...BUILT_ORDER_QUESTIONS,
@@ -1124,4 +1191,6 @@ export const ENGLISH_QUESTIONS: EnglishQuestion[] = [
   ...VOCAB_QUESTIONS,
   ...REVERSE_VOCAB_QUESTIONS,
   ...PASSAGE_TRANSLATION_QUESTIONS,
-].filter((question) => question.unit !== "exam-sample" && question.unit !== "ch19");
+]
+  .filter((question) => question.unit !== "exam-sample" && question.unit !== "ch19")
+  .map(withEnglishQuestionReference);

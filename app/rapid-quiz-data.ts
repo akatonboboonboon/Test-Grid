@@ -12,7 +12,7 @@ import { STATISTICS_FORMULAS, STATISTICS_QUESTIONS } from "./statistics-data";
 import { STATISTICS_EXAM_LEVEL_QUESTIONS } from "./statistics-expected-exams-data";
 import { THERMODYNAMICS_EXAM_LEVEL_QUESTIONS, THERMODYNAMICS_FORMULAS, THERMODYNAMICS_QUESTIONS, type ThermodynamicsDiagramKind } from "./thermodynamics-data";
 import { DEFAULT_SUBJECTS, type SubjectId } from "./study-data";
-import type { SmartControlDiagramId } from "./smart-control-figure-data";
+import { smartControlDiagramIdFor, type SmartControlDiagramId } from "./smart-control-figure-data";
 
 export type RapidQuestionVisual =
   | { type: "mechanical-dynamics"; kind: MechanicalDynamicsDiagramKind }
@@ -20,6 +20,12 @@ export type RapidQuestionVisual =
   | { type: "material-mechanics"; kind: MaterialMechanicsDiagramKind }
   | { type: "smart-control"; kind: SmartControlDiagramId }
   | { type: "digital-circuit"; kind: DigitalCircuitAnyDiagramKind };
+
+export type RapidQuestionReference = {
+  label: string;
+  quote: string;
+  translation?: string;
+};
 
 export type RapidQuestion = {
   id: string;
@@ -33,6 +39,9 @@ export type RapidQuestion = {
   studyHref: string;
   mathOptions?: boolean;
   visual?: RapidQuestionVisual;
+  reference?: RapidQuestionReference;
+  requiresVisual?: boolean;
+  requiresReference?: boolean;
   difficulty: 1 | 2 | 3;
   recommendedSeconds: number;
   steps: string[];
@@ -62,6 +71,12 @@ type ChoiceSeed = {
   acceptedOptions?: string[];
   mathOptions?: boolean;
   visual?: RapidQuestionVisual;
+  reference?: RapidQuestionReference;
+  requiresVisual?: boolean;
+  requiresReference?: boolean;
+  choiceGroup?: string;
+  choiceFormat?: string;
+  answerShape?: string;
   difficulty?: 1 | 2 | 3;
   recommendedSeconds?: number;
   steps?: string[];
@@ -109,19 +124,89 @@ function rotated<T>(values: T[], amount: number) {
   return [...values.slice(offset), ...values.slice(0, offset)];
 }
 
+function inferAnswerShape(value: string) {
+  const trimmed = value.trim();
+  if (/^[TF]$/u.test(trimmed)) return "truth-value";
+  if (/^[01](?:[\s,→>\-]*[01])+$/u.test(trimmed)) return "binary-sequence";
+
+  const hasJapanese = /[\u3040-\u30ff\u3400-\u9fff]/u.test(trimmed);
+  const latinWords = trimmed.match(/[A-Za-z]+(?:['’][A-Za-z]+)?/gu)?.length ?? 0;
+  const hasFormulaSyntax = /\\(?:begin|frac|sqrt|mathrm|text)|[=^_]|[+\-×÷*/]\s*\d/u.test(trimmed);
+  if (hasFormulaSyntax && !hasJapanese) {
+    return /\\begin|,|\\quad|(?:\\to|→).*(?:\\to|→)/u.test(trimmed)
+      ? "math:compound"
+      : "math:expression";
+  }
+
+  const language = hasJapanese ? "ja" : latinWords > 0 ? "en" : "symbol";
+  const characterCount = [...trimmed].length;
+  const granularity = /[.!?。！？]$/u.test(trimmed) || latinWords >= 7 || characterCount >= 32
+    ? "sentence"
+    : latinWords >= 2 || characterCount >= 9
+      ? "phrase"
+      : "term";
+  return `${language}:${granularity}`;
+}
+
+function choiceCompatibilityKey(seed: ChoiceSeed) {
+  const group = seed.choiceGroup ?? seed.topicLabel;
+  const format = seed.choiceFormat ?? (seed.mathOptions ? "math" : "text");
+  const shape = seed.answerShape ?? inferAnswerShape(seed.answer);
+  return `${group}\u0000${format}\u0000${shape}`;
+}
+
+function broadChoiceCompatibilityKey(seed: ChoiceSeed) {
+  const format = seed.choiceFormat ?? (seed.mathOptions ? "math" : "text");
+  const shape = seed.answerShape ?? inferAnswerShape(seed.answer);
+  return [format, shape].join(String.fromCharCode(0));
+}
+
+function shapeChoiceCompatibilityKey(seed: ChoiceSeed) {
+  return seed.answerShape ?? inferAnswerShape(seed.answer);
+}
+
 function buildChoicePool(subjectId: SubjectId, seeds: ChoiceSeed[]): RapidQuestion[] {
-  const answerBank = unique(seeds.flatMap((seed) => seed.acceptedOptions ?? [seed.answer]));
-  return seeds.map((seed, seedIndex) => {
-    const supplied = unique(seed.options ?? []);
-    const distractorBank = unique([
-      ...supplied,
-      ...rotated(answerBank, stableHash(seed.id) % Math.max(1, answerBank.length)),
-    ]).filter((answer) => !(seed.acceptedOptions ?? [seed.answer]).includes(answer));
-    const options = unique([
+  const answersByCompatibility = new Map<string, string[]>();
+  const answersByBroadCompatibility = new Map<string, string[]>();
+  const answersByShapeCompatibility = new Map<string, string[]>();
+  seeds.forEach((seed) => {
+    const key = choiceCompatibilityKey(seed);
+    answersByCompatibility.set(key, unique([
+      ...(answersByCompatibility.get(key) ?? []),
       seed.answer,
-      ...distractorBank.slice(0, Math.max(1, 4 - 1)),
+    ]));
+    const broadKey = broadChoiceCompatibilityKey(seed);
+    answersByBroadCompatibility.set(broadKey, unique([
+      ...(answersByBroadCompatibility.get(broadKey) ?? []),
+      seed.answer,
+    ]));
+    const shapeKey = shapeChoiceCompatibilityKey(seed);
+    answersByShapeCompatibility.set(shapeKey, unique([
+      ...(answersByShapeCompatibility.get(shapeKey) ?? []),
+      seed.answer,
+    ]));
+  });
+
+  return seeds.map((seed, seedIndex) => {
+    const acceptedOptions = unique([seed.answer, ...(seed.acceptedOptions ?? [])]);
+    const supplied = unique(seed.options ?? []);
+    const compatibleAnswers = unique([
+      ...(answersByCompatibility.get(choiceCompatibilityKey(seed)) ?? []),
+      ...(answersByBroadCompatibility.get(broadChoiceCompatibilityKey(seed)) ?? []),
+      ...(answersByShapeCompatibility.get(shapeChoiceCompatibilityKey(seed)) ?? []),
     ]);
-    while (options.length < 2) options.push(`別の選択肢 ${options.length}`);
+    const compatibleDistractors = rotated(
+      compatibleAnswers,
+      stableHash(seed.id) % Math.max(1, compatibleAnswers.length),
+    ).filter((answer) => !acceptedOptions.includes(answer));
+
+    let options = supplied.length >= 2
+      ? supplied.slice(0, 4)
+      : unique([...supplied, seed.answer, ...compatibleDistractors]).slice(0, 4);
+    if (!options.some((option) => acceptedOptions.includes(option))) {
+      options = unique([...options.slice(0, 3), seed.answer]).slice(0, 4);
+    }
+
     return {
       ...seed,
       subjectId,
@@ -130,8 +215,8 @@ function buildChoicePool(subjectId: SubjectId, seeds: ChoiceSeed[]): RapidQuesti
       steps: seed.steps?.length ? seed.steps : ["条件を整理する。", "必要な関係式または本文根拠を適用する。", "単位・符号・文脈を検算する。"],
       sourceBasis: seed.sourceBasis ?? "読み込み済み試験範囲の確認問題",
       studyHref: flashcardSearchHref(subjectId, seed.prompt),
-      acceptedOptions: unique(seed.acceptedOptions ?? [seed.answer]),
-      options: rotated(options.slice(0, 4), (stableHash(seed.id) + seedIndex) % Math.min(4, options.length)),
+      acceptedOptions,
+      options: rotated(options, (stableHash(seed.id) + seedIndex) % Math.max(1, options.length)),
     };
   });
 }
@@ -143,6 +228,7 @@ type ExamLevelRapidSource = {
   unit?: string;
   group?: string;
   genre?: string;
+  format?: string;
   difficulty?: 1 | 2 | 3;
   prompt: string;
   context?: string;
@@ -154,6 +240,8 @@ type ExamLevelRapidSource = {
   formula?: string;
   steps?: string[];
   explanation?: string;
+  reference?: RapidQuestionReference;
+  requiresVisual?: boolean;
 };
 
 const ACTIVE_ENGLISH_RAPID_GROUPS = new Set([
@@ -202,6 +290,18 @@ function numericRapidOptions(question: ExamLevelRapidSource) {
   ]);
 }
 
+function rapidPromptRequiresVisual(question: ExamLevelRapidSource) {
+  const text = [question.context, question.prompt].filter(Boolean).join(" ");
+  return /(?:下図|上図|次の図|図から|図に示|図を見|図示|回路図|波形図|\bfigure\b)/iu.test(text);
+}
+
+function rapidQuestionRequiresReference(subjectId: SubjectId, question: ExamLevelRapidSource, topicLabel: string) {
+  if (subjectId !== "subject-2") return false;
+  return question.format === "order"
+    || question.format === "translation"
+    || /(?:True\s*\/\s*False|本文|長文|内容理解|和訳|翻訳|抜き取り|並び替え|語順整序)/iu.test(topicLabel);
+}
+
 function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource, visual?: RapidQuestionVisual): ChoiceSeed {
   const steps = question.steps?.filter(Boolean) ?? [];
   const formulaNote = question.formula ? `使用式：\\(${question.formula}\\)` : "";
@@ -209,6 +309,11 @@ function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource, vis
   const topicLabel = question.group ?? question.genre ?? question.topicId ?? question.topic ?? question.unit ?? "本番水準";
   const options = question.options?.length ? question.options : numericRapidOptions(question);
   const optionValues = options?.length ? options : [question.answer];
+  const answerShape = Number.isFinite(question.numericAnswer)
+    ? `number:${question.expectedUnit?.trim() || "unitless"}`
+    : inferAnswerShape(question.answer);
+  const requiresVisual = question.requiresVisual ?? (Boolean(visual) || rapidPromptRequiresVisual(question));
+  const requiresReference = rapidQuestionRequiresReference(subjectId, question, topicLabel);
   const mathOptions = subjectId !== "subject-2"
     && optionValues.every((option) => !/[\u3000-\u9fff。、]/u.test(option));
   return {
@@ -222,6 +327,12 @@ function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource, vis
     studyHref: `/subjects/${subjectId}?mode=practice`,
     mathOptions,
     visual,
+    reference: question.reference,
+    requiresVisual,
+    requiresReference,
+    choiceGroup: topicLabel,
+    choiceFormat: question.format ?? (Number.isFinite(question.numericAnswer) ? "number" : "text"),
+    answerShape,
     difficulty: question.difficulty ?? 3,
     recommendedSeconds: subjectId === "subject-2" ? 60 : 90,
     steps: steps.length >= 2 ? steps : ["条件・本文根拠を整理する。", "複数の計算または判断を順に行う。", "答えを元の条件へ戻して検算する。"],
@@ -250,8 +361,10 @@ const thermodynamicsVisual = (question: { diagram?: ThermodynamicsDiagramKind })
   question.diagram ? { type: "thermodynamics", kind: question.diagram } : undefined;
 const materialMechanicsVisual = (question: { diagram?: MaterialMechanicsDiagramKind }): RapidQuestionVisual | undefined =>
   question.diagram ? { type: "material-mechanics", kind: question.diagram } : undefined;
-const smartControlVisual = (question: { diagramId?: SmartControlDiagramId }): RapidQuestionVisual | undefined =>
-  question.diagramId ? { type: "smart-control", kind: question.diagramId } : undefined;
+const smartControlVisual = (question: { id: string; diagramId?: SmartControlDiagramId }): RapidQuestionVisual | undefined => {
+  const diagramId = smartControlDiagramIdFor(question);
+  return diagramId ? { type: "smart-control", kind: diagramId } : undefined;
+};
 const digitalCircuitVisual = (question: { diagram?: DigitalCircuitAnyDiagramKind }): RapidQuestionVisual | undefined =>
   question.diagram ? { type: "digital-circuit", kind: question.diagram } : undefined;
 
@@ -283,19 +396,15 @@ function formulaCardPool<T extends ComprehensiveFormulaCard>(
   cards: readonly T[],
   getVisual?: (card: T) => RapidQuestionVisual | undefined,
 ) {
-  const formulaBank = unique(cards.map((card) => card.formula));
   return buildChoicePool(subjectId, cards.map((card) => ({
     id: `rapid-card-${card.id}`,
     topicLabel: `${card.title} / 暗記・公式`,
     prompt: card.prompt,
     answer: card.formula,
-    options: [
-      card.formula,
-      ...rotated(formulaBank, stableHash(card.id) % Math.max(1, formulaBank.length))
-        .filter((formula) => formula !== card.formula)
-        .slice(0, 3),
-    ],
     acceptedOptions: [card.formula],
+    choiceGroup: "formula-card",
+    choiceFormat: "formula",
+    answerShape: inferAnswerShape(card.formula),
     explanation: [
       card.explanation,
       `覚え方：${card.cue}`,
@@ -305,6 +414,7 @@ function formulaCardPool<T extends ComprehensiveFormulaCard>(
     studyHref: `/subjects/${subjectId}?mode=cards`,
     mathOptions: true,
     visual: getVisual?.(card),
+    requiresVisual: Boolean(getVisual?.(card)),
     difficulty: 3 as const,
     recommendedSeconds: 45,
     steps: ["問いの条件・記号を整理する。", `手掛かり「${card.cue}」から公式・定義を再現する。`, "各記号の意味と適用条件を確認する。"],
@@ -415,6 +525,18 @@ const STATIC_POOLS: Record<SubjectId, RapidQuestion[]> = {
 
 export function getStaticRapidPool(subjectId: SubjectId) {
   return STATIC_POOLS[subjectId];
+}
+
+export function isRankingEligibleRapidQuestion(question: RapidQuestion) {
+  const hasSelectableCorrectAnswer = question.options.length >= 2
+    && question.options.some((option) => question.acceptedOptions.includes(option));
+  const hasRequiredVisual = !question.requiresVisual || Boolean(question.visual);
+  const hasRequiredReference = !question.requiresReference || Boolean(question.reference?.quote.trim());
+  return hasSelectableCorrectAnswer && hasRequiredVisual && hasRequiredReference;
+}
+
+export function getOfficialRankingEligiblePool(subjectId: SubjectId) {
+  return getStaticRapidPool(subjectId).filter(isRankingEligibleRapidQuestion);
 }
 
 const COMPREHENSIVE_POOLS: Record<SubjectId, RapidQuestion[]> = {

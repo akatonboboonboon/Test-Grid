@@ -1,10 +1,5 @@
 import {
-  getOfficialRankingSpec,
-  type OfficialRankingSpec,
-} from "./official-ranking-config";
-import { OFFICIAL_RANKING_QUESTION_IDS } from "./official-ranking-question-ids";
-import {
-  getStaticRapidPool,
+  getOfficialRankingEligiblePool,
   type RapidQuestion,
 } from "./rapid-quiz-data";
 import type { SubjectId } from "./study-data";
@@ -13,6 +8,11 @@ export type OfficialRankingResponse = {
   questionId: string;
   selected: string | null;
 };
+
+export type PublicOfficialRankingReference = Pick<
+  NonNullable<RapidQuestion["reference"]>,
+  "label" | "quote"
+>;
 
 export type PublicOfficialRankingQuestion = Pick<
   RapidQuestion,
@@ -25,13 +25,15 @@ export type PublicOfficialRankingQuestion = Pick<
   | "visual"
   | "difficulty"
   | "recommendedSeconds"
->;
+> & {
+  reference?: PublicOfficialRankingReference;
+};
 
-export type OfficialRankingReviewItem = {
+export type OfficialRankingFeedback = {
   questionId: string;
   prompt: string;
   topicLabel: string;
-  selected: string | null;
+  selected: string;
   correct: boolean;
   answer: string;
   acceptedOptions: string[];
@@ -41,7 +43,10 @@ export type OfficialRankingReviewItem = {
   studyHref: string;
   mathOptions?: boolean;
   visual?: RapidQuestion["visual"];
+  reference: RapidQuestion["reference"];
 };
+
+export type OfficialRankingReviewItem = OfficialRankingFeedback;
 
 export function toPublicOfficialRankingQuestion(
   question: RapidQuestion,
@@ -51,77 +56,58 @@ export function toPublicOfficialRankingQuestion(
     subjectId: question.subjectId,
     topicLabel: question.topicLabel,
     prompt: question.prompt,
-    options: question.options,
+    options: [...question.options],
     mathOptions: question.mathOptions,
     visual: question.visual,
     difficulty: question.difficulty,
     recommendedSeconds: question.recommendedSeconds,
+    reference: question.reference
+      ? { label: question.reference.label, quote: question.reference.quote }
+      : undefined,
   };
 }
 
 export function getOfficialRankingQuestions(subjectId: SubjectId): RapidQuestion[] {
-  const spec = getOfficialRankingSpec(subjectId);
-  const byId = new Map(getStaticRapidPool(subjectId).map((question) => [question.id, question]));
-  const ids = OFFICIAL_RANKING_QUESTION_IDS[subjectId];
-  if (ids.length !== spec.questionCount || new Set(ids).size !== spec.questionCount) {
-    throw new Error(`Official ranking v${spec.version} for ${subjectId} is not a unique ${spec.questionCount}-question set.`);
+  const questions = getOfficialRankingEligiblePool(subjectId);
+  if (!questions.length || new Set(questions.map((question) => question.id)).size !== questions.length) {
+    throw new Error(`Official ranking eligible pool for ${subjectId} must contain unique questions.`);
   }
-  return ids.map((id) => {
-    const question = byId.get(id);
-    if (!question) throw new Error(`Official ranking question ${id} is missing from ${subjectId}.`);
-    return question;
-  });
+  return questions;
 }
 
-export function getOfficialRankingQuestionIds(subjectId: SubjectId) {
-  return [...OFFICIAL_RANKING_QUESTION_IDS[subjectId]];
+export function getOfficialRankingQuestion(subjectId: SubjectId, questionId: string) {
+  return getOfficialRankingQuestions(subjectId).find((question) => question.id === questionId) ?? null;
 }
 
-export function officialRankingQuestionSetMatches(
-  subjectId: SubjectId,
-  questionIds: readonly unknown[],
+export function updateOfficialRankingStreak(
+  currentStreak: number,
+  bestStreak: number,
+  correct: boolean,
 ) {
-  const expected = OFFICIAL_RANKING_QUESTION_IDS[subjectId];
-  return questionIds.length === expected.length
-    && questionIds.every((questionId, index) => questionId === expected[index]);
+  const nextCurrent = correct ? currentStreak + 1 : 0;
+  return {
+    currentStreak: nextCurrent,
+    bestStreak: Math.max(currentStreak, bestStreak, nextCurrent),
+  };
 }
 
-export function scoreOfficialRankingResponses(
-  spec: OfficialRankingSpec,
-  responses: readonly OfficialRankingResponse[],
-) {
-  const questions = getOfficialRankingQuestions(spec.subjectId);
-  let correctCount = 0;
-  let streak = 0;
-  let bestStreak = 0;
-  const review: OfficialRankingReviewItem[] = [];
-  for (let index = 0; index < questions.length; index += 1) {
-    const question = questions[index];
-    const response = responses[index];
-    const selected = response?.questionId === question.id ? response.selected : null;
-    const correct = selected !== null && question.acceptedOptions.includes(selected);
-    if (correct) {
-      correctCount += 1;
-      streak += 1;
-      bestStreak = Math.max(bestStreak, streak);
-    } else {
-      streak = 0;
-    }
-    review.push({
-      questionId: question.id,
-      prompt: question.prompt,
-      topicLabel: question.topicLabel,
-      selected,
-      correct,
-      answer: question.answer,
-      acceptedOptions: [...question.acceptedOptions],
-      explanation: question.explanation,
-      steps: [...question.steps],
-      sourceBasis: question.sourceBasis,
-      studyHref: question.studyHref,
-      mathOptions: question.mathOptions,
-      visual: question.visual,
-    });
-  }
-  return { correctCount, bestStreak, review };
+export function scoreOfficialRankingAnswer(question: RapidQuestion, selected: string) {
+  const correct = question.acceptedOptions.includes(selected);
+  const feedback: OfficialRankingFeedback = {
+    questionId: question.id,
+    prompt: question.prompt,
+    topicLabel: question.topicLabel,
+    selected,
+    correct,
+    answer: question.answer,
+    acceptedOptions: [...question.acceptedOptions],
+    explanation: question.explanation,
+    steps: [...question.steps],
+    sourceBasis: question.sourceBasis,
+    studyHref: question.studyHref,
+    mathOptions: question.mathOptions,
+    visual: question.visual,
+    reference: question.reference,
+  };
+  return { correct, feedback };
 }

@@ -5,7 +5,6 @@ import {
   type OfficialRankingSpec,
 } from "./official-ranking-config";
 import type {
-  OfficialRankingResponse,
   OfficialRankingReviewItem,
   PublicOfficialRankingQuestion,
 } from "./official-ranking-questions";
@@ -17,25 +16,35 @@ import {
 import { RAPID_CLIENT_TOKEN_HEADER } from "./rapid-ranking-profile";
 import type { SubjectId } from "./study-data";
 
-export type OfficialRankingChallenge = {
-  challengeId: string;
-  spec: OfficialRankingSpec;
-  startedAt: number;
-  expiresAt: number;
-  questions: PublicOfficialRankingQuestion[];
+export type OfficialRankingReference = {
+  label: string;
+  quote: string;
+  translation?: string;
 };
 
-export type OfficialRankingResult = {
-  saved: true;
-  improved: boolean;
-  nameUpdated: boolean;
+export type OfficialRankingFeedback = OfficialRankingReviewItem & {
+  reference?: OfficialRankingReference;
+};
+
+export type OfficialRankingSessionState = {
+  sessionId: string;
+  attemptId: string;
+  spec: OfficialRankingSpec;
   alias: string;
-  boardKey: string;
-  correctCount: number;
-  questionCount: number;
+  currentStreak: number;
   bestStreak: number;
-  durationMs: number;
-  review: OfficialRankingReviewItem[];
+  totalAnswered: number;
+  totalCorrect: number;
+  question: PublicOfficialRankingQuestion;
+};
+
+export type OfficialRankingSession = OfficialRankingSessionState & {
+  resumed: boolean;
+};
+
+export type OfficialRankingAnswerResult = OfficialRankingSessionState & {
+  feedback: OfficialRankingFeedback;
+  improved: boolean;
 };
 
 export type OfficialRankingRequest<T> =
@@ -61,10 +70,18 @@ function officialHeaders() {
   };
 }
 
-export async function startOfficialRankingChallenge(
+function validStateForSubject(state: OfficialRankingSessionState, subjectId: SubjectId) {
+  const expected = getOfficialRankingSpec(subjectId);
+  return state.spec?.boardKey === expected.boardKey
+    && state.question?.subjectId === subjectId
+    && typeof state.sessionId === "string"
+    && typeof state.attemptId === "string";
+}
+
+export async function startOfficialRankingSession(
   subjectId: SubjectId,
   playerName?: string,
-): Promise<OfficialRankingRequest<OfficialRankingChallenge>> {
+): Promise<OfficialRankingRequest<OfficialRankingSession>> {
   const rankingName = normalizeRapidPlayerName(playerName)
     ?? loadRapidRankingProfile()?.rankingName
     ?? undefined;
@@ -73,32 +90,31 @@ export async function startOfficialRankingChallenge(
     headers: officialHeaders(),
     body: JSON.stringify({ subjectId, ...(rankingName ? { rankingName } : {}) }),
   });
-  const result = await readRequest<OfficialRankingChallenge>(response);
+  const result = await readRequest<OfficialRankingSession>(response);
   if (!result.ok) return result;
-  const expected = getOfficialRankingSpec(subjectId);
-  const challenge = result.value;
-  if (
-    challenge.spec.boardKey !== expected.boardKey
-    || challenge.spec.mode !== expected.mode
-    || challenge.spec.version !== expected.version
-    || challenge.spec.questionCount !== expected.questionCount
-    || challenge.spec.timeLimitMs !== expected.timeLimitMs
-    || challenge.spec.seed !== expected.seed
-    || challenge.questions.length !== expected.questionCount
-  ) {
-    return { ok: false, status: 502, error: "INVALID_OFFICIAL_CHALLENGE" };
-  }
-  return result;
+  return validStateForSubject(result.value, subjectId)
+    ? result
+    : { ok: false, status: 502, error: "INVALID_OFFICIAL_SESSION" };
 }
 
-export async function submitOfficialRankingChallenge(
-  challengeId: string,
-  answers: readonly OfficialRankingResponse[],
-): Promise<OfficialRankingRequest<OfficialRankingResult>> {
+export async function submitOfficialRankingAnswer(
+  session: Pick<OfficialRankingSessionState, "sessionId" | "attemptId" | "question" | "spec">,
+  selected: string,
+): Promise<OfficialRankingRequest<OfficialRankingAnswerResult>> {
   const response = await fetch("/api/leaderboard", {
     method: "PUT",
     headers: officialHeaders(),
-    body: JSON.stringify({ challengeId, answers }),
+    body: JSON.stringify({
+      subjectId: session.spec.subjectId,
+      sessionId: session.sessionId,
+      attemptId: session.attemptId,
+      questionId: session.question.id,
+      selected,
+    }),
   });
-  return readRequest<OfficialRankingResult>(response);
+  const result = await readRequest<OfficialRankingAnswerResult>(response);
+  if (!result.ok) return result;
+  return validStateForSubject(result.value, session.spec.subjectId)
+    ? result
+    : { ok: false, status: 502, error: "INVALID_OFFICIAL_SESSION" };
 }

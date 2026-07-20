@@ -10058,7 +10058,7 @@ footer p {
   }
 }
 
-/* Fixed-condition, server-scored subject ranking */
+/* Endless, server-scored subject streak ranking */
 .official-ranking-main {
   overflow: hidden;
 }
@@ -10206,52 +10206,67 @@ footer p {
   padding: 12px 14px;
 }
 
-.official-ranking-total-timer {
-  background: rgba(11, 14, 19, 0.055);
-  border: 1px solid var(--line-dark);
-  padding: 14px;
-}
-
-.official-ranking-total-timer > div {
-  justify-content: space-between;
-}
-
-.official-ranking-total-timer strong {
-  font-size: clamp(32px, 6vw, 58px);
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.official-ranking-question-nav {
-  display: grid;
-  gap: 5px;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
-  margin: 16px 0;
-}
-
-.official-ranking-question-nav button {
-  background: #fffdf7;
-  border: 1px solid var(--line-dark);
-  color: rgba(11, 14, 19, 0.6);
-  cursor: pointer;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 900;
-  min-height: 36px;
-}
-
-.official-ranking-question-nav button.is-answered {
-  background: #dff4ce;
-  border-color: var(--ink);
-  color: var(--ink);
-}
-
-.official-ranking-question-nav button.is-current {
+.official-ranking-streak-status > span:first-child {
   background: var(--ink);
-  border-color: var(--ink);
+  color: rgba(244, 240, 230, 0.7);
+}
+
+.official-ranking-streak-status > span:first-child strong {
   color: var(--rapid-accent);
-  outline: 3px solid var(--rapid-accent);
-  outline-offset: -4px;
+  font-size: 22px;
+}
+
+.official-ranking-resume-notice {
+  background: #dff4ce;
+  border: 2px solid var(--ink);
+  border-left: 9px solid #159657;
+  display: grid;
+  gap: 4px;
+  margin: 14px 0;
+  padding: 13px 15px;
+}
+
+.official-ranking-resume-notice > span,
+.official-ranking-resume-notice > small {
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
+.official-ranking-resume-notice > span {
+  color: #126f45;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+}
+
+.official-ranking-resume-notice > strong {
+  font-size: 17px;
+}
+
+.official-ranking-resume-notice > small {
+  color: rgba(11, 14, 19, 0.58);
+}
+
+.official-ranking-runner-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin: 14px 0;
+}
+
+.official-ranking-runner-actions p {
+  color: rgba(11, 14, 19, 0.62);
+  font-size: 10px;
+  margin: 0;
+}
+
+.official-ranking-runner-actions a {
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 900;
+  padding: 10px 13px;
+  text-decoration: none;
 }
 
 .official-ranking-question .rapid-options button.selected {
@@ -10262,14 +10277,6 @@ footer p {
   outline-offset: -5px;
 }
 
-.official-ranking-controls {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 12px;
-}
-
-.official-ranking-controls button,
 .official-ranking-error-panel button {
   background: #fffdf7;
   border: 2px solid var(--ink);
@@ -10279,10 +10286,6 @@ footer p {
   font-weight: 900;
   min-height: 50px;
   padding: 12px 15px;
-}
-
-.official-ranking-controls .official-ranking-submit {
-  background: var(--rapid-accent);
 }
 
 .official-ranking-submitting {
@@ -10325,6 +10328,55 @@ footer p {
   border-top: 5px solid var(--rapid-accent);
 }
 
+.official-ranking-feedback {
+  background: #fffdf7;
+}
+
+.official-ranking-reference {
+  background: rgba(85, 221, 224, 0.12);
+  border-left: 5px solid var(--rapid-accent);
+  margin: 15px 0;
+  padding: 13px 15px;
+}
+
+.official-ranking-reference > span {
+  color: rgba(11, 14, 19, 0.52);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.official-ranking-reference blockquote {
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.75;
+  margin: 8px 0;
+}
+
+.official-ranking-reference > p {
+  border-top: 1px solid rgba(11, 14, 19, 0.2);
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+}
+
+.official-ranking-reference > p > strong {
+  font-size: 9px;
+}
+
+.rapid-leaderboard li > b {
+  background: var(--ink);
+  color: var(--rapid-accent);
+  padding: 6px 9px;
+}
+
+.rapid-leaderboard li > b > em {
+  font-size: 17px;
+  font-style: normal;
+}
+
 @media (max-width: 800px) {
   .official-ranking-rules {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -10336,6 +10388,15 @@ footer p {
 
   .official-ranking-start > button {
     min-height: 82px;
+  }
+
+  .official-ranking-runner-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .official-ranking-runner-actions a {
+    text-align: center;
   }
 }
 
@@ -10350,14 +10411,6 @@ footer p {
 
   .official-ranking-rules > div {
     min-height: 106px;
-  }
-
-  .official-ranking-question-nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  .official-ranking-controls {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .official-ranking-error-panel > div {

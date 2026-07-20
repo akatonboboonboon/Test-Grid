@@ -195,6 +195,32 @@ function quote(unit: EnglishExpectedUnit, paragraph: number) {
   return { label: `${UNIT_LABELS[unit]}・本文第${paragraph}段落`, paragraph, quote: source.en, translation: source.ja };
 }
 
+function redactedOrderQuote(unit: EnglishExpectedUnit, paragraph: number, answer: string) {
+  const passage = ENGLISH_PASSAGES.find((candidate) => candidate.unit === unit);
+  const targetIndex = paragraph - 1;
+  if (!passage || !passage.paragraphs[targetIndex]) {
+    throw new Error(`Passage reference not found: ${unit} paragraph ${paragraph}`);
+  }
+  const contextStart = Math.max(0, targetIndex - 1);
+  const contextEnd = Math.min(passage.paragraphs.length, targetIndex + 2);
+  const context = passage.paragraphs.slice(contextStart, contextEnd);
+  return {
+    label: `${UNIT_LABELS[unit]}・本文第${paragraph}段落の周辺（対象文は伏せています）`,
+    paragraph,
+    quote: context.map((item, offset) => {
+      const actualIndex = contextStart + offset;
+      if (actualIndex !== targetIndex) return `${actualIndex + 1}. ${item.en}`;
+      const redacted = item.en.includes(answer)
+        ? item.en.replace(answer, "［並べ替え対象文］")
+        : "［並べ替え対象文］";
+      return `${actualIndex + 1}. ${redacted}`;
+    }).join("\n"),
+    translation: context
+      .map((item, offset) => `${contextStart + offset + 1}. ${item.ja}`)
+      .join("\n"),
+  };
+}
+
 function trueFalse(
   unit: EnglishExpectedUnit,
   id: string,
@@ -501,7 +527,7 @@ function passageOrderBase(id: string): BaseQuestion {
     genre: "本文主要文法・一文整序",
     tokens: base.answer.trim().split(/\s+/u),
     explanation: `模範語順：${base.answer}\n\n語順の理由：${ORDER_GRAMMAR_NOTES[id]}\n\n各語を一語ずつ確認し、主語→動詞→目的語・補語→修飾語の骨格を先に作ります。`,
-    reference: quote(base.unit, paragraph),
+    reference: redactedOrderQuote(base.unit, paragraph, base.answer),
   };
 }
 
@@ -677,6 +703,13 @@ export const ENGLISH_EXAM_LEVEL_QUESTIONS: EnglishQuestion[] = ENGLISH_EXPECTED_
     options: question.options,
     tokens: question.tokens,
     explanation: `${question.explanation}\n\n出典・根拠：${question.reference.label}${question.reference.quote ? `\n本文：${question.reference.quote}` : ""}${question.reference.translation ? `\n和訳：${question.reference.translation}` : ""}`,
+    reference: question.reference.quote
+      ? {
+          label: question.reference.label,
+          quote: question.reference.quote,
+          translation: question.reference.translation,
+        }
+      : undefined,
     passageId: ["order", "sentence-ja-en", "true-false", "reading", "translation"].includes(question.section)
       ? PASSAGE_ID_BY_UNIT[question.unit]
       : undefined,

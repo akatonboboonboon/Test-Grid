@@ -178,7 +178,7 @@ test("server-renders the preserved Layer Sum trainer", async () => {
   assert.match(html, /時間制限つき層即答（練習）/);
   assert.match(html, /層を即答・連続正解の練習/);
   assert.match(html, /公式ランキングテスト/);
-  assert.match(html, /ネットワーク公式ランキングテスト/);
+  assert.match(html, /ネットワーク連続正解ランキング/);
   assert.match(html, /カードを編集/);
 });
 
@@ -925,7 +925,7 @@ test("ships layer filtering, autocomplete card search, rapid drills, and balance
   assert.match(overallChallenge, /全\{runner\.results\.length\}問の振り返り/);
 });
 
-test("ships a named R2-backed leaderboard with account or device identity and no exposed identifiers", async () => {
+test("ships a named D1-backed streak leaderboard with account or device identity and no exposed identifiers", async () => {
   const [route, hosting, rankingData, accountSync] = await Promise.all([
     readFile(new URL("../app/api/leaderboard/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
@@ -937,12 +937,12 @@ test("ships a named R2-backed leaderboard with account or device identity and no
   assert.match(route, /RAPID_CLIENT_TOKEN_HEADER/);
   assert.match(route, /normalizeRankingName/);
   assert.match(route, /sameSiteWriteAllowed/);
-  assert.match(route, /CHALLENGE_ALREADY_SUBMITTED/);
-  assert.match(route, /existing\?\.alias !== entry\.alias/);
-  assert.match(route, /leaderboards\/official-v1\/scores/);
-  assert.match(route, /STUDY_SNAPSHOTS\.list/);
-  assert.match(route, /STUDY_SNAPSHOTS\.put/);
-  assert.match(route, /scoreIsBetter/);
+  assert.match(route, /export async function PUT/);
+  assert.match(route, /official_ranking_sessions/);
+  assert.match(route, /official_ranking_entries/);
+  assert.match(route, /scoreOfficialRankingAnswer/);
+  assert.match(route, /updateOfficialRankingStreak/);
+  assert.match(route, /current_attempt_id/);
   assert.doesNotMatch(route, /env\.DB|SELECT[^;]*email/is);
   assert.doesNotMatch(route, /Response\.json\([^)]*userKey/);
   assert.match(hosting, /"r2": "STUDY_SNAPSHOTS"/);
@@ -1030,7 +1030,7 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(networkPage, /時間制限つき層即答（練習）/);
   assert.match(networkPage, /層を即答・連続正解の練習/);
   assert.match(networkPage, /href="\/ranking\/network"/);
-  assert.match(networkPage, /ネットワーク公式ランキングテスト/);
+  assert.match(networkPage, /ネットワーク連続正解ランキング/);
   assert.doesNotMatch(networkPage, /type Mode|mode ===|identifyLimit|finishIdentify|phase === "identify"|id="identify-limit"/);
   assert.match(networkPage, /type="number"/);
   assert.doesNotMatch(networkPage, /selectedLayers|対象レイヤー/);

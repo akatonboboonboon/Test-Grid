@@ -7,7 +7,7 @@ import { createServer } from "vite";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-test("official ranking v1 has one immutable fixed specification per subject", async (context) => {
+test("official ranking v2 is an endless server-scored streak for every subject", async (context) => {
   const server = await createServer({
     root: projectRoot,
     configFile: false,
@@ -16,85 +16,118 @@ test("official ranking v1 has one immutable fixed specification per subject", as
   });
   context.after(() => server.close());
   const config = await server.ssrLoadModule("/app/official-ranking-config.ts");
-  const questionData = await server.ssrLoadModule("/app/official-ranking-questions.ts");
+  const questionsModule = await server.ssrLoadModule("/app/official-ranking-questions.ts");
 
   assert.equal(config.OFFICIAL_RANKING_SUBJECT_IDS.length, 9);
   for (const subjectId of config.OFFICIAL_RANKING_SUBJECT_IDS) {
     const spec = config.getOfficialRankingSpec(subjectId);
-    const questions = questionData.getOfficialRankingQuestions(subjectId);
-    const ids = questionData.getOfficialRankingQuestionIds(subjectId);
-    assert.equal(spec.mode, "official-ranking-test");
-    assert.equal(spec.version, 1);
-    assert.equal(spec.boardKey, `ranking:${subjectId}:v1`);
-    assert.equal(spec.questionCount, 20);
-    assert.equal(questions.length, 20);
-    assert.equal(ids.length, 20);
-    assert.equal(new Set(ids).size, 20);
-    assert.deepEqual(questions.map((question) => question.id), ids);
-    assert.equal(config.officialRankingSpecFromBoardKey(`rapid:${subjectId}:q20`), null);
+    const questions = questionsModule.getOfficialRankingQuestions(subjectId);
+    assert.equal(spec.mode, "official-ranking-streak");
+    assert.equal(spec.version, 2);
+    assert.equal(spec.scoring, "consecutive-correct");
+    assert.equal(spec.boardKey, "ranking:" + subjectId + ":streak:v2");
+    assert.equal("questionCount" in spec, false);
+    assert.equal("timeLimitMs" in spec, false);
+    assert.ok(questions.length >= 2, subjectId + " needs at least two ranking questions");
+    assert.equal(new Set(questions.map((question) => question.id)).size, questions.length);
+    assert.equal(config.officialRankingSpecFromBoardKey("ranking:" + subjectId + ":v1"), null);
 
-    const publicQuestion = questionData.toPublicOfficialRankingQuestion(questions[0]);
+    for (const question of questions) {
+      assert.ok(question.options.length >= 2, question.id);
+      assert.ok(question.options.some((option) => question.acceptedOptions.includes(option)), question.id);
+      if (question.requiresVisual) assert.ok(question.visual, question.id + " must keep its visual");
+      if (question.requiresReference) assert.ok(question.reference?.quote, question.id + " must keep its reference");
+    }
+
+    const publicQuestion = questionsModule.toPublicOfficialRankingQuestion(questions[0]);
     assert.equal("answer" in publicQuestion, false);
     assert.equal("acceptedOptions" in publicQuestion, false);
     assert.equal("explanation" in publicQuestion, false);
-
-    const perfect = questionData.scoreOfficialRankingResponses(spec, questions.map((question) => ({
-      questionId: question.id,
-      selected: question.acceptedOptions[0],
-    })));
-    assert.equal(perfect.correctCount, 20);
-    assert.equal(perfect.bestStreak, 20);
-    assert.equal(perfect.review.length, 20);
-    assert.equal(perfect.review.every((item) => item.correct), true);
-    assert.deepEqual(
-      Object.keys(perfect.review[0]).sort(),
-      ["acceptedOptions", "answer", "correct", "explanation", "mathOptions", "prompt", "questionId", "selected", "sourceBasis", "steps", "studyHref", "topicLabel", "visual"].sort(),
-    );
-    assert.equal(perfect.review[0].answer, questions[0].answer);
-    assert.deepEqual(perfect.review[0].acceptedOptions, questions[0].acceptedOptions);
-    const blank = questionData.scoreOfficialRankingResponses(spec, questions.map((question) => ({
-      questionId: question.id,
-      selected: null,
-    })));
-    assert.equal(blank.correctCount, 0);
-    assert.equal(blank.bestStreak, 0);
-    assert.equal(blank.review.every((item) => !item.correct && item.selected === null), true);
   }
 
-  assert.equal(config.getOfficialRankingSpec("subject-2").timeLimitMs, 15 * 60_000);
-  assert.equal(config.getOfficialRankingSpec("network").timeLimitMs, 3 * 60_000);
-  for (const subjectId of config.OFFICIAL_RANKING_SUBJECT_IDS.filter((id) => id.startsWith("subject-") && id !== "subject-2")) {
-    assert.equal(config.getOfficialRankingSpec(subjectId).timeLimitMs, 30 * 60_000);
-  }
+  assert.deepEqual(questionsModule.updateOfficialRankingStreak(4, 9, true), {
+    currentStreak: 5,
+    bestStreak: 9,
+  });
+  assert.deepEqual(questionsModule.updateOfficialRankingStreak(9, 9, true), {
+    currentStreak: 10,
+    bestStreak: 10,
+  });
+  assert.deepEqual(questionsModule.updateOfficialRankingStreak(8, 12, false), {
+    currentStreak: 0,
+    bestStreak: 12,
+  });
+
+  const englishQuestions = questionsModule.getOfficialRankingQuestions("subject-2");
+  const referenced = englishQuestions.find((question) => question.reference?.translation);
+  assert.ok(referenced, "English ranking needs a translated source reference");
+  const publicReferenced = questionsModule.toPublicOfficialRankingQuestion(referenced);
+  assert.deepEqual(publicReferenced.reference, {
+    label: referenced.reference.label,
+    quote: referenced.reference.quote,
+  });
+  assert.equal("translation" in publicReferenced.reference, false, "translation must not leak before grading");
+
+  const graded = questionsModule.scoreOfficialRankingAnswer(referenced, referenced.acceptedOptions[0]);
+  assert.equal(graded.correct, true);
+  assert.equal(graded.feedback.reference.translation, referenced.reference.translation);
+  assert.equal(graded.feedback.explanation, referenced.explanation);
+  assert.deepEqual(graded.feedback.steps, referenced.steps);
+
+  const passageOrder = englishQuestions.find((question) => (
+    /(?:語順整序|一文整序)/u.test(question.topicLabel) && question.reference?.quote
+  ));
+  assert.ok(passageOrder, "passage ordering needs redacted source context");
+  assert.equal(passageOrder.reference.quote.includes(passageOrder.answer), false);
+  assert.match(passageOrder.reference.quote, /並べ替え対象文/u);
 });
 
-test("leaderboard API only accepts a server-issued one-use official challenge", async () => {
-  const [route, client, rankingData, fixedIds] = await Promise.all([
+test("leaderboard API persists one-use streak attempts in D1 and never trusts client scores", async () => {
+  const [route, client, schema, migration, hosting] = await Promise.all([
     readFile(new URL("../app/api/leaderboard/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/official-ranking-client.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/rapid-ranking-data.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/official-ranking-question-ids.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0003_nifty_landau.sql", import.meta.url), "utf8"),
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(route, /export async function POST/);
-  assert.match(route, /export async function PUT/);
-  assert.match(route, /challengeObjectKey\(identity\.userKey/);
-  assert.match(route, /CHALLENGE_ALREADY_SUBMITTED/);
-  assert.match(route, /CHALLENGE_EXPIRED/);
-  assert.match(route, /scoreOfficialRankingResponses\(spec, answers\)/);
-  assert.match(route, /completedAt - challenge\.startedAt/);
-  assert.match(route, /leaderboards\/official-v1\/scores/);
-  assert.doesNotMatch(route, /leaderboards\/v1/);
-  assert.doesNotMatch(route, /body\.correctCount|body\.bestStreak|body\.durationMs/);
-  assert.match(route, /questions\.map\(toPublicOfficialRankingQuestion\)/);
-  assert.match(route, /durationMs,\s*review,/);
+  for (const token of [
+    "export async function GET",
+    "export async function POST",
+    "export async function PUT",
+    "getD1()",
+    "official_ranking_sessions",
+    "official_ranking_entries",
+    "ORDER BY streak_count DESC, achieved_at ASC",
+    "current_attempt_id = ?",
+    "current_question_id = ?",
+    "revision = ?",
+    "database.batch([sessionUpdate, entryUpdate])",
+    "scoreOfficialRankingAnswer",
+    "updateOfficialRankingStreak",
+    "question: toPublicOfficialRankingQuestion(nextQuestion)",
+  ]) assert.ok(route.includes(token), token);
+  assert.ok(route.includes("if (!origin || !fetchSite) return false;"));
+  assert.ok(route.includes("ATTEMPT_ALREADY_ANSWERED") || route.includes("STALE_ATTEMPT"));
+  for (const token of ["body.correctCount", "body.bestStreak", "body.currentStreak", "body.durationMs", "body.totalAnswered", "body.totalCorrect", "leaderboards/official-v1"]) {
+    assert.equal(route.includes(token), false, token);
+  }
 
-  assert.match(client, /method: "POST"/);
-  assert.match(client, /method: "PUT"/);
-  assert.match(client, /JSON\.stringify\(\{ challengeId, answers \}\)/);
-  assert.doesNotMatch(client, /body:\s*JSON\.stringify\(\{[^}]*(?:correctCount|bestStreak|durationMs)/);
-  assert.match(client, /review: OfficialRankingReviewItem\[\]/);
-  assert.doesNotMatch(rankingData, /fetch\("\/api\/leaderboard"/);
-  assert.match(rankingData, /Variable-count rapid drills/);
-  assert.match(fixedIds, /deliberately pinned to explicit IDs/);
+  for (const token of [
+    'method: "POST"',
+    'method: "PUT"',
+    "subjectId: session.spec.subjectId",
+    "sessionId: session.sessionId",
+    "attemptId: session.attemptId",
+    "questionId: session.question.id",
+  ]) assert.ok(client.includes(token), token);
+  assert.equal(client.includes("correctCount"), false);
+  assert.equal(client.includes("durationMs"), false);
+
+  for (const value of [schema, migration]) {
+    for (const token of ["official_ranking_sessions", "official_ranking_entries", "current_attempt_id", "best_streak", "achieved_at"]) {
+      assert.ok(value.includes(token), token);
+    }
+  }
+  assert.ok(hosting.includes('"d1": "DB"'));
 });
