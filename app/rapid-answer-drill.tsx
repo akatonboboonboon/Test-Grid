@@ -372,7 +372,7 @@ export default function RapidAnswerDrill({ subjectId }: { subjectId: SubjectId }
               <div><span>TIME LEFT</span><strong>{(state.remainingMs / 1000).toFixed(1)}</strong><small>秒</small></div>
               <progress value={state.remainingMs} max={limitSeconds * 1000} aria-label={"残り時間 " + (state.remainingMs / 1000).toFixed(1) + "秒"} />
             </div>
-            <article className="rapid-question">
+            <article key={currentQuestion.instanceId} className="rapid-question" data-question-id={currentQuestion.instanceId}>
               <header><span>{currentQuestion.topicLabel} · 難度{currentQuestion.difficulty} · 推奨{currentQuestion.recommendedSeconds}秒</span><h2><RichMathText text={currentQuestion.prompt} /></h2></header>
               <RapidQuestionVisual visual={currentQuestion.visual} solution={state.phase === "feedback"} />
               {state.phase === "playing" && shortcutMaximum > 0 && (

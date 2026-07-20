@@ -56,6 +56,18 @@ test("English ranking keeps choice language and granularity compatible", async (
   const data = await server.ssrLoadModule("/app/rapid-quiz-data.ts");
   const english = data.getOfficialRankingEligiblePool("subject-2");
 
+  const screenshotTruth = english.find((question) => question.prompt.includes("63 billion cloud movements"));
+  assert.ok(screenshotTruth, "the screenshot T/F question must stay in the pool");
+  assert.match(screenshotTruth.topicLabel, /True\s*\/\s*False/u);
+  assert.deepEqual(new Set(screenshotTruth.options), new Set(["T", "F"]));
+  assert.equal(screenshotTruth.answer, "F");
+
+  const screenshotVocabulary = english.find((question) => question.answer === "research institute");
+  assert.ok(screenshotVocabulary, "the screenshot vocabulary question must stay in the pool");
+  assert.match(screenshotVocabulary.topicLabel, /語彙・熟語（日→英）/u);
+  assert.match(screenshotVocabulary.prompt, /研究所.*英語/u);
+  assert.equal(screenshotVocabulary.prompt.includes("63 billion cloud movements"), false);
+
   const cloudMap = english.find((question) => question.answer.includes("detailed cloud map"));
   assert.ok(cloudMap, "the screenshot regression question must stay in the pool");
   assert.equal(cloudMap.options.length, 4);

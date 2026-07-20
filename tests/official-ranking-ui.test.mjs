@@ -49,6 +49,11 @@ test("official rankings use one shared endless-streak UI while free rapid practi
     "中断して{meta.name}へ戻る",
     "次の問題へ",
     "refreshToken={leaderboardRefresh}",
+    "OfficialRankingReviewFrame",
+    "setReviewFrame({ question, selected, feedback: submitted.value.feedback })",
+    "key={displayedQuestion.id}",
+    "data-question-id={displayedQuestion.id}",
+    "displayedQuestion.instruction",
   ]) assert.ok(officialUi.includes(token), token);
   for (const token of ["expiresAt", "questionCount", "timeLimitMs", "answersRef", "submitOfficialRankingChallenge"]) {
     assert.equal(officialUi.includes(token), false, token);
@@ -86,6 +91,18 @@ test("ranking questions show required source text and diagrams before answering,
     "feedback.explanation",
     "feedback.sourceBasis",
   ]) assert.ok(source.includes(token), token);
+});
+
+test("question cards remount on question changes so prompt, topic, and choices cannot mix", async () => {
+  const [officialUi, rapidPractice] = await Promise.all([
+    readFile(new URL("../app/official-ranking-test.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/rapid-answer-drill.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.ok(officialUi.includes("key={displayedQuestion.id}"));
+  assert.ok(officialUi.includes("data-question-id={displayedQuestion.id}"));
+  assert.ok(officialUi.includes('phase === "feedback" ? reviewFrame?.question ?? null : currentQuestion'));
+  assert.ok(rapidPractice.includes("key={currentQuestion.instanceId}"));
 });
 
 test("every subject page links separately to free rapid practice and the official ranking test", async () => {

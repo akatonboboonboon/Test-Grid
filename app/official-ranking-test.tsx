@@ -20,6 +20,12 @@ import type { SubjectId } from "./study-data";
 
 type OfficialRankingPhase = "setup" | "starting" | "playing" | "checking" | "feedback" | "error";
 
+type OfficialRankingReviewFrame = {
+  question: PublicOfficialRankingQuestion;
+  selected: string;
+  feedback: OfficialRankingFeedback;
+};
+
 function rankingErrorMessage(error: string) {
   const messages: Record<string, string> = {
     RANKING_NAME_REQUIRED: "ランキング表示名を入力してください。",
@@ -76,16 +82,16 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
   const [phase, setPhase] = useState<OfficialRankingPhase>("setup");
   const [playerName, setPlayerName] = useState("");
   const [session, setSession] = useState<OfficialRankingSessionState | null>(null);
-  const [answeredQuestion, setAnsweredQuestion] = useState<PublicOfficialRankingQuestion | null>(null);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<OfficialRankingFeedback | null>(null);
+  const [reviewFrame, setReviewFrame] = useState<OfficialRankingReviewFrame | null>(null);
   const [resumeNotice, setResumeNotice] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
   const answerLockedRef = useRef(false);
   const normalizedPlayerName = normalizeRapidPlayerName(playerName);
   const currentQuestion = session?.question ?? null;
-  const displayedQuestion = phase === "feedback" ? answeredQuestion : currentQuestion;
+  const displayedQuestion = phase === "feedback" ? reviewFrame?.question ?? null : currentQuestion;
+  const selectedAnswer = reviewFrame?.selected ?? null;
+  const feedback = reviewFrame?.feedback ?? null;
   const shortcutMaximum = currentQuestion ? officialRankingShortcutMaximum(currentQuestion) : 0;
 
   /* eslint-disable react-hooks/set-state-in-effect -- restore one shared nickname after mount */
@@ -101,9 +107,7 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
     setPlayerName(name);
     setPhase("starting");
     setErrorMessage("");
-    setFeedback(null);
-    setAnsweredQuestion(null);
-    setSelectedAnswer(null);
+    setReviewFrame(null);
     answerLockedRef.current = false;
     const started = await startOfficialRankingSession(subjectId, name);
     if (!started.ok) {
@@ -122,8 +126,6 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
     if (phase !== "playing" || !session || answerLockedRef.current) return;
     answerLockedRef.current = true;
     const question = session.question;
-    setAnsweredQuestion(question);
-    setSelectedAnswer(selected);
     setErrorMessage("");
     setPhase("checking");
     const submitted = await submitOfficialRankingAnswer(session, selected);
@@ -134,7 +136,7 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
       return;
     }
     setSession(submitted.value);
-    setFeedback(submitted.value.feedback);
+    setReviewFrame({ question, selected, feedback: submitted.value.feedback });
     setPhase("feedback");
     if (submitted.value.improved) setLeaderboardRefresh((value) => value + 1);
   }, [phase, session]);
@@ -170,9 +172,7 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
   function nextQuestion() {
     if (phase !== "feedback" || !session) return;
     answerLockedRef.current = false;
-    setAnsweredQuestion(null);
-    setSelectedAnswer(null);
-    setFeedback(null);
+    setReviewFrame(null);
     setResumeNotice(false);
     setPhase("playing");
   }
@@ -180,9 +180,7 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
   function recoverSession() {
     answerLockedRef.current = false;
     setSession(null);
-    setAnsweredQuestion(null);
-    setSelectedAnswer(null);
-    setFeedback(null);
+    setReviewFrame(null);
     setResumeNotice(false);
     setErrorMessage("");
     setPhase("setup");
@@ -261,9 +259,14 @@ export default function OfficialRankingTest({ subjectId }: { subjectId: SubjectI
               <Link href={meta.href}>中断して{meta.name}へ戻る</Link>
             </div>
 
-            <article className="rapid-question official-ranking-question">
+            <article
+              key={displayedQuestion.id}
+              className="rapid-question official-ranking-question"
+              data-question-id={displayedQuestion.id}
+            >
               <header>
                 <span>{displayedQuestion.topicLabel} ・ 難度{displayedQuestion.difficulty}</span>
+                <p className="official-ranking-instruction"><strong>WHAT TO ANSWER</strong>{displayedQuestion.instruction}</p>
                 <h2><RichMathText text={displayedQuestion.prompt} /></h2>
               </header>
               {displayedQuestion.reference?.quote && (
