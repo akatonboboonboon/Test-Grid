@@ -64,8 +64,8 @@ const DEFAULT_TEST_DATES = Object.fromEntries(
 ) as Record<SubjectId, string>;
 
 const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "memo">> = [
-  { id: "subject-2", name: "英語", module: "generic", memo: "ZIP教材のCh.15・16・18を収録・過去問は形式だけ反映" },
-  { id: "network", name: "ネットワーク", module: "network", memo: "①〜⑦の全用語とOSI層を仕上げる" },
+  { id: "subject-2", name: "英語", module: "generic", memo: "ZIP教材のCh.14・15・16・18を収録（Ch.14 What's new?・Ch.19は対象外）" },
+  { id: "network", name: "ネットワーク", module: "network", memo: "本試験は範囲内プロトコルの層＋20文字以上記述、層暗算は追試対策として収録" },
   { id: "subject-3", name: "機械力学", module: "generic", memo: "範囲ZIP15枚・過去問全体の公式カード、計算演習、実物過去問、A4想定試験を収録" },
   { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "熱力学7枚・6単元の公式カード、計算演習、全範囲予想試験を収録" },
   { id: "subject-5", name: "材料力学", module: "generic", memo: "範囲ZIP9枚・ねじり、軸設計、コイルばね、はりの公式カード・図付き演習・A4想定試験を収録" },
@@ -119,7 +119,9 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
     const wasOldEnglishDescription = fallback.id === "subject-2" && [
       "試験PDF形式＋Ch.15・16・18・19を収録",
       "ZIP教材のCh.15・16・18・19を収録・過去問は形式だけ反映",
+      "ZIP教材のCh.15・16・18を収録・過去問は形式だけ反映",
     ].includes(savedMemo);
+    const wasOldNetworkDescription = fallback.id === "network" && savedMemo === "①〜⑦の全用語とOSI層を仕上げる";
     return {
       ...fallback,
       name,
@@ -128,7 +130,7 @@ export function normalizeSubjects(value: unknown): StudySubject[] {
       testDate: typeof saved.testDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(saved.testDate)
         ? saved.testDate
         : fallback.testDate,
-      memo: savedMemo && !wasOldStatisticsPlaceholder && !wasOldSmartControlPlaceholder && !wasOldAppliedMathPlaceholder && !wasOldThermodynamicsPlaceholder && !wasOldMechanicalDynamicsPlaceholder && !wasOldMaterialMechanicsPlaceholder && !wasOldDigitalCircuitsPlaceholder && !wasOldEnglishDescription
+      memo: savedMemo && !wasOldStatisticsPlaceholder && !wasOldSmartControlPlaceholder && !wasOldAppliedMathPlaceholder && !wasOldThermodynamicsPlaceholder && !wasOldMechanicalDynamicsPlaceholder && !wasOldMaterialMechanicsPlaceholder && !wasOldDigitalCircuitsPlaceholder && !wasOldEnglishDescription && !wasOldNetworkDescription
         ? savedMemo.slice(0, 120)
         : fallback.memo,
     };

@@ -26,7 +26,7 @@ export const ESSENTIAL_SUBJECTS: EssentialSubject[] = [
     accent: "#c7ff5e",
     examDate: "2026-07-28",
     examDateLabel: "7/28",
-    description: "Chapter 15・16・18の本文から、語彙と一文整序に直結する表現・文法だけを選定。Chapter 19は含みません。",
+    description: "Chapter 14・15・16・18、TOEIC Reading、Housing・Medicalから、語彙・文法・本文根拠に直結する項目だけを選定。Chapter 14のWhat's new?欄とChapter 19は含みません。",
     items: ENGLISH_ESSENTIALS,
   },
   {

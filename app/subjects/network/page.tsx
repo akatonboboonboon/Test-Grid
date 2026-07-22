@@ -342,9 +342,10 @@ export default function Home() {
         </Link>
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {cards.filter((card) => card.enabled).length} CARDS</span>
+          <Link className="outline-button header-link memory-open-button" href="/subjects/network/written">本試験・20文字記述</Link>
           <Link className="outline-button header-link memory-open-button" href="/subjects/network/cards">暗記帳を開く</Link>
-          <Link className="outline-button header-link" href="/rapid/network">時間制限つき層即答（練習）</Link>
-          <Link className="outline-button header-link" href="/ranking/network">公式ランキングテスト</Link>
+          <Link className="outline-button header-link" href="/rapid/network">追試用・時間制限つき層即答</Link>
+          <Link className="outline-button header-link" href="/ranking/network">連続正解ランキング</Link>
           <button className="outline-button" type="button" onClick={() => setEditorOpen(true)} disabled={!["idle", "result"].includes(phase)}>
             カードを編集
           </button>
@@ -353,14 +354,17 @@ export default function Home() {
 
       <main className={phase === "flash" || phase === "countdown" ? "main-layout focus-mode" : "main-layout"}>
         <section className="intro-block" aria-labelledby="page-title">
-          <p className="eyebrow"><span>NETWORK LAYER TRAINING</span><span>PHOTO SET / 01—02</span></p>
-          <h1 id="page-title">①〜⑦の用語を、<br /><em>瞬時に足す。</em></h1>
-          <p className="lede">丸数字をそのままOSI層番号へ対応。写真内の99個の層別記載を同名ごとにまとめた96枚で、テスト仕様の速さまで叩き込みます。</p>
+          <p className="eyebrow"><span>NETWORK EXAM TRAINING</span><span>NEW FORMAT / 20+ CHARACTERS</span></p>
+          <h1 id="page-title">本試験は、<br /><em>層＋20文字記述。</em></h1>
+          <p className="lede">新しい本試験は、元写真の96プロトコルから好きなものを選び、該当する層と20文字以上の説明を書く形式です。下のフラッシュ暗算は追試対策として残しています。</p>
+          <Link className="network-memory-callout" href="/subjects/network/written">
+            <span>本試験対策・新形式</span><strong>プロトコルを選び、層＋20文字で説明する</strong><b aria-hidden="true">最優先で練習 →</b>
+          </Link>
           <Link className="network-memory-callout" href="/subjects/network/cards">
             <span>暗記帳</span><strong>層・正式名称・働きを覚える</strong><b aria-hidden="true">開く →</b>
           </Link>
           <Link className="network-memory-callout" href="/rapid/network">
-            <span>時間制限つき練習</span><strong>層を即答・連続正解の練習</strong><b aria-hidden="true">練習する →</b>
+            <span>追試対策・時間制限つき練習</span><strong>層を即答・連続正解の練習</strong><b aria-hidden="true">練習する →</b>
           </Link>
           <Link className="network-memory-callout" href="/ranking/network">
             <span>問題数無制限・中断再開</span><strong>ネットワーク連続正解ランキング</strong><b aria-hidden="true">ランキングに挑戦 →</b>

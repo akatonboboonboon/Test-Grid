@@ -48,7 +48,7 @@ async function loadModules() {
 }
 
 const SUBJECT_IDS = ["subject-2", "subject-3", "subject-4", "subject-5", "subject-6", "subject-7", "subject-8", "subject-9"];
-const ALLOWED_CHAPTERS = new Set(["ch15", "ch16", "ch18"]);
+const ALLOWED_CHAPTERS = new Set(["ch14", "ch15", "ch16", "ch18"]);
 const FORBIDDEN_CONTROL_CHARACTERS = /[\u0000-\u001F\u007F]/u;
 
 function visibleStrings(question) {
@@ -291,7 +291,7 @@ test("hundreds of arbitrary seeds never leak unsolved or undefined questions", a
   }
 });
 
-test("English generation uses exact Ch.15, 16, and 18 excerpts and never Chapter 19", async () => {
+test("English generation uses exact Ch.14, 15, 16, and 18 excerpts and never excluded sources", async () => {
   const { english, engine } = await loadModules();
   const seenChapters = new Set();
   const seenKinds = new Set();
@@ -300,7 +300,7 @@ test("English generation uses exact Ch.15, 16, and 18 excerpts and never Chapter
     seenChapters.add(question.source.chapter);
     seenKinds.add(question.templateId);
     assert.ok(ALLOWED_CHAPTERS.has(question.source.chapter));
-    assert.doesNotMatch(JSON.stringify(question), /ch19|Chapter 19/i);
+    assert.doesNotMatch(JSON.stringify(question), /ch19|Chapter 19|What's new\?|What’s new\?/i);
     const passage = english.ENGLISH_PASSAGES.find((item) => item.id === question.source.passageId);
     const paragraph = passage?.paragraphs[question.source.paragraphIndex];
     assert.ok(passage, `${question.id} passage`);
@@ -325,7 +325,7 @@ test("English generation uses exact Ch.15, 16, and 18 excerpts and never Chapter
       assert.ok(question.options.includes(question.answer));
     }
   }
-  assert.deepEqual(seenChapters, new Set(["ch15", "ch16", "ch18"]));
+  assert.deepEqual(seenChapters, new Set(["ch14", "ch15", "ch16", "ch18"]));
   assert.deepEqual(seenKinds, new Set(["english-order", "english-translation", "english-grammar"]));
 });
 

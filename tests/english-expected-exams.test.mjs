@@ -52,10 +52,11 @@ test("English expected exams match the range and full 50-minute paper density", 
 
   assert.equal(ENGLISH_EXPECTED_EXAM_DURATION_MINUTES, 50);
   assert.equal(ENGLISH_EXPECTED_EXAM_TOTAL_POINTS, 100);
-  assert.deepEqual(ENGLISH_EXPECTED_SCOPE_UNITS, ["ch15", "ch16", "ch18"]);
+  assert.deepEqual(ENGLISH_EXPECTED_SCOPE_UNITS, ["ch14", "ch15", "ch16", "ch18", "toeic", "housing", "medical"]);
   assert.deepEqual([...ENGLISH_EXPECTED_FORMAT_ONLY_SOURCES], ["英語.pdf", "英語テスト過去問.zip"]);
-  assert.match(ENGLISH_EXPECTED_SOURCE_POLICY, /参照専用/);
-  assert.match(ENGLISH_EXPECTED_SOURCE_POLICY, /Chapter 15・16・18だけ/);
+  assert.match(ENGLISH_EXPECTED_SOURCE_POLICY, /Chapter 14・15・16・18/);
+  assert.match(ENGLISH_EXPECTED_SOURCE_POLICY, /TOEIC Reading/);
+  assert.match(ENGLISH_EXPECTED_SOURCE_POLICY, /Chapter 19は使わない/);
   assert.equal(ENGLISH_EXPECTED_EXAMS.length, 6);
 
   const expectedSectionPoints = {
@@ -75,7 +76,11 @@ test("English expected exams match the range and full 50-minute paper density", 
     assert.equal(exam.totalPoints, 100, exam.id);
     assert.equal(exam.questions.length, 34, `${exam.id} must have full-paper density`);
     assert.equal(exam.questions.reduce((sum, question) => sum + question.points, 0), 100, exam.id);
-    assert.deepEqual(new Set(exam.questions.map((question) => question.unit)), new Set(["ch15", "ch16", "ch18"]), exam.id);
+    const examUnits = new Set(exam.questions.map((question) => question.unit));
+    for (const unit of ["ch14", "ch15", "ch16", "ch18", "toeic"]) {
+      assert.ok(examUnits.has(unit), `${exam.id}:${unit}`);
+    }
+    assert.ok(examUnits.has("housing") || examUnits.has("medical"), `${exam.id}:topical vocabulary`);
 
     for (const [section, points] of Object.entries(expectedSectionPoints)) {
       assert.equal(
@@ -91,13 +96,13 @@ test("English expected exams match the range and full 50-minute paper density", 
     assert.equal(summaries.filter((question) => question.genre === "Abstract構成").length, 1, exam.id);
     assert.deepEqual(
       new Set(summaries.filter((question) => question.genre === "要約穴埋め").map((question) => question.unit)),
-      new Set(["ch15", "ch16", "ch18"]),
+      new Set(["ch14", "ch16", "ch18"]),
       exam.id,
     );
 
     const orders = exam.questions.filter((question) => question.section === "order");
     assert.equal(orders.length, 3, exam.id);
-    assert.deepEqual(new Set(orders.map((question) => question.unit)), new Set(["ch15", "ch16", "ch18"]), exam.id);
+    assert.deepEqual(new Set(orders.map((question) => question.unit)), new Set(["ch14", "ch16", "ch18"]), exam.id);
     for (const question of orders) {
       assert.ok(question.tokens.length >= 4, `${exam.id}:${question.sourceId} token count`);
       assert.ok(question.tokens.every((token) => !/\s/u.test(token)), `${exam.id}:${question.sourceId} must be split word by word`);
@@ -115,18 +120,19 @@ test("English expected exams match the range and full 50-minute paper density", 
 
     const trueFalse = exam.questions.filter((question) => question.section === "true-false");
     assert.equal(trueFalse.length, 6, exam.id);
-    for (const unit of ["ch15", "ch16", "ch18"]) {
-      assert.equal(trueFalse.filter((question) => question.unit === unit).length, 2, `${exam.id}:${unit}:T/F`);
-    }
+    assert.equal(trueFalse.filter((question) => question.unit === "ch14").length, 1, `${exam.id}:ch14:T/F`);
+    assert.equal(trueFalse.filter((question) => question.unit === "ch15").length, 1, `${exam.id}:ch15:T/F`);
+    assert.equal(trueFalse.filter((question) => question.unit === "ch16").length, 2, `${exam.id}:ch16:T/F`);
+    assert.equal(trueFalse.filter((question) => question.unit === "ch18").length, 2, `${exam.id}:ch18:T/F`);
     for (const question of trueFalse) {
-      assert.match(question.explanation, /根拠箇所/);
-      assert.match(question.explanation, /反対選択肢/);
+      assert.match(question.explanation, /根拠箇所|本文の根拠/);
+      assert.match(question.explanation, /反対選択肢|誤答/);
       assert.ok(question.reference.quote && question.reference.translation, `${exam.id}:${question.sourceId} T/F evidence`);
     }
 
     const reading = exam.questions.filter((question) => question.section === "reading");
     assert.equal(reading.length, 3, exam.id);
-    assert.deepEqual(new Set(reading.map((question) => question.unit)), new Set(["ch15", "ch16", "ch18"]), exam.id);
+    assert.deepEqual(new Set(reading.map((question) => question.unit)), new Set(["toeic", "ch16", "ch18"]), exam.id);
     for (const question of reading) {
       assert.equal(question.options.length, 4, `${exam.id}:${question.sourceId}`);
       for (const option of question.options) {
@@ -137,7 +143,7 @@ test("English expected exams match the range and full 50-minute paper density", 
 
     const translations = exam.questions.filter((question) => question.section === "translation");
     assert.equal(translations.length, 3, exam.id);
-    assert.deepEqual(new Set(translations.map((question) => question.unit)), new Set(["ch15", "ch16", "ch18"]), exam.id);
+    assert.deepEqual(new Set(translations.map((question) => question.unit)), new Set(["ch14", "ch16", "ch18"]), exam.id);
     assert.equal(translations.reduce((sum, question) => sum + question.points, 0), 12, exam.id);
     assert.ok(translations.every((question) => question.semantic === true), `${exam.id}:semantic translation grading`);
 
@@ -157,6 +163,18 @@ test("English expected exams match the range and full 50-minute paper density", 
 
   const signatures = ENGLISH_EXPECTED_EXAMS.map((exam) => exam.questions.map((question) => question.sourceId).join("|"));
   assert.equal(new Set(signatures).size, 6, "all six expected papers must differ");
+
+  const allQuestions = ENGLISH_EXPECTED_EXAMS.flatMap((exam) => exam.questions);
+  assert.deepEqual(
+    new Set(allQuestions.map((question) => question.unit)),
+    new Set(["ch14", "ch15", "ch16", "ch18", "toeic", "housing", "medical"]),
+  );
+  assert.deepEqual(
+    new Set(allQuestions.filter((question) => question.section === "language" && question.sourceId.startsWith("ch16-extra-")).map((question) => question.sourceId)),
+    new Set(["ch16-extra-map", "ch16-extra-surface", "ch16-extra-narrow"]),
+  );
+  assert.equal(allQuestions.filter((question) => question.unit === "ch14").length, 28);
+  assert.equal(allQuestions.filter((question) => question.unit === "toeic").length, 9);
 });
 test("weather-homepage questions require the source figure in papers and explanations", async () => {
   const { ENGLISH_EXPECTED_EXAMS } = await loadExpectedModule();
@@ -175,6 +193,8 @@ test("weather-homepage questions require the source figure in papers and explana
   const component = await readFile(new URL("../app/english-expected-exams.tsx", import.meta.url), "utf8");
   assert.match(component, /import EnglishWeatherFigure from "\.\/english-weather-figure"/);
   assert.match(component, /sourceId\.startsWith\("ch16-homepage-"\)/);
+  assert.match(component, /question\.reference\.quote/);
+  assert.match(component, /SOURCE TEXT/);
   assert.ok((component.match(/<EnglishWeatherFigure\s*\/>/g) ?? []).length >= 2, "figure must appear in the paper and answer review");
 });
 
@@ -185,7 +205,7 @@ test("expected exam print stylesheet declares A4 paper and question-only mode", 
     readFile(new URL("../app/english-expected-exams.module.css", import.meta.url), "utf8"),
   ]);
 
-  assert.doesNotMatch(dataSource, /ch19/i);
+  assert.doesNotMatch(dataSource, /unit:\s*"ch19"/i);
   assert.match(componentSource, /ENGLISH_EXPECTED_EXAM_STORAGE_KEY/);
   assert.match(componentSource, /remainingSeconds/);
   assert.match(componentSource, /window\.print\(\)/);

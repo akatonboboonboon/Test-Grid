@@ -563,14 +563,15 @@ const PASSAGE_TRANSLATION_SEEDS: Record<string, ExplanationSeed> = Object.fromEn
     passage.paragraphs.flatMap((_, index) => {
       const questionId = `${passage.id}-translation-${index + 1}`;
       const guidance = PASSAGE_TRANSLATION_GUIDANCE[questionId];
-      if (!guidance) return [];
       return [[
         questionId,
         {
           passageId: passage.id,
           paragraphNumbers: [index + 1],
-          correctReason: guidance.correctReason,
-          readingTip: guidance.readingTip,
+          correctReason: guidance?.correctReason
+            ?? passage.title + " 第" + (index + 1) + "段落について、主語・述語・目的語と修飾関係を保ち、数値・固有名詞・因果関係を落とさず自然な日本語へ組み替えたものが模範訳です。",
+          readingTip: guidance?.readingTip
+            ?? "最初に主節の主語と動詞を確定し、不定詞・分詞・関係節・前置詞句の係り先を確認してから、日本語として自然な語順へ直します。",
         } satisfies ExplanationSeed,
       ]];
     }),
@@ -579,10 +580,150 @@ const PASSAGE_TRANSLATION_SEEDS: Record<string, ExplanationSeed> = Object.fromEn
 
 const ACTIVE_QUESTION_IDS = new Set(ENGLISH_QUESTIONS.map((question) => question.id));
 
+const ADDITIONAL_REFERENCE_PARAGRAPHS: Readonly<Record<string, readonly number[]>> = {
+  "ch14-tf-1": [3],
+  "ch14-tf-2": [3],
+  "ch14-tf-3": [5],
+  "ch14-tf-4": [7],
+  "ch14-tf-5": [10],
+  "ch14-summary-1": [1],
+  "ch14-summary-2": [5],
+  "ch14-summary-3": [5, 6, 7],
+  "ch14-summary-4": [7, 8, 9],
+  "toeic-keller-181": [2],
+  "toeic-keller-182": [3],
+  "toeic-keller-183": [5, 6],
+  "toeic-keller-184": [3, 4],
+  "toeic-keller-185": [4],
+  "toeic-eston-135": [1],
+  "toeic-eston-136": [2],
+  "toeic-eston-137": [2],
+  "toeic-eston-138": [3],
+};
+
+const ADDITIONAL_OPTION_REASONS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "ch14-summary-1": {
+    "world's": "本文第1段落のthe world's largestに一致し、世界最大という規模を表します。",
+    "country's": "本文は国内最大ではなく世界最大と述べるため、country'sでは範囲が狭すぎます。",
+    "company's": "特定企業内で最大という比較は本文になく、蓄電池の世界規模を表せません。",
+    "city's": "都市内最大という記述はなく、建設地Hokkaidoとの取り違えです。",
+  },
+  "ch14-summary-2": {
+    "government's": "経済産業省が200億円を拠出した第5段落をgovernment's backingと要約しています。",
+    "customer's": "顧客が資金援助した記述はなく、事業を支援した主体と一致しません。",
+    "expert's": "専門家は電池特性を説明するだけで、開発費を支援した主体ではありません。",
+    "landlord's": "家主は本文に登場せず、エネルギー事業への支援とも無関係です。",
+  },
+  "ch14-summary-3": {
+    "Hokkaido's": "北海道電力が安平町に建設する蓄電システムなので、原要約のHokkaido'sが入ります。",
+    "Tokyo's": "建設地・事業者はいずれも北海道で、東京という情報は本文にありません。",
+    "Kagoshima's": "鹿児島は本文に登場せず、蓄電システムの所在地と一致しません。",
+    "Dallas's": "Dallasは別のTOEIC文書の住所であり、この蓄電池記事とは無関係です。",
+  },
+  "ch14-summary-4": {
+    "system's": "第7段落で60,000 kWhはthe systemのcapacityなので所有格system'sが適切です。",
+    "weather's": "天候には本文中の60,000 kWhという蓄電容量は帰属しません。",
+    "article's": "記事そのものの容量ではなく、蓄電システムの容量を述べています。",
+    "building's": "6階建ては高さの比較であり、建物の電気容量を示す記述ではありません。",
+  },
+  "toeic-keller-181": {
+    "Shoes to match a suit": "Webサイトで利用できるものとして靴は一度も挙げられていないため、NOTの正答です。",
+    "Professional advice": "第2段落のstyle experts are ready to chatが専門家の助言を提供すると示します。",
+    "Images of different styles": "full range of styles, colors, and fabricsをサイトで見られるため利用可能です。",
+    "A way to find correct sizes": "online Measuring Wizardが正しいサイズ選びを助けるため利用可能です。",
+  },
+  "toeic-keller-182": {
+    basic: "追加料金のovernight deliveryと対比される通常の基本配送なのでbasicが最も近い語です。",
+    routine: "routineは反復的な日課の含みが強く、ここでは配送プランの基本区分を示しません。",
+    average: "平均的な所要時間や品質ではなく、標準プランという種類を表しています。",
+    affordable: "standardは価格が手頃という評価ではなく、通常配送という区分です。",
+  },
+  "toeic-keller-183": {
+    "To report a mistake in an advertisement": "広告の誤記ではなく、誤配送後の対応を称賛する手紙です。",
+    "To express his concern about a policy": "方針への懸念は述べず、extremely gratefulと満足を表しています。",
+    "To invite her to meet his clients": "顧客との面会への招待はなく、client dinnerは注文目的の説明です。",
+    "To praise her company's customer service": "spotless professionalismとsuperior customer serviceへの謝意が手紙の目的です。",
+  },
+  "toeic-keller-184": {
+    "He lives in New York": "New Yorkは会食と指定配送先で、自宅住所はDallasと書かれています。",
+    "He is dissatisfied with a service": "問題はあったものの、対応にextremely gratefulと述べているため不満ではありません。",
+    "He was unable to attend a dinner": "代替スーツがホテルへ届き、会食に出席できなかったとは書かれていません。",
+    "He paid $50 for delivery": "overnight deliveryは追加50ドルで、Varela氏はそのサービスを選んだとあります。",
+  },
+  "toeic-keller-185": {
+    "It did not fit.": "サイズ不適合は述べられず、問題は配送先です。",
+    "It was the wrong color.": "色が違ったという記述はなく、similar suitの手配は配送問題への対応です。",
+    "It was delivered late.": "遅配ではなく、本人が出発した後にDallasの自宅へ届きました。",
+    "It arrived at the wrong address.": "指定したNew YorkではなくDallasの自宅へ配送されたことが直接の問題です。",
+  },
+  "toeic-eston-135": {
+    tradition: "冠詞aと前置詞forの間には単数名詞traditionが必要です。",
+    traditional: "形容詞traditionalだけでは冠詞aを受ける名詞中心語になれません。",
+    traditions: "aの直後に複数名詞traditionsは置けません。",
+    traditionally: "副詞traditionallyはbecomeの補語となる名詞句を作れません。",
+  },
+  "toeic-eston-136": {
+    Another: "anotherだけでは何を指すか不明で、直前の単数イベントECSHを自然に受けません。",
+    Each: "eachは複数の対象を一つずつ指す語ですが、ここでは一つのECSHの所要時間です。",
+    Mine: "所有代名詞mineには受ける所有物がなく、イベントを指せません。",
+    It: "直前のthe ECSHを受ける単数代名詞Itが文の主語になります。",
+  },
+  "toeic-eston-137": {
+    "The park map is very detailed.": "地図の詳しさはsmartphoneの必要条件やチーム構成を補足しません。",
+    "City hall was built 75 years ago.": "市庁舎の築年数は、端末が必要という直前の話題から外れます。",
+    "You will need only one device per team.": "smartphone is requiredを受け、必要台数を一チーム一台と具体化します。",
+    "Feedback from participants would be helpful.": "参加者の感想募集は本文になく、必要機器の説明にもつながりません。",
+  },
+  "toeic-eston-138": {
+    Afterward: "探索を終えた後の祝賀会へ時系列で移るためAfterwardが適切です。",
+    However: "逆接となる対立内容はなく、イベント後の次の行動を述べています。",
+    Similarly: "前後を類似例として並べる関係ではありません。",
+    Rather: "前文を訂正・選択し直す関係ではなく、単純な時間順序です。",
+  },
+};
+
+const FALLBACK_EXPLANATION_SEEDS: Record<string, ExplanationSeed> = Object.fromEntries(
+  ENGLISH_QUESTIONS.flatMap((question) => {
+    if (!question.passageId || STATIC_EXPLANATION_SEEDS[question.id] || PASSAGE_TRANSLATION_SEEDS[question.id]) {
+      return [];
+    }
+    const passage = ENGLISH_PASSAGES.find((candidate) => candidate.id === question.passageId);
+    if (!passage) return [];
+    const paragraphNumbers = [...(
+      ADDITIONAL_REFERENCE_PARAGRAPHS[question.id]
+      ?? passage.paragraphs.map((_, index) => index + 1)
+    )];
+    const correctReason = [
+      question.explanation,
+      "正答「" + question.answer + "」は、" + passage.title + " の本文にある数値・語句・出来事の順序と一致します。",
+      "設問の主語、時制、否定、比較、数値を本文と一つずつ照合すると判断できます。",
+    ].filter(Boolean).join(" ");
+    const optionReasons = question.options
+      ? ADDITIONAL_OPTION_REASONS[question.id] ?? Object.fromEntries(question.options.map((option) => [
+        option,
+        option === question.answer
+          ? "本文の根拠と一致するため「" + option + "」が正答です。" + (question.explanation ?? "")
+          : "「" + option + "」は本文の事実・語形・文のつながりのいずれかと一致せず、正答「" + question.answer + "」に置き換える必要があります。",
+      ]))
+      : undefined;
+    return [[
+      question.id,
+      {
+        passageId: passage.id,
+        paragraphNumbers,
+        correctReason,
+        optionReasons,
+        readingTip: "選択肢の一語だけで決めず、本文の該当文を和訳し、主語・動詞・数値・接続関係まで照合します。",
+      } satisfies ExplanationSeed,
+    ]];
+  }),
+);
+
 const ALL_EXPLANATION_SEEDS: Record<string, ExplanationSeed> = Object.fromEntries(
   Object.entries({
     ...STATIC_EXPLANATION_SEEDS,
     ...PASSAGE_TRANSLATION_SEEDS,
+    ...FALLBACK_EXPLANATION_SEEDS,
   }).filter(([questionId]) => ACTIVE_QUESTION_IDS.has(questionId)),
 );
 

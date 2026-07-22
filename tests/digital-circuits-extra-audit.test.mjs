@@ -50,6 +50,42 @@ test("1001 detector retains the source's exact eight Mealy transitions", async (
   ]);
 });
 
+test("additional-scope 101 and 1011 detectors retain every overlap-aware transition", async () => {
+  const extra = await loadExtra();
+  assert.deepEqual(extra.DIGITAL_CIRCUIT_DETECTOR_101_TRANSITIONS.map((item) =>
+    `${item.current}:${item.input}->${item.next}/${item.output}`), [
+    "S0:0->S0/0", "S0:1->S1/0", "S1:0->S2/0",
+    "S1:1->S1/0", "S2:0->S0/0", "S2:1->S1/1",
+  ]);
+  assert.deepEqual(extra.DIGITAL_CIRCUIT_DETECTOR_1011_TRANSITIONS.map((item) =>
+    `${item.current}:${item.input}->${item.next}/${item.output}`), [
+    "S0:0->S0/0", "S0:1->S1/0", "S1:0->S2/0", "S1:1->S1/0",
+    "S2:0->S0/0", "S2:1->S3/0", "S3:0->S2/0", "S3:1->S1/1",
+  ]);
+  assert.equal(extra.DIGITAL_CIRCUIT_ADDITIONAL_SCOPE_IMAGES.length, 2);
+  assert.ok(extra.DIGITAL_CIRCUIT_ADDITIONAL_SCOPE_IMAGES.every((image) => image.role === "current-scope"));
+  assert.match(extra.DIGITAL_CIRCUIT_ADDITIONAL_SCOPE_IMAGES[0].contents.join(" "), /101・1011/);
+
+  let state = "S0";
+  const states = [];
+  const outputs = [];
+  for (const input of "1011011") {
+    const transition = extra.DIGITAL_CIRCUIT_DETECTOR_1011_TRANSITIONS.find(
+      (item) => item.current === state && item.input === Number(input),
+    );
+    assert.ok(transition, `${state}/${input}`);
+    state = transition.next;
+    states.push(state);
+    outputs.push(transition.output);
+  }
+  assert.deepEqual(states, ["S1", "S2", "S3", "S1", "S2", "S3", "S1"]);
+  assert.equal(outputs.join(""), "0001001");
+  assert.match(
+    extra.DIGITAL_CIRCUIT_EXTRA_QUESTIONS.find((item) => item.id === "dc-add-q-sequence-1011-stream").answer,
+    /S1→S2→S3→S1→S2→S3→S1、出力0001001/,
+  );
+});
+
 test("unsolved diagrams are neutral worksheets and solved diagrams consume canonical transitions", async () => {
   const source = await readFile(DIAGRAM_URL, "utf8");
   const cyclic = source.slice(source.indexOf("function CyclicDown"), source.indexOf("function Exercise3"));
@@ -67,6 +103,9 @@ test("unsolved diagrams are neutral worksheets and solved diagrams consume canon
   assert.match(detectorBlank, /各枝へ I\/O を記入/);
   assert.match(source, /DIGITAL_CIRCUIT_PAST_MACHINE_TRANSITIONS\.find/);
   assert.match(source, /DIGITAL_CIRCUIT_DETECTOR_1001_TRANSITIONS\.find/);
+  for (const kind of ["sequence-detector-101", "sequence-detector-1011", "sequence-design-workflow"]) {
+    assert.match(source, new RegExp(kind));
+  }
 });
 
 test("added practice covers full waveform table, circuit/timing, full state table, and all detector branches", async () => {
@@ -75,6 +114,8 @@ test("added practice covers full waveform table, circuit/timing, full state tabl
   for (const id of [
     "dc-extra-q-truth-table-full", "dc-extra-q-cycle-design", "dc-extra-q-cycle-timing",
     "dc-extra-q-past-full-table", "dc-extra-q-sequence-full-table",
+    "dc-add-q-sequence-101-full", "dc-add-q-sequence-1011-full",
+    "dc-add-q-design-workflow", "dc-add-q-1001-synthesis",
   ]) assert.ok(ids.has(id), id);
   assert.match(extra.DIGITAL_CIRCUIT_EXTRA_QUESTIONS.find((item) => item.id === "dc-extra-q-past-full-table").explanation, /表.*S0S1.*グラフ.*S1S0/);
 });
@@ -88,7 +129,10 @@ test("every predicted paper carries past-paper-level synthesis work", async () =
     assert.ok(questions.filter((question) => question.difficulty >= 3).length >= 2, exam.id);
     assert.ok(questions.some((question) => question.id === "dc-extra-q-cycle-design" || question.id === "dc-extra-q-cycle-timing" || question.id === "dc-extra-q-three-jk"), exam.id);
     assert.ok(questions.some((question) => question.id === "dc-extra-q-past-full-table" || question.id === "dc-extra-q-ex3-equation" || question.id === "dc-extra-q-ex3-table"), exam.id);
-    assert.ok(questions.some((question) => question.id === "dc-extra-q-sequence-full-table" || question.id === "dc-extra-q-sequence-stream" || question.id === "dc-extra-q-sequence-output"), exam.id);
+    assert.ok(questions.some((question) => [
+      "dc-add-q-1001-synthesis", "dc-add-q-sequence-101-full", "dc-add-q-sequence-1011-stream",
+      "dc-add-q-design-workflow", "dc-add-q-sequence-1011-full",
+    ].includes(question.id)), exam.id);
   }
 });
 test("generated variants keep their three stable IDs and use neutral canonical diagrams", async () => {

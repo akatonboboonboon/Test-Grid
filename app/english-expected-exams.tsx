@@ -129,8 +129,18 @@ function shuffledTokens(question: EnglishExpectedQuestion) {
   return tokens;
 }
 
+const UNIT_SHORT_LABELS: Record<EnglishExpectedQuestion["unit"], string> = {
+  ch14: "Ch.14",
+  ch15: "Ch.15",
+  ch16: "Ch.16",
+  ch18: "Ch.18",
+  toeic: "TOEIC",
+  housing: "Housing",
+  medical: "Medical",
+};
+
 function unitShort(unit: EnglishExpectedQuestion["unit"]) {
-  return unit === "ch15" ? "Ch.15" : unit === "ch16" ? "Ch.16" : "Ch.18";
+  return UNIT_SHORT_LABELS[unit];
 }
 
 function sectionPoints(exam: EnglishExpectedExam, section: EnglishExpectedSectionId) {
@@ -309,7 +319,7 @@ export default function EnglishExpectedExams() {
         <div>
           <span>EXPECTED EXAM SERIES / 6 SETS</span>
           <h2 id="english-expected-title">英語 予想模試</h2>
-          <p>Chapter 15・16・18の範囲データだけで構成。各セット50分・100点、3章を毎回まんべんなく出題します。</p>
+          <p>Chapter 14・15・16・18、TOEIC Reading、Housing・Medical語彙の追加範囲で構成。各セット50分・100点です。</p>
         </div>
         <div className={styles.heroMetrics}>
           <div><span>TIME</span><strong>50</strong><small>MIN</small></div>
@@ -375,7 +385,7 @@ export default function EnglishExpectedExams() {
           return (
             <article className={styles.paperPage} id={`${exam.id}-paper-${pageNumber}`} key={`${exam.id}-page-${pageNumber}`}>
               <header className={styles.paperHeader}>
-                <div><span>2026 / EXPECTED</span><h3>{exam.title}</h3><p>Chapter 15・16・18</p></div>
+                <div><span>2026 / EXPECTED</span><h3>{exam.title}</h3><p>ADDITIONAL RANGE</p></div>
                 <div><span>制限時間</span><strong>50分</strong></div>
                 <div><span>満点</span><strong>100点</strong></div>
                 <label><span>氏名</span><input type="text" aria-label={`氏名・${pageNumber}ページ`} /></label>
@@ -403,6 +413,13 @@ export default function EnglishExpectedExams() {
                         const enabled = phase === "active";
                         return (
                           <div className={`${styles.question}${phase === "result" ? verdicts[question.id] ? ` ${styles.correct}` : ` ${styles.wrong}` : ""}`} key={question.id}>
+                            {question.reference.quote && ["summary-abstract", "order", "true-false", "reading"].includes(question.section) && (
+                              <aside className={styles.sourceExcerpt}>
+                                <span>SOURCE TEXT</span>
+                                <strong>{question.reference.label}</strong>
+                                <blockquote lang="en">{question.reference.quote}</blockquote>
+                              </aside>
+                            )}
                             <div className={styles.questionPrompt}>
                               <span>{questionIndex + 1}</span>
                               <div><small>{unitShort(question.unit)}・{question.points}点</small><p>{question.prompt}</p></div>

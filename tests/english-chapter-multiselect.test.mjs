@@ -30,13 +30,13 @@ test("English Chapter selections normalize legacy values and use OR semantics", 
     normalizeChapterSelection,
     toggleChapterSelection,
   } = evaluateTypeScript(source, "english-chapter-filter.ts");
-  const allowed = ["ch15", "ch16", "ch18"];
+  const allowed = ["ch14", "ch15", "ch16", "ch18", "toeic", "housing", "medical"];
 
   assert.deepEqual(normalizeChapterSelection("all", allowed), []);
   assert.deepEqual(normalizeChapterSelection("ch16", allowed), ["ch16"]);
   assert.deepEqual(
-    normalizeChapterSelection(["ch18", "ch15", "ch18", "ch19"], allowed),
-    ["ch15", "ch18"],
+    normalizeChapterSelection(["medical", "ch15", "medical", "ch19"], allowed),
+    ["ch15", "medical"],
   );
   assert.equal(chapterMatches("ch15", []), true, "empty selection means all active Chapters");
   assert.equal(chapterMatches("ch15", ["ch15", "ch18"]), true);
@@ -51,7 +51,7 @@ test("English cards, mock tests, and reading practice expose independent multi-C
   assert.match(page, /cardUnits\.includes\(unit\.id\)/);
   assert.match(page, /testUnits\.includes\(unit\.id\)/);
   assert.match(page, /readingUnits\.includes\(unit\.id\)/);
-  assert.match(page, /Chapter（複数選択可）/);
+  assert.match(page, /範囲タグ（複数選択可）/);
   assert.match(page, /chapterMatches\(card\.unit, cardUnits\)/);
   assert.match(page, /chapterMatches\(question\.unit, testUnits\)/);
   assert.match(page, /chapterMatches\(question\.unit, readingUnits\)/);
@@ -64,7 +64,7 @@ test("English Chapter 19 stays outside every selectable and study data set", asy
   const { ENGLISH_PASSAGES, ENGLISH_QUESTIONS, ENGLISH_UNITS, ENGLISH_VOCAB } =
     evaluateTypeScript(source, "english-data.ts");
 
-  assert.deepEqual(ENGLISH_UNITS.map((unit) => unit.id), ["ch15", "ch16", "ch18"]);
+  assert.deepEqual(ENGLISH_UNITS.map((unit) => unit.id), ["ch14", "ch15", "ch16", "ch18", "toeic", "housing", "medical"]);
   for (const [label, items] of [
     ["vocab", ENGLISH_VOCAB],
     ["questions", ENGLISH_QUESTIONS],

@@ -1,4 +1,4 @@
-import { ENGLISH_PASSAGES } from "./english-data";
+import { ENGLISH_EXCLUDED_SOURCE_MARKERS, ENGLISH_PASSAGES } from "./english-data";
 import {
   buildMaterialMechanicsGeneratedSpec,
   type MaterialMechanicsGeneratorTemplateId,
@@ -31,7 +31,7 @@ export type GeneratedPracticeVisual =
 export type GeneratedPracticeSource = {
   kind: "passage" | "range";
   label: string;
-  chapter?: "ch15" | "ch16" | "ch18";
+  chapter?: "ch14" | "ch15" | "ch16" | "ch18";
   passageId?: string;
   passageTitle?: string;
   paragraphIndex?: number;
@@ -137,8 +137,8 @@ export const GENERATED_PRACTICE_SUBJECTS = [
     id: "subject-2",
     name: "英語",
     shortName: "英語",
-    description: "Ch.15・16・18の本文抜粋から、並び替え・和訳・本文文法をその場で生成します。",
-    sourceLabel: "英語ZIP教材 Ch.15・16・18",
+    description: "Ch.14・15・16・18の本文抜粋から、並び替え・和訳・本文文法をその場で生成します。",
+    sourceLabel: "英語ZIP教材 Ch.14・15・16・18（Ch.14の除外ブロックは不使用）",
   },
   {
     id: "subject-3",
@@ -201,7 +201,7 @@ const SUBJECT_NAME = Object.fromEntries(
   GENERATED_PRACTICE_SUBJECTS.map((subject) => [subject.id, subject.name]),
 ) as Record<GeneratedPracticeSubjectId, string>;
 
-const ENGLISH_CHAPTERS = new Set(["ch15", "ch16", "ch18"] as const);
+const ENGLISH_CHAPTERS = new Set(["ch14", "ch15", "ch16", "ch18"] as const);
 const EPSILON = 1e-12;
 export const MAX_GENERATION_ATTEMPTS = 32;
 
@@ -384,7 +384,7 @@ function numericQuestion(seedKey: string, seed: NumericSeed): GeneratedPracticeQ
 }
 
 type EnglishSourceSpec = {
-  chapter: "ch15" | "ch16" | "ch18";
+  chapter: "ch14" | "ch15" | "ch16" | "ch18";
   passageId: string;
   paragraphIndex: number;
   sentenceIndex?: number;
@@ -421,6 +421,8 @@ function resolveEnglishSource(spec: EnglishSourceSpec) {
 }
 
 const ENGLISH_ORDER_SOURCES: EnglishSourceSpec[] = [
+  { chapter: "ch14", passageId: "passage-big-battery", paragraphIndex: 2 },
+  { chapter: "ch14", passageId: "passage-big-battery", paragraphIndex: 9 },
   { chapter: "ch15", passageId: "passage-amyris", paragraphIndex: 1 },
   { chapter: "ch15", passageId: "passage-amyris", paragraphIndex: 8 },
   { chapter: "ch16", passageId: "passage-weather", paragraphIndex: 2 },
@@ -430,6 +432,24 @@ const ENGLISH_ORDER_SOURCES: EnglishSourceSpec[] = [
 ];
 
 const ENGLISH_TRANSLATION_SOURCES: Array<EnglishSourceSpec & { keywordGroups: string[][] }> = [
+  {
+    chapter: "ch14",
+    passageId: "passage-big-battery",
+    paragraphIndex: 0,
+    keywordGroups: [["日本"], ["北海道"], ["2013年", "2013"], ["世界最大"], ["蓄電池"], ["変動", "再生可能"]],
+  },
+  {
+    chapter: "ch14",
+    passageId: "passage-big-battery",
+    paragraphIndex: 7,
+    keywordGroups: [["レドックスフロー"], ["充電"], ["放電"], ["タンク"], ["バナジウム", "電解液"]],
+  },
+  {
+    chapter: "ch14",
+    passageId: "passage-big-battery",
+    paragraphIndex: 8,
+    keywordGroups: [["安全"], ["寿命"], ["10年", "20年"], ["容易"], ["大規模", "システム"], ["専門家"]],
+  },
   {
     chapter: "ch15",
     passageId: "passage-amyris",
@@ -478,6 +498,28 @@ type GrammarSpec = EnglishSourceSpec & {
 };
 
 const ENGLISH_GRAMMAR_SPECS: GrammarSpec[] = [
+  {
+    chapter: "ch14",
+    passageId: "passage-big-battery",
+    paragraphIndex: 1,
+    target: "is aimed at promoting",
+    question: "is aimed at promoting の文法構造として正しいものはどれか。",
+    options: ["be aimed at + 動名詞", "be aimed to + 動名詞", "aim at + 過去分詞", "be aiming for + 不定詞"],
+    answer: "be aimed at + 動名詞",
+    reason: "at は前置詞なので、後ろに動名詞 promoting が続くためです。",
+    explanation: "be aimed at doing は「～することを目的とする」。受動態 be aimed と前置詞 at を一まとまりで捉えます。",
+  },
+  {
+    chapter: "ch14",
+    passageId: "passage-big-battery",
+    paragraphIndex: 9,
+    target: "allow utilities to buy",
+    question: "allow utilities to buy の構造として正しいものはどれか。",
+    options: ["allow + 目的語 + to do", "allow + doing + 目的語", "allow + 目的語 + doing", "allow to + 目的語 + do"],
+    answer: "allow + 目的語 + to do",
+    reason: "utilities が意味上の主語、to buy が可能になる動作だからです。",
+    explanation: "allow A to do で「Aが～するのを可能にする／許す」。本文では蓄電池が電力会社の利用増加を可能にします。",
+  },
   {
     chapter: "ch15",
     passageId: "passage-amyris",
@@ -588,7 +630,7 @@ function englishOrder(seedKey: string, rng: SeededRandom): GeneratedPracticeQues
     provenance: "generated-from-in-scope-material",
     difficulty: 3,
     subpartCount: 3,
-    sourceBasis: ["英語過去問・本文一文整序", "範囲教材Chapter 15・16・18"],
+    sourceBasis: ["英語過去問・本文一文整序", "範囲教材Chapter 14・15・16・18"],
   };
 }
 
@@ -630,7 +672,7 @@ function englishTranslation(seedKey: string, rng: SeededRandom): GeneratedPracti
     provenance: "generated-from-in-scope-material",
     difficulty: 3,
     subpartCount: 3,
-    sourceBasis: ["英語過去問・本文抜粋和訳", "範囲教材Chapter 15・16・18"],
+    sourceBasis: ["英語過去問・本文抜粋和訳", "範囲教材Chapter 14・15・16・18"],
   };
 }
 
@@ -1957,7 +1999,7 @@ export function validateGeneratedPracticeQuestion(question: GeneratedPracticeQue
   }
   if (question.subjectId === "subject-2") {
     const sourceChapter = question.source.chapter as string | undefined;
-    if (question.source.kind !== "passage" || !sourceChapter || !ENGLISH_CHAPTERS.has(sourceChapter as "ch15" | "ch16" | "ch18")) {
+    if (question.source.kind !== "passage" || !sourceChapter || !ENGLISH_CHAPTERS.has(sourceChapter as "ch14" | "ch15" | "ch16" | "ch18")) {
       errors.push("英語の出典Chapterが範囲外です");
     }
     if (sourceChapter === "ch19") errors.push("Chapter 19は対象外です");
@@ -1968,6 +2010,9 @@ export function validateGeneratedPracticeQuestion(question: GeneratedPracticeQue
     }
     if (JSON.stringify(question).includes("ch19") || JSON.stringify(question).includes("Chapter 19")) {
       errors.push("Chapter 19の情報を含みます");
+    }
+    if (ENGLISH_EXCLUDED_SOURCE_MARKERS.some((marker) => JSON.stringify(question).includes(marker))) {
+      errors.push("Chapter 14の対象外ブロックを含みます");
     }
   }
   return { ok: errors.length === 0, errors };

@@ -1,4 +1,4 @@
-import { ENGLISH_QUESTIONS } from "./english-data";
+import { ENGLISH_QUESTIONS, isEnglishPoolItemInScope } from "./english-data";
 import { ENGLISH_CH18_QUIZ_ITEMS } from "./english-ch18-quiz-data";
 import { ENGLISH_EXAM_LEVEL_QUESTIONS } from "./english-expected-exams-data";
 import { APPLIED_MATH_EXAM_LEVEL_QUESTIONS, APPLIED_MATH_FORMULAS, APPLIED_MATH_QUESTIONS } from "./applied-math-data";
@@ -250,11 +250,27 @@ const ACTIVE_ENGLISH_RAPID_GROUPS = new Set([
   "語形・文脈",
   "長文内容理解",
   "和訳",
+  "長文和訳",
   "情報検索",
+  "TOEIC Reading",
+  "語彙・熟語（日→英）",
+  "語彙・熟語（英→日）",
 ]);
 
+const ACTIVE_ENGLISH_UNITS = new Set(["ch14", "ch15", "ch16", "ch18", "toeic", "housing", "medical"]);
+
+function isActiveEnglishRapidQuestion(question: ExamLevelRapidSource) {
+  return isEnglishPoolItemInScope(question)
+    && ACTIVE_ENGLISH_UNITS.has(question.unit ?? "")
+    && (
+      ACTIVE_ENGLISH_RAPID_GROUPS.has(question.group ?? "")
+      || question.group?.startsWith("語順整序｜")
+      || question.id.startsWith("exam-level-")
+    );
+}
+
 const RAPID_SOURCE_BASIS: Partial<Record<SubjectId, string>> = {
-  "subject-2": "英語ZIP本文 Ch.15・16・18 と提供過去問の出題形式",
+  "subject-2": "英語追加範囲 Ch.14・15・16・18、TOEIC Reading、Housing・Medical語彙（対象外欄・Ch.19は除外）",
   "subject-3": "機械力学範囲プリント4枚相当・過去問の連続計算",
   "subject-4": "熱力学範囲ZIPと形式1〜3の複合状態変化",
   "subject-5": "材料力学範囲ZIPと形式2の範囲重複問題",
@@ -433,8 +449,7 @@ function combineRapidPools(...pools: readonly RapidQuestion[][]) {
 const ENGLISH_RAPID = examLevelPool(
   "subject-2",
   [...ENGLISH_QUESTIONS, ...ENGLISH_EXAM_LEVEL_QUESTIONS],
-  (question) => ["ch15", "ch16", "ch18"].includes(question.unit ?? "")
-    && (ACTIVE_ENGLISH_RAPID_GROUPS.has(question.group ?? "") || question.id.startsWith("exam-level-")),
+  isActiveEnglishRapidQuestion,
 );
 
 export function networkCardsToRapid(cards: ProtocolCard[]) {
@@ -543,7 +558,7 @@ const COMPREHENSIVE_POOLS: Record<SubjectId, RapidQuestion[]> = {
   "subject-2": examLevelPool(
     "subject-2",
     [...ENGLISH_QUESTIONS, ...ENGLISH_CH18_ACTUAL_QUIZ_QUESTIONS, ...ENGLISH_EXAM_LEVEL_QUESTIONS],
-    (question) => ["ch15", "ch16", "ch18"].includes(question.unit ?? ""),
+    (question) => isEnglishPoolItemInScope(question) && ACTIVE_ENGLISH_UNITS.has(question.unit ?? ""),
   ),
   network: networkCardsToRapid(DEFAULT_CARDS),
   "subject-3": combineRapidPools(

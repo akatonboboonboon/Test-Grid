@@ -42,6 +42,10 @@ test("source contract separates ten scope images, four current-scope PDFs, and f
   assert.equal(base.DIGITAL_CIRCUIT_FORMAT_REFERENCE_FILENAMES.length, 4);
   assert.equal(extra.DIGITAL_CIRCUIT_CURRENT_SCOPE_PDFS.length, 4);
   assert.equal(extra.DIGITAL_CIRCUIT_CURRENT_SCOPE_PDFS.reduce((sum, file) => sum + file.pages, 0), 7);
+  assert.equal(extra.DIGITAL_CIRCUIT_ADDITIONAL_SCOPE_IMAGES.length, 2);
+  assert.deepEqual(extra.DIGITAL_CIRCUIT_ADDITIONAL_SCOPE_IMAGES.map((image) => image.filename), [
+    "PXL_20260720_073506138.MP.jpg", "PXL_20260720_073513112.MP.jpg",
+  ]);
   assert.deepEqual(extra.DIGITAL_CIRCUIT_CURRENT_SCOPE_PDFS.map((file) => file.filename), [
     "スマート制御過去問.pdf", "スマート制御演習1.pdf", "スマート制御演習2.pdf", "スマート制御演習3.pdf",
   ]);
@@ -56,8 +60,8 @@ test("source contract separates ten scope images, four current-scope PDFs, and f
 test("combined deck and practice cover every in-scope topic with solved, sourced, diagram-linked items", async () => {
   const { base, extra } = await loadModules();
   assert.deepEqual(base.DIGITAL_CIRCUIT_TOPICS.map((topic) => topic.id), TOPICS);
-  assert.ok(extra.DIGITAL_CIRCUIT_ALL_FORMULAS.length >= 32);
-  assert.ok(extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.length >= 40);
+  assert.ok(extra.DIGITAL_CIRCUIT_ALL_FORMULAS.length >= 38);
+  assert.ok(extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.length >= 47);
   assert.equal(new Set(extra.DIGITAL_CIRCUIT_ALL_FORMULAS.map((item) => item.id)).size, extra.DIGITAL_CIRCUIT_ALL_FORMULAS.length);
   assert.equal(new Set(extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.map((item) => item.id)).size, extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.length);
   for (const topic of TOPICS) {
@@ -91,7 +95,8 @@ test("combined deck and practice cover every in-scope topic with solved, sourced
     assert.ok(question.diagram, question.id + " required problem-linked diagram");
   }
   const facts = JSON.stringify([extra.DIGITAL_CIRCUIT_ALL_FORMULAS, extra.DIGITAL_CIRCUIT_ALL_QUESTIONS]);
-  assert.doesNotMatch(facts, /進数変換|カルノー図|全加算器|7セグメント/);
+  assert.doesNotMatch(facts, /進数変換|全加算器|7セグメント/);
+  assert.match(facts, /カルノー図|K-map/);
   for (const required of ["XOR", "1001", "10→2", "S\\^\\+", "JK"]) assert.match(facts, new RegExp(required));
 });
 

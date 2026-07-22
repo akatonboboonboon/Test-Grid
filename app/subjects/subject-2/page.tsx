@@ -875,7 +875,7 @@ export default function EnglishSubjectPage() {
           <div><span>VOCAB</span><strong>{ENGLISH_VOCAB.length}</strong><small>語</small></div>
           <div><span>QUESTIONS</span><strong>{ENGLISH_QUESTIONS.length}</strong><small>問</small></div>
           <div><span>PASSAGES</span><strong>{ENGLISH_PASSAGES.length}</strong><small>本</small></div>
-          <p>ZIP教材のChapter 15・16・18を収録。全問に詳しい解説を付け、Chapter 16の資料図も表示します。PDF見本の本文・単語は出題しません。覚えた {masteredTotal}語／復習 {learningTotal}語。</p>
+          <p>追加範囲のChapter 14・15・16・18、TOEIC Reading、Housing・Medical語彙を収録。全問に詳しい解説を付け、Chapter 16の資料図も表示します。Chapter 14冒頭の対象外欄とChapter 19は出題しません。覚えた {masteredTotal}語／復習 {learningTotal}語。</p>
         </section>
 
         <section ref={workspaceRef} id="english-workspace" className="english-workspace">
@@ -905,7 +905,7 @@ export default function EnglishSubjectPage() {
                     </div>
                   </div>
                   <fieldset className="english-chapter-filter english-card-chapter-filter">
-                    <legend>Chapter（複数選択可）</legend>
+                    <legend>範囲タグ（複数選択可）</legend>
                     <div role="group" aria-label="暗記帳のChapter絞り込み（複数選択）">
                       <button type="button" aria-pressed={cardUnits.length === 0} onClick={() => changeCardChapters([])}>全Chapter</button>
                       {COURSE_UNITS.map((unit) => <button key={unit.id} type="button" title={unit.title} aria-pressed={cardUnits.includes(unit.id)} onClick={() => toggleCardChapter(unit.id)}>{unitLabel(unit.id).split(" ")[0]}</button>)}
@@ -994,7 +994,7 @@ export default function EnglishSubjectPage() {
                   )}
                   <div className="english-test-settings english-test-settings-multi">
                     <fieldset className="english-chapter-filter english-test-chapter-filter">
-                      <legend>出題Chapter（複数選択可）</legend>
+                      <legend>出題範囲タグ（複数選択可）</legend>
                       <div role="group" aria-label="模擬テストのChapter絞り込み（複数選択）">
                         <button type="button" aria-pressed={testUnits.length === 0} onClick={() => changeTestChapters([])}>全Chapter</button>
                         {COURSE_UNITS.map((unit) => <button key={unit.id} type="button" title={unit.title} aria-pressed={testUnits.includes(unit.id)} onClick={() => toggleTestChapter(unit.id)}>{unitLabel(unit.id).split(" ")[0]}</button>)}
@@ -1021,6 +1021,12 @@ export default function EnglishSubjectPage() {
                     <details className="english-question-passage">
                       <summary>本文を表示して解く <span>{questionPassage.title}</span></summary>
                       <div>{questionPassage.paragraphs.map((paragraph, index) => <p key={`${questionPassage.id}-test-${index}`}><b>{index + 1}</b>{paragraph.en}</p>)}</div>
+                    </details>
+                  )}
+                  {!questionPassage && currentQuestion.reference && (
+                    <details className="english-question-passage">
+                      <summary>本文を表示して解く <span>{currentQuestion.reference.label}</span></summary>
+                      <div>{currentQuestion.reference.quote.split("\n").map((line, index) => <p key={`${currentQuestion.id}-reference-${index}`}><b>{index + 1}</b>{line}</p>)}</div>
                     </details>
                   )}
                   {currentQuestion.id.startsWith("ch16-homepage-") && <EnglishWeatherFigure />}
@@ -1067,7 +1073,7 @@ export default function EnglishSubjectPage() {
 
               {readingStudyMode === "practice" && (
                 <fieldset className="english-chapter-filter english-reading-chapter-filter">
-                  <legend>実戦のChapter（複数選択可）</legend>
+                  <legend>実戦の範囲タグ（複数選択可）</legend>
                   <div role="group" aria-label="長文実戦のChapter絞り込み（複数選択）">
                     <button type="button" aria-pressed={readingUnits.length === 0} onClick={() => changeReadingChapters([])}>全Chapter</button>
                     {COURSE_UNITS.map((unit) => <button key={unit.id} type="button" title={unit.title} aria-pressed={readingUnits.includes(unit.id)} onClick={() => toggleReadingChapter(unit.id)}>{unitLabel(unit.id).split(" ")[0]}</button>)}
@@ -1148,7 +1154,7 @@ export default function EnglishSubjectPage() {
                 <article><span>08 / MULTI &amp; T/F</span><h3>複数正解・T/F</h3><p>正解を1つ見つけても止めず、全選択肢を本文の根拠と照合します。NOT問題は「本文と合わないもの」を選ぶことを先に確認。</p><strong>各選択肢に根拠文を1つ対応させる</strong></article>
                 <article><span>09 / PASSAGE SET</span><h3>長文の連続小問</h3><p>先に小問を眺めて探す情報を決め、本文は段落ごとの要点を取りながら一度通読。語句・和訳・日本語記述・内容一致を同じ根拠箇所から続けて処理します。</p><strong>設問確認 → 通読 → 根拠箇所 → 連続解答</strong></article>
               </div>
-              <div className="english-guide-tip"><span>PAST EXAM NOTE</span><p><b>送付された過去問は出題形式の分析専用です。</b>過去問の本文・単語・固有テーマは今回のテスト範囲に含めず、Chapter 15・16・18の教材だけで練習問題を構成します。</p></div>
+              <div className="english-guide-tip"><span>SCOPE NOTE</span><p><b>追加教材の指定範囲を出題します。</b>Chapter 14・15・16・18、TOEIC Reading、Housing・Medical語彙を練習対象とし、Chapter 14冒頭の対象外欄とChapter 19はすべての出題プールから除外します。</p></div>
               <div className="english-guide-tip"><span>INTERVIEW TIP</span><p><b>Yes / No質問</b>は Yes・No から答え、<b>Wh疑問文</b>は聞かれている情報を直接返す。what / where / why / how long を見分ける。</p></div>
             </section>
           )}

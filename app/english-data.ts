@@ -42,10 +42,27 @@ export type EnglishPassage = {
   paragraphs: Array<{ en: string; ja: string }>;
 };
 
+export const ENGLISH_EXCLUDED_SOURCE_MARKERS = Object.freeze([
+  "What's new?",
+  "What’s new?",
+] as const);
+
+export function isEnglishPoolItemInScope(item: unknown) {
+  if (!item || typeof item !== "object") return false;
+  const unit = "unit" in item && typeof item.unit === "string" ? item.unit : "";
+  if (unit === "exam-sample" || unit === "ch19") return false;
+  const sourceText = JSON.stringify(item);
+  return !ENGLISH_EXCLUDED_SOURCE_MARKERS.some((marker) => sourceText.includes(marker));
+}
+
 export const ENGLISH_UNITS: EnglishUnit[] = [
+  { id: "ch14", title: "Chapter 14｜再生可能エネルギー導入拡大の鍵", shortTitle: "Ch.14 大型蓄電池と再生可能エネルギー" },
   { id: "ch15", title: "Chapter 15｜新しい生命体を作り出す企業", shortTitle: "Ch.15 新しい生命体を作り出す企業" },
   { id: "ch16", title: "Chapter 16｜スパコンで天気予報①", shortTitle: "Ch.16 スパコンで天気予報①" },
   { id: "ch18", title: "Chapter 18｜高齢化社会に強力な助っ人", shortTitle: "Ch.18 高齢化社会に強力な助っ人" },
+  { id: "toeic", title: "TOEIC Reading｜広告・手紙・市イベント", shortTitle: "TOEIC Reading 追加2セット" },
+  { id: "housing", title: "Key Vocabulary｜Housing", shortTitle: "Housing 語彙15語" },
+  { id: "medical", title: "Key Vocabulary｜Medical", shortTitle: "Medical 語彙15語" },
 ];
 
 type RawVocab = [unit: string, en: string, ja: string, note?: string];
@@ -222,7 +239,75 @@ const RAW_VOCAB: RawVocab[] = [
   ["ch19", "graduate school", "大学院"],
 ];
 
-export const ENGLISH_VOCAB: EnglishVocabCard[] = RAW_VOCAB
+const ADDITIONAL_RAW_VOCAB: RawVocab[] = [
+  ["ch14", "storage battery", "蓄電池", "storage は store（蓄える）+ -age、battery は電池。電力を蓄える装置を表す複合語。"],
+  ["ch14", "power generation", "発電", "generate はラテン語系の「生み出す」に由来し、generation は生み出すこと。"],
+  ["ch14", "power supply", "電力供給", "supply は「必要なものを満たす・供給する」。power と組み合わせて電力供給。"],
+  ["ch14", "life span", "寿命", "span は両端の間に広がる長さ。生命が続く時間の幅から「寿命」。"],
+  ["ch14", "suspension bridge", "つり橋", "suspend（つるす）+ -sion。ケーブルで橋面をつる構造を表す。"],
+  ["ch14", "renewable", "再生可能な", "renew（再び新しくする）+ -able（～できる）。"],
+  ["ch14", "disposable", "使い捨ての", "dispose（処分する）+ -able（～できる）。処分できることから「使い捨ての」。"],
+  ["ch14", "erasable", "消すことのできる", "erase（消す）+ -able（～できる）。"],
+  ["ch14", "adjustable", "調節可能な", "adjust（調節する）+ -able（～できる）。"],
+  ["ch14", "rechargeable", "再充電可能な", "re-（再び）+ charge（充電する）+ -able（～できる）。"],
+  ["ch14", "build", "建設する、築く", "古英語 byldan「住居を建てる」と同系。物理的な建設から仕組みを築く意味へ広がる。"],
+  ["ch14", "in a bid to", "～しようとして、～するために", "bid は「試み・入札」。in a bid to do で、ある目的を達成しようとする試みを表す。"],
+  ["ch14", "rectify", "是正する、修正する", "ラテン語 rectus「まっすぐな」と同系で、誤りを正しい状態へ直す。"],
+  ["ch14", "address", "対処する", "問題へ注意・働きかけを向けることから「対処する」。"],
+  ["ch14", "defect", "欠点、欠陥", "de-（離れて）+ facere（作る）と同系で、本来あるべき状態を欠くこと。"],
+  ["ch14", "fluctuation", "変動", "fluctuate（上下する）+ -tion。波のように上がり下がりする変化。"],
+  ["ch14", "affect", "影響を及ぼす", "ラテン語 ad-「～へ」+ facere「作用する」と同系。動詞 affect と名詞 effect を区別する。"],
+  ["ch14", "account for", "～を占める、～を説明する", "account は計算・説明。割合を計算に入れる意味から「～を占める」。"],
+  ["ch14", "boost", "押し上げる、促進する", "下から押し上げて量や勢いを増すイメージ。"],
+  ["ch14", "be aimed at", "～を目的とする", "aim（狙い）+ at（標的）を受動形で用いる定型表現。"],
+  ["ch14", "favorable", "好都合な、好ましい", "favor（好意・支持）+ -able。都合よく働く状態。"],
+  ["ch14", "dispense", "出す、分配する、販売する", "dis-（分けて）+ pendere（量る）と同系。必要量ずつ分けて出す。"],
+  ["ch14", "cover", "費用を補う、賄う", "覆って不足を埋めるイメージから、費用を「賄う」意味へ広がった。"],
+  ["ch14", "development", "開発、発展", "develop（発展させる・開発する）+ 名詞語尾 -ment。"],
+  ["ch14", "what is called", "いわゆる", "what is called A は直訳すると「Aと呼ばれるもの」で、名詞の前に置いて「いわゆるA」。"],
+  ["ch14", "utility", "公共事業体、電力会社", "ラテン語 utilis「役に立つ」と同系。公共に役立つ電気・水道等の事業体を指す。"],
+  ["ch14", "allow", "～を可能にする、許す", "allow + 目的語 + to do で「目的語が～するのを可能にする」。"],
+  ["ch14", "redox flow battery", "レドックスフロー電池", "redox は reduction（還元）+ oxidation（酸化）の合成語。"],
+  ["ch14", "electrolytic solution", "電解液", "electro-（電気）+ lytic（分解の）から、電気を通す溶液。"],
+  ["ch14", "vanadium", "バナジウム", "元素名。レドックスフロー電池の電解液に用いられる。"],
+  ["ch14", "capacity", "容量、生産能力", "capable（能力がある）と同系で、入れられる量・処理できる量。"],
+  ["ch14", "discharge", "放出する、放電する", "dis-（外へ）+ charge（電荷・負荷）。蓄えた電気を外へ出す。"],
+  ["ch14", "convert A into B", "AをBに変換する", "con-（一緒に）+ vert（向きを変える）。into が変換後の姿Bを導く。"],
+
+  ["housing", "affordable", "手頃な、無理なく買える", "afford（余裕がある）+ -able（～できる）。"],
+  ["housing", "comfort", "快適さ、安らぎ", "古フランス語 conforter「力づける」と同系で、苦痛を和らげ安心させることから「快適さ」。"],
+  ["housing", "condominium", "分譲マンション、区分所有住宅", "ラテン語 con-「共同で」+ dominium「所有権」。建物を共同所有し、各戸を区分所有する形。"],
+  ["housing", "to decorate", "飾る、内装を施す", "ラテン語 decorare「飾る」と同系。decor（装飾）に動詞語尾 -ate が付いた形。"],
+  ["housing", "fully equipped", "設備が完全に整った", "full + -ly の副詞 fully が、equip の過去分詞 equipped「設備を備えた」を強める。"],
+  ["housing", "to furnish", "家具を備え付ける", "古フランス語 fournir「備える・供給する」と同系。furniture（家具）の語幹として覚える。"],
+  ["housing", "furthermore", "さらに、そのうえ", "further「さらに」+ more「もっと」を重ねた接続副詞。情報を追加する。"],
+  ["housing", "household goods", "家庭用品、家財道具", "house + hold から household「世帯」、goods「品物」。家庭で使う物品を表す。"],
+  ["housing", "landlord", "家主、大家", "land「土地」+ lord「所有者・主人」。土地・住宅を貸す側。"],
+  ["housing", "lease", "賃貸借契約、賃貸する", "アングロフランス語系の「放す・貸す」に由来し、一定期間使用権を渡す契約。"],
+  ["housing", "microwave oven", "電子レンジ", "micro-「小さい」+ wave「波」から microwave「マイクロ波」、oven「加熱器」。"],
+  ["housing", "mortgage", "住宅ローン、抵当", "古フランス語 mort「死んだ」+ gage「誓約・担保」。返済または差押えで終わる担保契約。"],
+  ["housing", "rent", "家賃、賃借する", "古フランス語 rente「定期収入」と同系。定期的に払う賃料、または借りる動作。"],
+  ["housing", "suburban", "郊外の", "sub-「下・近く」+ urban「都市の」。都市の周辺に位置することを表す。"],
+  ["housing", "tenant", "借家人、入居者", "ラテン語 tenere「保持する」と同系。契約で物件を保持・使用する借り手。"],
+
+  ["medical", "accommodation", "収容施設、宿泊設備", "ラテン語 accommodare「適合させる」と同系。人に合う場所を用意することから宿泊設備・収容。"],
+  ["medical", "ambulance", "救急車", "フランス語 hôpital ambulant「移動病院」に由来し、ambulare「歩く・移動する」と同系。"],
+  ["medical", "blood pressure", "血圧", "blood「血液」+ pressure「圧力」。血管壁にかかる圧力を表す複合語。"],
+  ["medical", "confidentiality", "守秘義務、機密性", "confidential「内密の」+ 名詞語尾 -ity。語幹はラテン語 fidere「信頼する」と同系。"],
+  ["medical", "to disclose", "開示する、明らかにする", "dis-「離して」+ close「閉じる」。閉じた情報を開いて見せるイメージ。"],
+  ["medical", "to donate", "寄付する、提供する", "ラテン語 donum「贈り物」と同系。donor（提供者）・donation（寄付）も同じ語族。"],
+  ["medical", "duty", "義務、勤務", "due「当然支払うべき」と同系で、自分が果たすべき務めを表す。"],
+  ["medical", "evaluation", "評価", "value「価値」につながる evaluate「価値を見積もる」+ -tion。"],
+  ["medical", "inpatient", "入院患者", "in「中で」+ patient「患者」。病院内に滞在して治療を受ける人。"],
+  ["medical", "to investigate", "調査する、検査する", "ラテン語 vestigium「足跡」と同系で、跡をたどって詳しく調べるイメージ。"],
+  ["medical", "to misuse", "誤用する、乱用する", "mis-「誤って・悪く」+ use「使う」。目的外または不適切に使う。"],
+  ["medical", "occupational therapy", "作業療法", "occupation「活動・仕事」+ ギリシャ語系 therapy「治療」。作業活動を用いる治療。"],
+  ["medical", "outpatient", "外来患者", "out「外で」+ patient「患者」。入院せず、外から通院して診療を受ける人。"],
+  ["medical", "surgery", "手術、外科", "ギリシャ語 kheirourgia「手の仕事」に由来し、手を用いる治療から手術・外科。"],
+  ["medical", "temperature", "体温、温度", "ラテン語 temperare「適度にする・調整する」と同系で、熱さ冷たさの程度。"],
+];
+
+export const ENGLISH_VOCAB: EnglishVocabCard[] = [...RAW_VOCAB, ...ADDITIONAL_RAW_VOCAB]
   .map(([unit, en, ja, note], index) => ({
     id: `ev-${String(index + 1).padStart(3, "0")}`,
     unit,
@@ -230,9 +315,112 @@ export const ENGLISH_VOCAB: EnglishVocabCard[] = RAW_VOCAB
     ja,
     note,
   }))
-  .filter((card) => card.unit !== "exam-sample" && card.unit !== "ch19");
+  .filter(isEnglishPoolItemInScope);
 
-export const ENGLISH_PASSAGES: EnglishPassage[] = [
+const ADDITIONAL_ENGLISH_PASSAGES: EnglishPassage[] = [
+  {
+    id: "passage-big-battery",
+    unit: "ch14",
+    title: "Big battery eyes green energy era",
+    titleJa: "大型蓄電池が再生可能エネルギー時代を見据える",
+    paragraphs: [
+      {
+        en: "Japan will build the world's largest storage battery system in Hokkaido as early as autumn of 2013 in a bid to rectify fluctuations in the electricity produced by renewable energy sources.",
+        ja: "日本は、再生可能エネルギー源で作られる電力の変動を是正するため、早ければ2013年秋に北海道で世界最大の蓄電池システムを建設する。",
+      },
+      {
+        en: "The project is aimed at promoting renewable energy by addressing a key defect—inconsistent power generation.",
+        ja: "この計画は、主要な欠点である不安定な発電へ対処することで、再生可能エネルギーを促進することを目的としている。",
+      },
+      {
+        en: "The electricity generated by such sources accounts for only 1.6 percent of the nation's total, partly because solar and wind power are affected by the changes in the weather.",
+        ja: "こうした電源による電力は国全体のわずか1.6パーセントを占めるにすぎず、その一因は太陽光・風力発電が天候の変化に影響されることである。",
+      },
+      {
+        en: "To raise renewable energy's role in the national energy mix, the Ministry of Economy, Trade and Industry pushed for the development of a large storage system that would store electricity when weather conditions are favorable and dispense it when the weather fails.",
+        ja: "国のエネルギー構成における再生可能エネルギーの役割を高めるため、経済産業省は、天候が好都合なときに電力を蓄え、天候が悪化したときに送り出す大型蓄電システムの開発を推進した。",
+      },
+      {
+        en: "Sumitomo Electric Industries Ltd. and Hokkaido Electric Power Co. are leading the storage project, and the ministry has provided ¥20 billion to cover all development and manufacturing costs.",
+        ja: "住友電気工業株式会社と北海道電力株式会社が蓄電計画を主導し、経済産業省は開発・製造費のすべてを賄うため200億円を拠出した。",
+      },
+      {
+        en: "For the project, Hokkaido Electric will build what is called a “redox flow” battery system, produced by Sumitomo, at a substation in the town of Abira.",
+        ja: "この計画のため、北海道電力は安平町の変電所に、住友電工製のいわゆる「レドックスフロー」電池システムを建設する。",
+      },
+      {
+        en: "With a capacity of 60,000 kWh, the system will be as high as a six-story building.",
+        ja: "容量6万kWhのそのシステムは、6階建ての建物ほどの高さになる。",
+      },
+      {
+        en: "A redox flow battery repeats charging and discharging operations in a tank, using an electrolytic solution of vanadium.",
+        ja: "レドックスフロー電池は、バナジウムの電解液を用いてタンク内で充電と放電を繰り返す。",
+      },
+      {
+        en: "While it is safe and has a life span of 10 to 20 years, it can be readily converted into a large system, experts say.",
+        ja: "安全で寿命が10年から20年ある一方、容易に大規模システムへ変換できると専門家はいう。",
+      },
+      {
+        en: "The ministry believes that using such batteries will allow utilities to buy 10 percent more electricity from green energy sources.",
+        ja: "経済産業省は、このような蓄電池を使えば、電力会社がグリーンエネルギー源からの電力を10パーセント多く購入できるようになると考えている。",
+      },
+    ],
+  },
+  {
+    id: "passage-keller-attire",
+    unit: "toeic",
+    title: "Keller Attire advertisement and customer letter",
+    titleJa: "Keller Attireの広告と顧客からの手紙",
+    paragraphs: [
+      {
+        en: "Renting a suit from Keller Attire has never been easier! We now have an expanded range of men's formal wear in sizes XS to XXL, all available to rent online.",
+        ja: "Keller Attireでのスーツレンタルはこれまでになく簡単です。XSからXXLまで紳士用礼服の品ぞろえを拡大し、すべてオンラインで借りられます。",
+      },
+      {
+        en: "Whether you are attending a wedding, a black-tie event, or some other special occasion, we have the perfect suit for you. Visit our Web site at www.kellerattire.com to see our full range of styles, colors, and fabrics. Our style experts are ready to chat with you about your choices and walk you through our super-accurate online Measuring Wizard. We will help you find a great suit that fits you perfectly!",
+        ja: "結婚式、正装行事、その他の特別な機会のいずれでも、あなたにぴったりのスーツがあります。ウェブサイトではスタイル、色、生地の全品ぞろえを確認でき、専門家が選択を相談し、精度の高いオンライン採寸機能を案内します。ぴったり合う素敵なスーツ探しをお手伝いします。",
+      },
+      {
+        en: "Our standard delivery service will get your order to you in three to five days. For faster service, we offer overnight delivery for an additional charge of $50.",
+        ja: "通常配送は3日から5日です。急ぎの場合は、追加料金50ドルで翌日配送を利用できます。",
+      },
+      {
+        en: "I recently ordered a suit from Keller Attire to wear to an important client dinner in New York. I chose your overnight delivery service and provided a New York address for delivery. However, the suit was delivered to my home address in Dallas instead—I was already on my way to New York at the time!",
+        ja: "私は最近、ニューヨークでの重要な顧客との夕食会で着るためKeller Attireのスーツを注文しました。翌日配送を選び、ニューヨークの住所を指定しましたが、スーツは代わりにダラスの自宅へ届き、その時私はすでにニューヨークへ向かっていました。",
+      },
+      {
+        en: "Your customer service team handled the problem with spotless professionalism. As there was not enough time to send a replacement, they arranged for a local rental company to deliver a similar suit to my hotel at no additional cost to me.",
+        ja: "顧客対応チームは非の打ちどころのないプロ意識で問題に対処しました。代替品を送る時間がなかったため、現地のレンタル会社を手配し、追加料金なしで同様のスーツをホテルへ届けました。",
+      },
+      {
+        en: "I am extremely grateful for your team's superior customer service. I will certainly use Keller Attire again in the future.",
+        ja: "御社チームの優れた顧客対応に心から感謝しています。今後も必ずKeller Attireを利用します。",
+      },
+    ],
+  },
+  {
+    id: "passage-eston-scavenger-hunt",
+    unit: "toeic",
+    title: "Eston City Scavenger Hunt announcement",
+    titleJa: "Eston市スカベンジャーハントのお知らせ",
+    paragraphs: [
+      {
+        en: "This year's Eston City Scavenger Hunt (ECSH) is coming soon! Now in its seventh year, the ECSH has become a tradition for local residents. Gather clues, solve challenges, and uncover hidden details about historical sites throughout the city.",
+        ja: "今年のEston市スカベンジャーハント（ECSH）が間もなく開催されます。7年目を迎え、ECSHは地域住民の恒例行事になりました。手がかりを集め、課題を解き、市内各地の史跡に隠された細部を発見してください。",
+      },
+      {
+        en: "The ECSH starts in Founders Park at 10:00 A.M. on July 20. It takes two to four hours to complete, and a smartphone is required. All of the sites are within walking distance of the park. You will need only one device per team.",
+        ja: "ECSHは7月20日午前10時にFounders Parkで始まります。完了には2時間から4時間かかり、スマートフォンが必要です。全地点は公園から徒歩圏内で、1チームにつき端末は1台だけで構いません。",
+      },
+      {
+        en: "Afterward, join your neighbors to celebrate with refreshments and music in the park. Register online at www.estoncity.gov/ecsh by July 18 or in person on the day of the event.",
+        ja: "終了後は公園で軽食と音楽を楽しみ、近隣の人々と祝いましょう。www.estoncity.gov/ecshで7月18日までにオンライン登録するか、当日に会場で登録してください。",
+      },
+    ],
+  },
+];
+
+const LEGACY_ENGLISH_PASSAGES: EnglishPassage[] = [
   {
     id: "passage-amyris",
     unit: "ch15",
@@ -410,6 +598,11 @@ export const ENGLISH_PASSAGES: EnglishPassage[] = [
     ],
   },
 ].filter((passage) => passage.unit !== "ch19");
+
+export const ENGLISH_PASSAGES: EnglishPassage[] = [
+  ...ADDITIONAL_ENGLISH_PASSAGES,
+  ...LEGACY_ENGLISH_PASSAGES,
+].filter(isEnglishPoolItemInScope);
 
 type RawOrder = [
   unit: string,
@@ -1184,7 +1377,200 @@ function withEnglishQuestionReference(question: EnglishQuestion): EnglishQuestio
   };
 }
 
+const ADDITIONAL_CORE_QUESTIONS: EnglishQuestion[] = [
+  {
+    id: "ch14-able-disposable",
+    unit: "ch14",
+    group: "語形・文脈",
+    format: "choice",
+    prompt: "接尾辞 -able を使う語のうち「使い捨ての」を表すものを選ぶ。",
+    options: ["disposable", "erasable", "adjustable", "rechargeable"],
+    answer: "disposable",
+    explanation: "dispose（処分する）+ -able で、使用後に処分できる「使い捨ての」。他は順に「消せる」「調節可能な」「再充電可能な」。",
+  },
+  {
+    id: "ch14-able-rechargeable",
+    unit: "ch14",
+    group: "語形・文脈",
+    format: "choice",
+    prompt: "re- + charge + -able の語形成から「再充電可能な」を表す語を選ぶ。",
+    options: ["disposable", "erasable", "adjustable", "rechargeable"],
+    answer: "rechargeable",
+    explanation: "re- は「再び」、charge は「充電する」、-able は「～できる」。三要素を合わせて「再充電可能な」。",
+  },
+  {
+    id: "passage-order-ch14-1",
+    unit: "ch14",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.14 本文第2段落を並べ替え：この計画は、発電の欠点へ対処することで再生可能エネルギーを促進することを目的とする。",
+    answer: "The project is aimed at promoting renewable energy by addressing a key defect—inconsistent power generation.",
+    tokens: "The project is aimed at promoting renewable energy by addressing a key defect—inconsistent power generation.".split(/\s+/u),
+  },
+  {
+    id: "passage-order-ch14-2",
+    unit: "ch14",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.14 本文第3段落を並べ替え：このような電源による電力は国全体の1.6パーセントにすぎない。",
+    answer: "The electricity generated by such sources accounts for only 1.6 percent of the nation's total, partly because solar and wind power are affected by the changes in the weather.",
+    tokens: "The electricity generated by such sources accounts for only 1.6 percent of the nation's total, partly because solar and wind power are affected by the changes in the weather.".split(/\s+/u),
+  },
+  {
+    id: "passage-order-ch14-3",
+    unit: "ch14",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.14 本文第9段落を並べ替え：安全で寿命が10年から20年ある一方、大規模システムへ容易に変換できる。",
+    answer: "While it is safe and has a life span of 10 to 20 years, it can be readily converted into a large system, experts say.",
+    tokens: "While it is safe and has a life span of 10 to 20 years, it can be readily converted into a large system, experts say.".split(/\s+/u),
+  },
+  {
+    id: "passage-order-ch14-4",
+    unit: "ch14",
+    group: "語順整序｜本文主要文法",
+    format: "order",
+    prompt: "Ch.14 本文第10段落を並べ替え：蓄電池の利用で電力会社はグリーンエネルギー電力を10パーセント多く購入できる。",
+    answer: "Using such batteries will allow utilities to buy 10 percent more electricity from green energy sources.",
+    tokens: "Using such batteries will allow utilities to buy 10 percent more electricity from green energy sources.".split(/\s+/u),
+  },
+  ...[
+    ["ch14-order-bid", "その企業は建設計画の入札を募った。", "The corporation invited bids for the construction project."],
+    ["ch14-order-rectify", "この状況を修正するには、かなり時間がかかるだろう。", "It will take quite some time to rectify this situation."],
+    ["ch14-order-fluctuation", "その管理者は価格変動の記録を取り続けた。", "The manager kept a record of price fluctuations."],
+    ["ch14-order-address", "そのチームは問題に対処する必要があった。", "The team needed to address the issue."],
+    ["ch14-order-defect", "助手はプログラムの重大な欠陥を見つけた。", "The assistant found a major defect in the program."],
+    ["ch14-order-account", "この国では以前、喫煙者が80パーセントを超えていた。", "In this country, smokers used to account for more than 80%."],
+    ["ch14-order-affect", "オゾン層の破壊は環境に影響を及ぼす。", "The destruction of the ozone layer affects the environment."],
+    ["ch14-order-favorable", "天気は出航に適している。", "The weather is favorable for sailing."],
+    ["ch14-order-dispense", "自動販売機はさまざまな商品を販売する。", "Vending machines dispense a variety of goods."],
+    ["ch14-order-cover", "この品物の価格では製造費を補えない。", "The price of this article does not cover the cost of its manufacture."],
+    ["ch14-order-development", "新薬の開発には12年から15年かかる。", "The development of a new medicine takes 12 to 15 years."],
+    ["ch14-order-called", "その少年はいわゆる天才である。", "The boy is what is called a genius."],
+    ["ch14-order-capacity", "この機械には1時間に100個を処理する能力がある。", "This machine has the capacity to process 100 units per hour."],
+    ["ch14-order-discharge", "その工場は汚水を排出する。", "The factory discharges polluted water."],
+    ["ch14-order-convert", "原本ファイルをPDFに変換してください。", "Convert the original file into a PDF."],
+    ["ch14-order-utility", "公共料金の支払いに使えるクレジットカードがある。", "There is a credit card you can use to pay utility bills."],
+    ["ch14-order-allow", "その博物館では私たちが写真を撮ることを認めている。", "The museum allows us to take pictures."],
+  ].map(([id, prompt, answer]) => ({
+    id,
+    unit: "ch14",
+    group: "語順整序｜追加範囲例文",
+    format: "order" as const,
+    prompt: "語句を並べ替える：" + prompt,
+    answer,
+    tokens: answer.split(/\s+/u),
+  })),
+  ...[
+    ["ch14-tf-1", "According to the article, renewable energy is a consistent source of electricity.", "F", "第3段落は天候で発電量が変わるため、再生可能エネルギーの供給はinconsistentだと説明している。"],
+    ["ch14-tf-2", "Renewable energy is only a small part of Japan's electricity generation.", "T", "第3段落の約1.6パーセントという割合は、発電全体の小さな一部であることを示す。"],
+    ["ch14-tf-3", "The Japanese government is helping to pay for the storage system.", "T", "第5段落は経済産業省が開発・製造費を賄う200億円を拠出したと述べる。"],
+    ["ch14-tf-4", "The storage battery system will be housed in six buildings.", "F", "第7段落はシステムの高さをa six-story buildingにたとえており、6棟に収容するとは述べていない。"],
+    ["ch14-tf-5", "Sales of renewable energy will probably increase if the batteries are used.", "T", "第10段落は蓄電池により電力会社が再生可能エネルギー電力を10パーセント多く利用できるとする。"],
+  ].map(([id, prompt, answer, explanation]) => ({
+    id,
+    unit: "ch14",
+    group: "長文 True / False",
+    format: "choice" as const,
+    prompt,
+    options: ["T", "F"],
+    answer,
+    explanation,
+    passageId: "passage-big-battery",
+  })),
+  ...[
+    ["ch14-summary-1", "Japan is to build the ( ___ ) largest storage battery system in an effort to address a key concern of renewable energy and inconsistent power generation.", ["world's", "country's", "company's", "city's"], "world's"],
+    ["ch14-summary-2", "With the ( ___ ) backing, the battery storage system will store energy in good weather and release energy in times of need.", ["government's", "customer's", "expert's", "landlord's"], "government's"],
+    ["ch14-summary-3", "( ___ ) battery storage system will store energy in good weather and release energy in times of need.", ["Hokkaido's", "Tokyo's", "Kagoshima's", "Dallas's"], "Hokkaido's"],
+    ["ch14-summary-4", "The redox flow battery has a vanadium solution, a life span of up to 20 years, and the ( ___ ) capacity is 60,000 kWh.", ["system's", "weather's", "article's", "building's"], "system's"],
+  ].map(([id, prompt, options, answer]) => ({
+    id,
+    unit: "ch14",
+    group: "要約穴埋め",
+    format: "choice" as const,
+    prompt: prompt as string,
+    options: options as string[],
+    answer: answer as string,
+    explanation: "本文全体の数値・用語を照合すると「" + answer + "」が要約文を正しく完成させる。",
+    passageId: "passage-big-battery",
+  })),
+  {
+    id: "ch16-extra-weather-map-order",
+    unit: "ch16",
+    group: "語順整序｜追加範囲テスト",
+    format: "order",
+    prompt: "「これはある特定の日の日本の天気図です。」となるように並べ替える。",
+    answer: "This is a weather map of Japan on a particular day.",
+    tokens: "This is a weather map of Japan on a particular day.".split(/\s+/u),
+  },
+  ...[
+    ["ch16-extra-map", "Researchers have ( ___ ) the genome of a spider for the first time.", ["mapped", "narrowed", "surfaced"], "mapped", "現在完了 have の後なので map の過去分詞 mapped。genome を地図化する比喩で「解読した」。"],
+    ["ch16-extra-surface", "The problem started to ( ___ ) in the 1980s.", ["map", "narrow", "surface"], "surface", "start to の後は動詞原形。surface は「表面化する」。"],
+    ["ch16-extra-narrow", "High-tech supercomputers could ( ___ ) each block down to 3.5 kilometers.", ["map", "narrow", "surface"], "narrow", "助動詞 could の後は原形で、narrow A down to B「AをBまで狭める」。"],
+    ["ch16-extra-formation", "formation の意味を選ぶ。", ["形成", "分割", "六角形の"], "形成", "form（形作る）+ -ation で「形成」。"],
+    ["ch16-extra-split", "split（動詞）の意味を選ぶ。", ["分割する", "予測する", "測定する"], "分割する", "一つのものを複数部分へ分ける動詞。"],
+    ["ch16-extra-hexagonal", "hexagonal の意味を選ぶ。", ["六角形の", "正方形の", "球状の"], "六角形の", "hexa-「6」+ -gon「角」+ -al「～の」。"],
+  ].map(([id, prompt, options, answer, explanation]) => ({
+    id,
+    unit: "ch16",
+    group: "語形・文脈",
+    format: "choice" as const,
+    prompt,
+    options: options as string[],
+    answer,
+    explanation,
+  })),
+  ...[
+    ["toeic-keller-181", "What would NOT be available to customers who visit Keller Attire's Web site?", ["Shoes to match a suit", "Professional advice", "Images of different styles", "A way to find correct sizes"], "Shoes to match a suit", "サイトには専門家の助言、各スタイルの画像、採寸機能があるが、スーツに合う靴は掲載されていない。"],
+    ["toeic-keller-182", "In the advertisement, the word “standard” in paragraph 3, line 1, is closest in meaning to", ["basic", "routine", "average", "affordable"], "basic", "standard deliveryは追加料金のない通常・基本の配送なのでbasicが最も近い。"],
+    ["toeic-keller-183", "Why did Mr. Varela write to Ms. Ford?", ["To report a mistake in an advertisement", "To express his concern about a policy", "To invite her to meet his clients", "To praise her company's customer service"], "To praise her company's customer service", "手紙は問題解決時のspotless professionalismを称賛している。"],
+    ["toeic-keller-184", "What is suggested about Mr. Varela?", ["He lives in New York", "He is dissatisfied with a service", "He was unable to attend a dinner", "He paid $50 for delivery"], "He paid $50 for delivery", "overnight deliveryは追加50ドルで、彼はそのサービスを選んだと手紙にある。"],
+    ["toeic-keller-185", "What problem did Mr. Varela have with the suit he ordered?", ["It did not fit.", "It was the wrong color.", "It was delivered late.", "It arrived at the wrong address."], "It arrived at the wrong address.", "指定したニューヨークではなくダラスの自宅へ配送された。"],
+  ].map(([id, prompt, options, answer, explanation]) => ({
+    id,
+    unit: "toeic",
+    group: "長文内容理解",
+    format: "choice" as const,
+    prompt,
+    options: options as string[],
+    answer,
+    explanation,
+    passageId: "passage-keller-attire",
+  })),
+  ...[
+    ["toeic-eston-135", "The event has become a ( ___ ) for local residents.", ["tradition", "traditional", "traditions", "traditionally"], "tradition", "冠詞aの後、前置詞forの前には単数名詞traditionが入る。"],
+    ["toeic-eston-136", "( ___ ) takes two to four hours to complete, and a smartphone is required.", ["Another", "Each", "Mine", "It"], "It", "前文のthe ECSHを受けて主語になる代名詞Itが必要。"],
+    ["toeic-eston-137", "Which sentence best follows the smartphone requirement?", ["The park map is very detailed.", "City hall was built 75 years ago.", "You will need only one device per team.", "Feedback from participants would be helpful."], "You will need only one device per team.", "smartphone is requiredを受け、チーム当たりの必要台数を補足する。"],
+    ["toeic-eston-138", "( ___ ), join your neighbors for refreshments and music in the park.", ["Afterward", "However", "Similarly", "Rather"], "Afterward", "探索終了後の行動なので時間の順序を表すAfterward。"],
+  ].map(([id, prompt, options, answer, explanation]) => ({
+    id,
+    unit: "toeic",
+    group: "TOEIC Reading",
+    format: "choice" as const,
+    prompt,
+    options: options as string[],
+    answer,
+    explanation,
+    passageId: "passage-eston-scavenger-hunt",
+  })),
+  ...[
+    ["toeic-part5-104", "Sunnyville Public Library is ( ___ ) today because of a problem with the electrical system.", ["certain", "closed", "returned", "simple"], "closed", "be動詞isの後には状態を表す過去分詞closed「閉館している」が入る。"],
+    ["toeic-part5-105", "Ms. Suzuki ( ___ ) as a leader in the Asian financial services industry.", ["recognizes", "recognizing", "is recognized", "has recognized"], "is recognized", "Ms. Suzukiは認められる側なので受動態is recognized as「～として認められている」。"],
+    ["toeic-part5-106", "Before meeting with the board, Mr. Ortiz practiced his ( ___ ) several times.", ["presentation", "leader", "seminar", "education"], "presentation", "所有格hisの後でpracticedの目的語になる名詞presentation「発表」が必要。"],
+  ].map(([id, prompt, options, answer, explanation]) => ({
+    id,
+    unit: "toeic",
+    group: "語形・文脈",
+    format: "choice" as const,
+    prompt,
+    options: options as string[],
+    answer,
+    explanation,
+  })),
+];
+
 export const ENGLISH_QUESTIONS: EnglishQuestion[] = [
+  ...ADDITIONAL_CORE_QUESTIONS,
   ...CORE_QUESTIONS,
   ...BUILT_ORDER_QUESTIONS,
   ...PASSAGE_ORDER_QUESTIONS,
@@ -1192,5 +1578,5 @@ export const ENGLISH_QUESTIONS: EnglishQuestion[] = [
   ...REVERSE_VOCAB_QUESTIONS,
   ...PASSAGE_TRANSLATION_QUESTIONS,
 ]
-  .filter((question) => question.unit !== "exam-sample" && question.unit !== "ch19")
+  .filter(isEnglishPoolItemInScope)
   .map(withEnglishQuestionReference);

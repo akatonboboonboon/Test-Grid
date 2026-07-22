@@ -314,4 +314,18 @@ export const DIGITAL_CIRCUIT_ESSENTIALS: EssentialItem[] = [
     cue: "入力列から1001を検出し、最後の1で出力を1にする。",
     pitfall: "検出後は初期へ捨てず、末尾1を次の接頭辞として再利用し状態01へ進む。",
   },
+  {
+    id: "digital-sequence-design-flow", kind: "check", title: "系列検出器の設計手順",
+    value: "状態図 → 状態割当 → 全状態×全入力の状態表 → 各次状態ビット・出力のK-map → 簡単化式 → D-FF回路。",
+    math: [{ tex: "D_1=S_1^+,\\qquad D_0=S_0^+,\\qquad O=G(S_1,S_0,I)" }],
+    cue: "仕様からD-FFとゲートの実回路まで設計する追加範囲。",
+    pitfall: "状態表の行を省かない。D1・D0・Oは別々のカルノー図で簡単化する。",
+  },
+  {
+    id: "digital-sequence-overlap", kind: "rule", title: "101・1011の重なり検出",
+    value: "次状態は、入力後の末尾と一致する検出語の最長接頭辞状態。検出後の末尾1も次の先頭として残す。",
+    math: [{ tex: "101:S_2\\xrightarrow{1/1}S_1,\\qquad 1011:S_3\\xrightarrow{1/1}S_1" }],
+    cue: "10101や1011011のように検出語が1ビット重なる入力。",
+    pitfall: "不一致・検出完了のたびに無条件で初期状態へ戻すと、重なった次の系列を見落とす。",
+  },
 ];

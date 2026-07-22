@@ -60,7 +60,7 @@ export const DIGITAL_CIRCUIT_SOURCE_POLICY = {
   scopeArchive: "デジタル回路範囲-20260717T141240Z-1-001.zip",
   formatArchive: "デジタル回路形式-20260717T141257Z-1-001.zip",
   note: "範囲ZIPの10画像と、別送の現行範囲PDF（4ファイル・計7ページ）を出題内容に採用。形式ZIPの4画像は記述式・表完成・回路作図という紙面形式だけを参照する。",
-  excludedFormatOnlyTopics: ["進数変換", "カルノー図", "全加算器", "7セグメント表示"],
+  excludedFormatOnlyTopics: ["進数変換", "全加算器", "7セグメント表示"],
 } as const;
 
 export const DIGITAL_CIRCUIT_RANGE_PAGES = [

@@ -1,15 +1,19 @@
 import DigitalCircuitDiagram from "./digital-circuits-diagrams";
 import {
+  DIGITAL_CIRCUIT_DETECTOR_101_TRANSITIONS,
+  DIGITAL_CIRCUIT_DETECTOR_1011_TRANSITIONS,
   DIGITAL_CIRCUIT_DETECTOR_1001_TRANSITIONS,
   DIGITAL_CIRCUIT_PAST_MACHINE_TRANSITIONS,
   type DigitalCircuitAnyDiagramKind,
   type DigitalCircuitExtraDiagramKind,
+  type DigitalCircuitPatternDetectorTransition,
 } from "./digital-circuits-extra-data";
 
 type Props = { kind: DigitalCircuitAnyDiagramKind; solution?: boolean; title?: string; compact?: boolean };
 const extraKinds = new Set<DigitalCircuitExtraDiagramKind>([
   "xor-timing", "three-jk-ripple", "cyclic-down-10-2",
   "exercise3-sequential", "past-state-machine", "sequence-detector-1001",
+  "sequence-detector-101", "sequence-detector-1011", "sequence-design-workflow",
 ]);
 const ink = "#10243a";
 const accent = "#18a99b";
@@ -348,6 +352,100 @@ function Detector1001({ solution }: { solution: boolean }) {
   );
 }
 
+function PatternDetector({
+  target,
+  transitions,
+  meanings,
+  solution,
+}: {
+  target: "101" | "1011";
+  transitions: DigitalCircuitPatternDetectorTransition[];
+  meanings: Record<string, string>;
+  solution: boolean;
+}) {
+  const states = [...new Set(transitions.map((item) => item.current))];
+  return (
+    <Shell title={target + "系列検出器の全遷移表・状態割当ワークシート"}>
+      <text x="350" y="28" textAnchor="middle" fontSize="17" fontWeight="800" fill={ink}>{target} Mealy detector / overlap allowed</text>
+      <rect x="20" y="48" width="418" height="292" rx="8" fill="#fff" stroke={grid} />
+      <text x="76" y="73" textAnchor="middle" fontSize="13" fontWeight="800" fill={ink}>current</text>
+      <text x="148" y="73" textAnchor="middle" fontSize="13" fontWeight="800" fill={ink}>I</text>
+      <text x="258" y="73" textAnchor="middle" fontSize="13" fontWeight="800" fill={ink}>next</text>
+      <text x="382" y="73" textAnchor="middle" fontSize="13" fontWeight="800" fill={ink}>O</text>
+      {[120, 180, 335].map((x) => <line key={x} x1={x} y1="52" x2={x} y2="336" stroke={grid} />)}
+      {transitions.map((transition, index) => {
+        const y = 98 + index * 30;
+        return (
+          <g key={transition.current + transition.input}>
+            <line x1="24" y1={y + 9} x2="434" y2={y + 9} stroke={grid} />
+            <text x="76" y={y} textAnchor="middle" fontSize="14" fill={ink}>{transition.current}</text>
+            <text x="148" y={y} textAnchor="middle" fontSize="14" fill={ink}>{transition.input}</text>
+            {solution
+              ? <><text x="258" y={y} textAnchor="middle" fontSize="14" fontWeight="800" fill={answer}>{transition.next}</text><text x="382" y={y} textAnchor="middle" fontSize="14" fontWeight="800" fill={answer}>{transition.output}</text></>
+              : <><line x1="214" y1={y - 4} x2="302" y2={y - 4} stroke={answer} /><line x1="365" y1={y - 4} x2="399" y2={y - 4} stroke={answer} /></>}
+          </g>
+        );
+      })}
+      <rect x="455" y="48" width="225" height="292" rx="8" fill="#fff" stroke={grid} />
+      <text x="568" y="75" textAnchor="middle" fontSize="14" fontWeight="800" fill={ink}>状態割当・一致済み接頭辞</text>
+      {states.map((state, index) => {
+        const y = 108 + index * 57;
+        return (
+          <g key={state}>
+            <rect x="475" y={y - 22} width="185" height="43" rx="7" fill="#f7fbfd" stroke={ink} />
+            <text x="506" y={y + 5} textAnchor="middle" fontSize="16" fontWeight="800" fill={ink}>{state}</text>
+            {solution
+              ? <text x="578" y={y + 5} textAnchor="middle" fontSize="13" fontWeight="800" fill={answer}>{meanings[state]}</text>
+              : <line x1="540" y1={y + 3} x2="642" y2={y + 3} stroke={answer} />}
+          </g>
+        );
+      })}
+      <text x="568" y="330" textAnchor="middle" fontSize="12" fill={accent}>{solution ? "各表行を I/O 付き矢印へ変換" : "最長接頭辞を残す戻り先まで記入"}</text>
+    </Shell>
+  );
+}
+
+function SequenceDesignWorkflow({ solution }: { solution: boolean }) {
+  const labels = ["状態図", "状態割当", "状態表", "K-map", "式", "D-FF回路"];
+  return (
+    <Shell title="系列検出器の状態図からD-FF論理回路までの設計ワークシート">
+      <text x="350" y="27" textAnchor="middle" fontSize="17" fontWeight="800" fill={ink}>Sequential circuit design / state graph to D-FF circuit</text>
+      {labels.map((label, index) => {
+        const x = 18 + index * 112;
+        return (
+          <g key={label}>
+            <rect x={x} y="48" width="98" height="46" rx="7" fill="#fff" stroke={ink} strokeWidth="2" />
+            <text x={x + 49} y="75" textAnchor="middle" fontSize="13" fontWeight="800" fill={solution ? answer : ink}>{solution ? label : "STEP " + (index + 1)}</text>
+            {index < labels.length - 1 && <path d={"M" + (x + 98) + " 71H" + (x + 110)} stroke={accent} strokeWidth="3" markerEnd="url(#workflow-arrow)" />}
+          </g>
+        );
+      })}
+      <ArrowMarker id="workflow-arrow" />
+
+      <rect x="22" y="122" width="205" height="200" rx="8" fill="#fff" stroke={grid} />
+      <text x="124" y="146" textAnchor="middle" fontSize="14" fontWeight="800" fill={ink}>全状態×全入力の表</text>
+      <text x="50" y="170" fontSize="12" fill={ink}>S1 S0 I</text><text x="137" y="170" fontSize="12" fill={ink}>S1+ S0+ O</text>
+      {[180, 199, 218, 237, 256, 275, 294, 313].map((y) => <line key={y} x1="35" y1={y} x2="213" y2={y} stroke={grid} />)}
+      <line x1="120" y1="155" x2="120" y2="316" stroke={grid} />
+      {solution && <text x="124" y="304" textAnchor="middle" fontSize="12" fontWeight="800" fill={answer}>8行を漏れなく列挙</text>}
+
+      <rect x="245" y="122" width="205" height="200" rx="8" fill="#fff" stroke={grid} />
+      <text x="347" y="146" textAnchor="middle" fontSize="14" fontWeight="800" fill={ink}>3変数カルノー図</text>
+      {["D1", "D0", "O"].map((label, index) => {
+        const y = 167 + index * 50;
+        return <g key={label}><text x="270" y={y + 20} fontSize="12" fill={solution ? answer : ink}>{solution ? label : "　"}</text><rect x="300" y={y} width="128" height="40" fill="#f7fbfd" stroke={ink} /><line x1="332" y1={y} x2="332" y2={y + 40} stroke={grid} /><line x1="364" y1={y} x2="364" y2={y + 40} stroke={grid} /><line x1="396" y1={y} x2="396" y2={y + 40} stroke={grid} /><line x1="300" y1={y + 20} x2="428" y2={y + 20} stroke={grid} /></g>;
+      })}
+
+      <rect x="468" y="122" width="210" height="200" rx="8" fill="#fff" stroke={grid} />
+      <text x="573" y="146" textAnchor="middle" fontSize="14" fontWeight="800" fill={ink}>論理ゲート＋2個のD-FF</text>
+      {[182, 245].map((y, index) => <g key={y}><rect x="555" y={y - 22} width="70" height="44" fill="#fff" stroke={ink} strokeWidth="2" /><text x="573" y={y + 5} fontSize="15" fontWeight="800" fill={ink}>D</text><text x="608" y={y + 5} fontSize="15" fontWeight="800" fill={ink}>Q</text><path d={"M490 " + y + "H555M625 " + y + "H660"} stroke={ink} strokeWidth="3" /><text x="480" y={y - 8} fontSize="12" fill={solution ? answer : ink}>{solution ? "D" + (1 - index) : "式"}</text></g>)}
+      <path d="M493 282H535Q555 282 565 300Q575 282 595 282H625" fill="none" stroke={ink} strokeWidth="3" />
+      <text x="642" y="287" fontSize="14" fontWeight="800" fill={solution ? answer : ink}>{solution ? "O" : "出力"}</text>
+      <text x="350" y="345" textAnchor="middle" fontSize="13" fontWeight="800" fill={solution ? answer : accent}>{solution ? "D1=S1+、D0=S0+。各K-mapの簡単化式を対応する入力へ接続" : "表・K-map・式の途中過程をこの図へ残す"}</text>
+    </Shell>
+  );
+}
+
 export default function DigitalCircuitStudyDiagram({ kind, solution = false, title, compact = false }: Props) {
   if (!extraKinds.has(kind as DigitalCircuitExtraDiagramKind)) {
     return <DigitalCircuitDiagram kind={kind as never} solution={solution} title={title} compact={compact} />;
@@ -361,6 +459,9 @@ export default function DigitalCircuitStudyDiagram({ kind, solution = false, tit
       {kind === "exercise3-sequential" && <Exercise3 solution={solution} />}
       {kind === "past-state-machine" && <PastMachine solution={solution} />}
       {kind === "sequence-detector-1001" && <Detector1001 solution={solution} />}
+      {kind === "sequence-detector-101" && <PatternDetector target="101" transitions={DIGITAL_CIRCUIT_DETECTOR_101_TRANSITIONS} meanings={{ S0: "一致なし", S1: "1", S2: "10" }} solution={solution} />}
+      {kind === "sequence-detector-1011" && <PatternDetector target="1011" transitions={DIGITAL_CIRCUIT_DETECTOR_1011_TRANSITIONS} meanings={{ S0: "一致なし", S1: "1", S2: "10", S3: "101" }} solution={solution} />}
+      {kind === "sequence-design-workflow" && <SequenceDesignWorkflow solution={solution} />}
     </figure>
   );
 }

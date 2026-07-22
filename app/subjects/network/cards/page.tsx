@@ -393,7 +393,8 @@ export default function CardsPage() {
         </Link>
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {selectedLayers.length === 0 ? cards.length : `${filteredCards.length} / ${cards.length}`} CARDS</span>
-          <Link className="outline-button header-link" href="/subjects/network">暗算へ戻る</Link>
+          <Link className="outline-button header-link memory-open-button" href="/subjects/network/written">本試験・20文字記述へ</Link>
+          <Link className="outline-button header-link" href="/subjects/network">追試用・暗算へ</Link>
         </div>
       </header>
 

@@ -155,7 +155,7 @@ test("server-renders the nine-subject study hub", async () => {
   assert.match(html, /<title>TEST\/\/GRID/);
   assert.match(html, /9教科を/);
   assert.match(html, /科目別の勉強机/);
-  assert.match(html, /ネットワークから始める/);
+  assert.match(html, /ネットワーク記述対策から始める/);
   assert.match(html, /暗記帳と検索はここです/);
   assert.match(html, /9教科総合/);
   assert.match(html, /英語/);
@@ -166,20 +166,38 @@ test("server-renders the nine-subject study hub", async () => {
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|react-loading-skeleton/);
 });
 
-test("server-renders the preserved Layer Sum trainer", async () => {
+test("server-renders the network exam hub and preserved retest trainer", async () => {
   const response = await render("/subjects/network");
   assert.equal(response.status, 200);
 
   const html = await response.text();
-  assert.match(html, /<title>ネットワーク専用ドリル \| TEST\/\/GRID/);
-  assert.match(html, /①〜⑦の用語を/);
+  assert.match(html, /<title>ネットワーク本試験・追試対策 \| TEST\/\/GRID/);
+  assert.match(html, /本試験は/);
+  assert.match(html, /層＋20文字記述/);
+  assert.match(html, /href="\/subjects\/network\/written"/);
   assert.match(html, /96(?:<!-- -->)? CARDS/);
   assert.match(html, /暗算を始める/);
-  assert.match(html, /時間制限つき層即答（練習）/);
+  assert.match(html, /追試用・時間制限つき層即答/);
   assert.match(html, /層を即答・連続正解の練習/);
-  assert.match(html, /公式ランキングテスト/);
+  assert.match(html, /連続正解ランキング/);
   assert.match(html, /ネットワーク連続正解ランキング/);
   assert.match(html, /カードを編集/);
+});
+
+test("server-renders the new network 20-character written practice", async () => {
+  const response = await render("/subjects/network/written");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+
+  const html = await response.text();
+  assert.match(html, /<title>ネットワーク本試験・20文字記述練習 \| TEST\/\/GRID/);
+  assert.match(html, /好きなプロトコルを選び/);
+  assert.match(html, /空白を除き20文字以上/);
+  assert.match(html, /既存96プロトコルだけを出題/);
+  assert.match(html, /形式だけを参照/);
+  assert.doesNotMatch(html, /特定層なし／複数層/);
+  assert.match(html, /模範解答/);
+  assert.match(html, /旧フラッシュ形式も残しています/);
 });
 
 test("server-renders the memorization card page", async () => {
@@ -212,9 +230,14 @@ test("server-renders the English exam lab", async () => {
   assert.match(html, /実物18点/);
   assert.match(html, /模擬テスト/);
   assert.match(html, /長文読解/);
+  assert.match(html, /Chapter 14|Ch\.14/);
   assert.match(html, /Chapter 15|Ch\.15/);
   assert.match(html, /Chapter 18|Ch\.18/);
-  assert.doesNotMatch(html, /Chapter 19|Ch\.19/);
+  assert.match(html, /TOEIC Reading/);
+  assert.match(html, /Housing/);
+  assert.match(html, /Medical/);
+  assert.match(html, /Chapter 19は出題しません/);
+  assert.doesNotMatch(html, /title="Chapter 19|>Ch\.19</);
   assert.match(html, /MEMORY BOOK/);
   assert.match(html, /出題方向/);
   assert.match(html, /日 → 英/);
@@ -439,14 +462,14 @@ test("supports translation grading, explanations, genre filters, and the course-
   assert.match(englishPage, /すべて選択/);
 });
 
-test("uses English past exams only as a format guide", async () => {
+test("shows the English additional-range scope and keeps excluded blocks out", async () => {
   const englishPage = await readFile(new URL("../app/subjects/subject-2/page.tsx", import.meta.url), "utf8");
   for (const label of ["共通語群・複数空所", "イラスト○×・語形変化", "英文挿入", "複数正解・T/F", "長文の連続小問"]) {
     assert.match(englishPage, new RegExp(label));
   }
-  assert.match(englishPage, /過去問は出題形式の分析専用/);
-  assert.match(englishPage, /Chapter 15・16・18の教材だけ/);
-  assert.doesNotMatch(englishPage, /Chapter 15・16・18・19/);
+  assert.match(englishPage, /追加教材の指定範囲を出題/);
+  assert.match(englishPage, /Chapter 14・15・16・18、TOEIC Reading、Housing・Medical語彙/);
+  assert.match(englishPage, /Chapter 14冒頭の対象外欄とChapter 19/);
 });
 
 test("keeps statistics course data separate from the sample tests and saves mock exams", async () => {
@@ -1027,7 +1050,7 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(networkPage, /cardLayers\(/);
   assert.match(networkPage, /cardLayerLabel\(/);
   assert.match(networkPage, /href="\/rapid\/network"/);
-  assert.match(networkPage, /時間制限つき層即答（練習）/);
+  assert.match(networkPage, /追試用・時間制限つき層即答/);
   assert.match(networkPage, /層を即答・連続正解の練習/);
   assert.match(networkPage, /href="\/ranking\/network"/);
   assert.match(networkPage, /ネットワーク連続正解ランキング/);
@@ -1052,7 +1075,7 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(englishData, /passage\.unit !== "ch19"/);
   assert.match(englishData, /VOCAB_QUESTIONS/);
   assert.match(englishData, /ORDER_QUESTIONS/);
-  assert.match(studyData, /ZIP教材のCh\.15・16・18を収録/);
+  assert.match(studyData, /ZIP教材のCh\.14・15・16・18を収録/);
   assert.match(studyData, /ZIP教材のCh\.15・16・18・19を収録・過去問は形式だけ反映/);
   assert.match(subjectPage, /parseBulk/);
   assert.match(subjectPage, /一問一答/);

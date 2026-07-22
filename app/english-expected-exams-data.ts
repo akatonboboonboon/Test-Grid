@@ -9,7 +9,8 @@ import { ENGLISH_EXTRA_EXPLANATIONS } from "./english-explanations-extra";
 import { ENGLISH_LANGUAGE_EXPLANATIONS } from "./english-explanations-language";
 import { ENGLISH_READING_EXPLANATIONS } from "./english-explanations-reading";
 
-export type EnglishExpectedUnit = "ch15" | "ch16" | "ch18";
+export type EnglishExpectedUnit = "ch14" | "ch15" | "ch16" | "ch18" | "toeic" | "housing" | "medical";
+type CoreEnglishExpectedUnit = "ch15" | "ch16" | "ch18";
 export type EnglishExpectedSectionId =
   | "vocab-ja-en"
   | "vocab-en-ja"
@@ -68,10 +69,11 @@ export type EnglishExpectedSection = {
 export const ENGLISH_EXPECTED_EXAM_STORAGE_KEY = "test-grid:english:expected-exam:v1";
 export const ENGLISH_EXPECTED_EXAM_DURATION_MINUTES = 50;
 export const ENGLISH_EXPECTED_EXAM_TOTAL_POINTS = 100;
-export const ENGLISH_EXPECTED_SCOPE_UNITS: EnglishExpectedUnit[] = ["ch15", "ch16", "ch18"];
+const CORE_ENGLISH_EXPECTED_UNITS: CoreEnglishExpectedUnit[] = ["ch15", "ch16", "ch18"];
+export const ENGLISH_EXPECTED_SCOPE_UNITS: EnglishExpectedUnit[] = ["ch14", "ch15", "ch16", "ch18", "toeic", "housing", "medical"];
 export const ENGLISH_EXPECTED_FORMAT_ONLY_SOURCES = ["英語.pdf", "英語テスト過去問.zip"] as const;
 export const ENGLISH_EXPECTED_SOURCE_POLICY =
-  "英語.pdf・英語テスト過去問.zipは大問構成と難度の参照専用。出題本文・正答根拠は範囲教材Chapter 15・16・18だけから採る。";
+  "追加教材の指定範囲（Chapter 14・15・16・18、TOEIC Reading、Housing・Medical語彙）から出題し、Chapter 14冒頭の対象外欄とChapter 19は使わない。";
 
 export const ENGLISH_EXPECTED_EXAM_SECTIONS: EnglishExpectedSection[] = [
   { id: "vocab-ja-en", number: "I", title: "語彙・熟語｜日→英", instruction: "日本語に対応する教材表現を英語で書きなさい。", page: 1 },
@@ -80,15 +82,19 @@ export const ENGLISH_EXPECTED_EXAM_SECTIONS: EnglishExpectedSection[] = [
   { id: "summary-abstract", number: "IV", title: "要約穴埋め・Abstract構成", instruction: "本文全体の流れとAbstract各文の役割を判断し、最も適切なものを選びなさい。", page: 1 },
   { id: "order", number: "V", title: "本文主要文法｜一文整序", instruction: "本文から抜き出した一文を、提示された単語をすべて一度ずつ使って完成させなさい。", page: 2 },
   { id: "sentence-ja-en", number: "VI", title: "本文主要文｜日→英", instruction: "日本語を、本文で用いられた語彙と文法に沿って英訳しなさい。", page: 2 },
-  { id: "true-false", number: "VII", title: "本文 True / False", instruction: "Chapter 15・16・18の本文内容と一致すれば T、一致しなければ F を選びなさい。", page: 2 },
+  { id: "true-false", number: "VII", title: "本文 True / False", instruction: "指定範囲の本文内容と一致すれば T、一致しなければ F を選びなさい。", page: 2 },
   { id: "reading", number: "VIII", title: "本文参照・内容理解", instruction: "本文の該当箇所を根拠に、最も適切なものを1つ選びなさい。", page: 3 },
   { id: "translation", number: "IX", title: "本文抜粋｜英→日", instruction: "主語・述語・修飾関係を保ち、英文を自然な日本語に訳しなさい。", page: 3 },
 ];
 
 const UNIT_LABELS: Record<EnglishExpectedUnit, string> = {
+  ch14: "Chapter 14｜大型蓄電池と再生可能エネルギー",
   ch15: "Chapter 15｜新しい生命体を作り出す企業",
   ch16: "Chapter 16｜スパコンで天気予報①",
   ch18: "Chapter 18｜高齢化社会に強力な助っ人",
+  toeic: "TOEIC Reading｜広告・手紙・市イベント",
+  housing: "Key Vocabulary｜Housing",
+  medical: "Key Vocabulary｜Medical",
 };
 
 type BaseQuestion = Omit<EnglishExpectedQuestion, "id" | "section" | "points">;
@@ -96,7 +102,7 @@ type BaseQuestion = Omit<EnglishExpectedQuestion, "id" | "section" | "points">;
 function findExistingQuestion(id: string): EnglishQuestion & { unit: EnglishExpectedUnit } {
   const question = ENGLISH_QUESTIONS.find((candidate) => candidate.id === id);
   if (!question) throw new Error(`Expected English range question not found: ${id}`);
-  if (question.unit !== "ch15" && question.unit !== "ch16" && question.unit !== "ch18") {
+  if (!ENGLISH_EXPECTED_SCOPE_UNITS.some((unit) => unit === question.unit)) {
     throw new Error(`Out-of-range question rejected: ${id}`);
   }
   return question as EnglishQuestion & { unit: EnglishExpectedUnit };
@@ -171,15 +177,15 @@ function vocabularyBase(card: EnglishVocabCard, direction: "ja-en" | "en-ja"): B
 }
 
 const VOCAB_BY_UNIT = Object.fromEntries(
-  (["ch15", "ch16", "ch18"] as EnglishExpectedUnit[]).map((unit) => [
+  CORE_ENGLISH_EXPECTED_UNITS.map((unit) => [
     unit,
     ENGLISH_VOCAB.filter((card) => card.unit === unit),
   ]),
-) as Record<EnglishExpectedUnit, EnglishVocabCard[]>;
+) as Record<CoreEnglishExpectedUnit, EnglishVocabCard[]>;
 
-const VOCAB_STEP: Record<EnglishExpectedUnit, number> = { ch15: 7, ch16: 5, ch18: 5 };
+const VOCAB_STEP: Record<CoreEnglishExpectedUnit, number> = { ch15: 7, ch16: 5, ch18: 5 };
 
-function vocabularySequence(unit: EnglishExpectedUnit) {
+function vocabularySequence(unit: CoreEnglishExpectedUnit) {
   const cards = VOCAB_BY_UNIT[unit];
   return cards.map((_, index) => cards[(index * VOCAB_STEP[unit]) % cards.length]);
 }
@@ -247,7 +253,7 @@ function trueFalse(
   };
 }
 
-const TRUE_FALSE_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
+const TRUE_FALSE_BANK: Record<CoreEnglishExpectedUnit, BaseQuestion[]> = {
   ch15: [
     trueFalse("ch15", "expected-tf-15-1", "Jack Newman types a DNA sequence on a laptop and clicks ‘send.’", "T", 1, "本文は生命体作成の開始操作をこの二つの動作で具体化しています。"),
     trueFalse("ch15", "expected-tf-15-2", "Robotic arms mix compounds in order to produce the desired cells.", "T", 2, "to produce は目的を表し、ロボットアームが化合物を混ぜる理由と一致します。"),
@@ -310,7 +316,7 @@ function readingChoice(
   };
 }
 
-const READING_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
+const READING_BANK: Record<CoreEnglishExpectedUnit, BaseQuestion[]> = {
   ch15: [
     readingChoice("ch15", "expected-read-15-1", "What begins after Newman enters a DNA sequence and clicks ‘send’?", ["Robotic arms mix compounds", "Customers download an app", "Corn is harvested", "Genes are removed by hand"], "Robotic arms mix compounds", 2, "第2段落は、近くの実験室でロボットアームが目的の細胞を作るため化合物を混ぜ始めると説明します。", "アプリは作り方の比喩、トウモロコシはバイオ燃料、手作業での遺伝子除去は書かれていません。"),
     readingChoice("ch15", "expected-read-15-2", "At what rate is the company creating new organisms?", ["More than 1,500 a day", "Exactly 1,500 a year", "Three million a day", "One organism a decade"], "More than 1,500 a day", 3, "at a dizzying rate of more than 1,500 a day が正答の直接根拠です。", "three million は創業以来の累計、a decade は会社の創業時期です。"),
@@ -372,7 +378,7 @@ function summaryFromExisting(id: string, paragraph: number, correctReason: strin
   return detailedChoice(base.unit, id, "要約穴埋め", base.prompt, base.options, base.answer, paragraph, correctReason);
 }
 
-const SUMMARY_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
+const SUMMARY_BANK: Record<CoreEnglishExpectedUnit, BaseQuestion[]> = {
   ch15: [
     summaryFromExisting("ch15-summary-1", 8, "現在完了 has の後は過去分詞 created。本文の『300万を超える生命体を作ってきた』という実績を要約します。"),
     summaryFromExisting("ch15-summary-2", 8, "has become で『～になった』。創業以来から現在までの変化を現在完了で表します。"),
@@ -455,7 +461,7 @@ function languageChoice(
   return detailedChoice(unit, id, "語形・文法・文脈", prompt, options, answer, paragraph, reason);
 }
 
-const LANGUAGE_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
+const LANGUAGE_BANK: Record<CoreEnglishExpectedUnit, BaseQuestion[]> = {
   ch15: [
     existingToBase("ch15-prep-1"),
     existingToBase("ch15-prep-2"),
@@ -482,13 +488,17 @@ const LANGUAGE_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
   ],
 };
 
-const ORDER_POOLS: Record<EnglishExpectedUnit, string[]> = {
+const ORDER_POOLS: Record<CoreEnglishExpectedUnit, string[]> = {
   ch15: ["passage-order-ch15-1", "passage-order-ch15-2", "passage-order-ch15-3", "passage-order-ch15-4"],
   ch16: ["passage-order-ch16-1", "passage-order-ch16-2", "passage-order-ch16-3", "passage-order-ch16-4"],
   ch18: ["passage-order-ch18-1", "passage-order-ch18-2", "passage-order-ch18-3", "passage-order-ch18-4"],
 };
 
 const ORDER_PARAGRAPHS: Record<string, number> = {
+  "passage-order-ch14-1": 2,
+  "passage-order-ch14-2": 3,
+  "passage-order-ch14-3": 9,
+  "passage-order-ch14-4": 10,
   "passage-order-ch15-1": 4,
   "passage-order-ch15-2": 6,
   "passage-order-ch15-3": 8,
@@ -504,6 +514,10 @@ const ORDER_PARAGRAPHS: Record<string, number> = {
 };
 
 const ORDER_GRAMMAR_NOTES: Record<string, string> = {
+  "passage-order-ch14-1": "be aimed at の後は動名詞 promoting、手段を表す by の後は addressing を置きます。",
+  "passage-order-ch14-2": "過去分詞 generated が electricity を後置修飾し、accounts for が主節の動詞になります。",
+  "passage-order-ch14-3": "While 節で安全性と寿命を示し、主節の受動態 can be converted into と対比させます。",
+  "passage-order-ch14-4": "動名詞句 Using such batteries が主語、allow A to do が『Aが～できるようにする』を表します。",
   "passage-order-ch15-1": "主語 Others の後に動詞 create、目的語 moisturizers、先行詞を修飾する関係節 that can be used ... を続けます。",
   "passage-order-ch15-2": "believe の目的語となる節では this kind of work が主語、marks が三人称単数の動詞です。",
   "passage-order-ch15-3": "Since + 過去形で起点を示し、主節は現在完了 has become で現在までの変化を表します。",
@@ -552,7 +566,7 @@ function sentenceJaEn(
   };
 }
 
-const SENTENCE_JA_EN_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
+const SENTENCE_JA_EN_BANK: Record<CoreEnglishExpectedUnit, BaseQuestion[]> = {
   ch15: [
     sentenceJaEn("ch15", "expected-ja-en-15-1", "目的の細胞を作るために、ロボットアームがいくつかの化合物を混ぜ始める。", "Robotic arms start to mix together some compounds to produce the desired cells.", 2, "start to + 動詞原形、目的の不定詞 to produce、desired cells の語順を使います。"),
     sentenceJaEn("ch15", "expected-ja-en-15-2", "他のものは、化粧品に使える保湿剤を作る。", "Others create moisturizers that can be used in cosmetics.", 4, "moisturizers を関係代名詞 that 以下の受動態 can be used が修飾します。"),
@@ -578,7 +592,7 @@ const SENTENCE_JA_EN_BANK: Record<EnglishExpectedUnit, BaseQuestion[]> = {
     sentenceJaEn("ch18", "expected-ja-en-18-6", "危険な場所を通過した車椅子からの最新情報は、危険を避ける経路選びを助けるため、ほかの車椅子に送られる。", "The latest information from wheelchairs that have passed through dangerous places will be sent to other wheelchairs to help them choose routes that avoid danger.", 10, "主語 information を二つの that 節が修飾し、主節は受動態 will be sent、目的は to help で表します。"),
   ],
 };
-const TRANSLATION_PARAGRAPHS: Record<EnglishExpectedUnit, number[]> = {
+const TRANSLATION_PARAGRAPHS: Record<CoreEnglishExpectedUnit, number[]> = {
   ch15: [1, 4, 6, 7, 8, 9],
   ch16: [1, 2, 4, 5, 6, 7],
   ch18: [1, 2, 4, 6, 8, 10],
@@ -600,17 +614,45 @@ function scored(
   return { ...base, id: `${examId}-q${String(index + 1).padStart(2, "0")}-${base.sourceId}`, section, points };
 }
 
+const ADDITIONAL_VOCAB_UNITS = ["ch14", "housing", "medical"] as const;
+const ADDITIONAL_LANGUAGE_IDS = [
+  "toeic-part5-104",
+  "ch16-extra-map",
+  "toeic-part5-105",
+  "ch16-extra-surface",
+  "toeic-part5-106",
+  "ch16-extra-narrow",
+] as const;
+const CH14_SUMMARY_IDS = ["ch14-summary-1", "ch14-summary-2", "ch14-summary-3", "ch14-summary-4"] as const;
+const CH14_ORDER_IDS = ["passage-order-ch14-1", "passage-order-ch14-2", "passage-order-ch14-3", "passage-order-ch14-4"] as const;
+const CH14_TRUE_FALSE_IDS = ["ch14-tf-1", "ch14-tf-2", "ch14-tf-3", "ch14-tf-4", "ch14-tf-5"] as const;
+const TOEIC_READING_IDS = [
+  "toeic-keller-181",
+  "toeic-keller-182",
+  "toeic-keller-183",
+  "toeic-keller-184",
+  "toeic-keller-185",
+  "toeic-eston-135",
+] as const;
+
+function additionalVocabularyCard(unit: typeof ADDITIONAL_VOCAB_UNITS[number], index: number) {
+  const cards = ENGLISH_VOCAB.filter((card) => card.unit === unit);
+  const card = cards[index % cards.length];
+  if (!card) throw new Error(`Additional vocabulary not found: ${unit}`);
+  return card;
+}
+
 function buildExam(number: number): EnglishExpectedExam {
   const index = number - 1;
   const examId = `english-expected-${String(number).padStart(2, "0")}`;
-  const units = ENGLISH_EXPECTED_SCOPE_UNITS;
-  const vocabSequences: Record<EnglishExpectedUnit, EnglishVocabCard[]> = {
+  const units = CORE_ENGLISH_EXPECTED_UNITS;
+  const vocabSequences: Record<CoreEnglishExpectedUnit, EnglishVocabCard[]> = {
     ch15: vocabularySequence("ch15"),
     ch16: vocabularySequence("ch16"),
     ch18: vocabularySequence("ch18"),
   };
-  const vocabStarts: Record<EnglishExpectedUnit, number> = { ch15: index * 3, ch16: index * 4, ch18: index * 3 };
-  const pickVocab = (unit: EnglishExpectedUnit, offset: number) => (
+  const vocabStarts: Record<CoreEnglishExpectedUnit, number> = { ch15: index * 3, ch16: index * 4, ch18: index * 3 };
+  const pickVocab = (unit: CoreEnglishExpectedUnit, offset: number) => (
     vocabSequences[unit][(vocabStarts[unit] + offset) % vocabSequences[unit].length]
   );
   const jaExtraUnit = units[index % units.length];
@@ -623,20 +665,28 @@ function buildExam(number: number): EnglishExpectedExam {
     ...units.map((unit) => pickVocab(unit, 1)),
     pickVocab(enExtraUnit, 3),
   ];
+  jaEnCards[3] = additionalVocabularyCard(ADDITIONAL_VOCAB_UNITS[index % ADDITIONAL_VOCAB_UNITS.length], index);
+  enJaCards[3] = additionalVocabularyCard(ADDITIONAL_VOCAB_UNITS[(index + 1) % ADDITIONAL_VOCAB_UNITS.length], index + 4);
 
   const language = units.map((unit) => LANGUAGE_BANK[unit][index]);
-  const languageExtraUnit: EnglishExpectedUnit = index % 2 === 0 ? "ch15" : "ch18";
+  const languageExtraUnit: CoreEnglishExpectedUnit = index % 2 === 0 ? "ch15" : "ch18";
   language.push(LANGUAGE_BANK[languageExtraUnit][(index + 3) % LANGUAGE_BANK[languageExtraUnit].length]);
+  language[0] = existingToBase(ADDITIONAL_LANGUAGE_IDS[index]);
 
   const summaryAbstract = [
     ...units.map((unit) => SUMMARY_BANK[unit][index]),
     ABSTRACT_BANK[index],
   ];
+  summaryAbstract[0] = existingToBase(CH14_SUMMARY_IDS[index % CH14_SUMMARY_IDS.length]);
   const order = units.map((unit) => passageOrderBase(ORDER_POOLS[unit][index % ORDER_POOLS[unit].length]));
+  order[0] = passageOrderBase(CH14_ORDER_IDS[index % CH14_ORDER_IDS.length]);
   const sentenceJaEn = units.map((unit) => SENTENCE_JA_EN_BANK[unit][index]);
   const trueFalseQuestions = units.flatMap((unit) => cyclePick(TRUE_FALSE_BANK[unit], index * 2, 2));
+  trueFalseQuestions[0] = existingToBase(CH14_TRUE_FALSE_IDS[index % CH14_TRUE_FALSE_IDS.length]);
   const reading = units.map((unit) => READING_BANK[unit][index % READING_BANK[unit].length]);
+  reading[0] = existingToBase(TOEIC_READING_IDS[index]);
   const translation = units.map((unit) => translationBase(unit, TRANSLATION_PARAGRAPHS[unit][index]));
+  translation[0] = existingToBase(`passage-big-battery-translation-${index + 1}`);
 
   const staged: Array<{ base: BaseQuestion; section: EnglishExpectedSectionId; points: number }> = [
     ...jaEnCards.map((card) => ({ base: vocabularyBase(card, "ja-en"), section: "vocab-ja-en" as const, points: 2 })),
@@ -662,7 +712,7 @@ function buildExam(number: number): EnglishExpectedExam {
     "要約とAbstract構成を含む実戦回",
     "数値・単位・因果関係を精査",
     "日英双方向と本文参照を横断",
-    "3章総仕上げ・全大問形式",
+    "追加範囲総仕上げ・全大問形式",
   ];
   return {
     id: examId,
@@ -679,7 +729,8 @@ export const ENGLISH_EXPECTED_EXAMS: EnglishExpectedExam[] = Array.from(
   (_, index) => buildExam(index + 1),
 );
 
-const PASSAGE_ID_BY_UNIT: Record<EnglishExpectedUnit, string> = {
+const PASSAGE_ID_BY_UNIT: Partial<Record<EnglishExpectedUnit, string>> = {
+  ch14: "passage-big-battery",
   ch15: "passage-amyris",
   ch16: "passage-weather",
   ch18: "passage-wheelchair",

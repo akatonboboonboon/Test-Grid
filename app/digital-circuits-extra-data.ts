@@ -14,7 +14,10 @@ export type DigitalCircuitExtraDiagramKind =
   | "cyclic-down-10-2"
   | "exercise3-sequential"
   | "past-state-machine"
-  | "sequence-detector-1001";
+  | "sequence-detector-1001"
+  | "sequence-detector-101"
+  | "sequence-detector-1011"
+  | "sequence-design-workflow";
 export type DigitalCircuitAnyDiagramKind =
   | NonNullable<DigitalCircuitQuestion["diagram"]>
   | DigitalCircuitExtraDiagramKind;
@@ -33,12 +36,35 @@ const PAST = (page: number, note: string) => pdfRef("スマート制御過去問
 const EX1 = pdfRef("スマート制御演習1.pdf", 1, "第6回演習");
 const EX2 = pdfRef("スマート制御演習2.pdf", 1, "第7回演習");
 const EX3 = pdfRef("スマート制御演習3.pdf", 1, "第8回演習");
+const additionalImageRef = (filename: string, page: number, note: string): DigitalCircuitSourceRef => ({
+  kind: "scope-zip",
+  filename,
+  page,
+  note: "追加範囲ノート：" + note,
+});
+const ADD1 = (note: string) => additionalImageRef("PXL_20260720_073506138.MP.jpg", 1, note);
+const ADD2 = (note: string) => additionalImageRef("PXL_20260720_073513112.MP.jpg", 2, note);
 
 export const DIGITAL_CIRCUIT_CURRENT_SCOPE_PDFS = [
   { filename: "スマート制御過去問.pdf", pages: 4, role: "current-scope", contents: ["JK-FF特性・波形", "10→2巡回ダウンカウンタ", "状態表・Mealy図", "1001系列検出"] },
   { filename: "スマート制御演習1.pdf", pages: 1, role: "current-scope", contents: ["波形から真理値表", "XORタイミング"] },
   { filename: "スマート制御演習2.pdf", pages: 1, role: "current-scope", contents: ["3段JK-FF非同期カウンタ"] },
   { filename: "スマート制御演習3.pdf", pages: 1, role: "current-scope", contents: ["D-FF順序回路", "状態表", "Mealy図"] },
+] as const;
+
+export const DIGITAL_CIRCUIT_ADDITIONAL_SCOPE_IMAGES = [
+  {
+    filename: "PXL_20260720_073506138.MP.jpg",
+    page: 1,
+    role: "current-scope",
+    contents: ["順序回路の設計法", "nビットパターン検出", "101・1011 Mealy系列検出", "重なりを許す状態遷移"],
+  },
+  {
+    filename: "PXL_20260720_073513112.MP.jpg",
+    page: 2,
+    role: "current-scope",
+    contents: ["系列検出の状態表", "カルノー図", "次状態式・出力式", "D-FF実現回路"],
+  },
 ] as const;
 
 export type DigitalCircuitPastMachineTransition = {
@@ -80,6 +106,35 @@ export const DIGITAL_CIRCUIT_DETECTOR_1001_TRANSITIONS: DigitalCircuitDetectorTr
   { current: "10", input: 1, next: "01", output: 0 },
   { current: "11", input: 0, next: "00", output: 0 },
   { current: "11", input: 1, next: "01", output: 1 },
+];
+
+export type DigitalCircuitPatternDetectorTransition = {
+  current: string;
+  input: 0 | 1;
+  next: string;
+  output: 0 | 1;
+};
+
+/** 追加範囲p.1に例示された101を、重なり検出ありのMealy機械にした全6遷移。 */
+export const DIGITAL_CIRCUIT_DETECTOR_101_TRANSITIONS: DigitalCircuitPatternDetectorTransition[] = [
+  { current: "S0", input: 0, next: "S0", output: 0 },
+  { current: "S0", input: 1, next: "S1", output: 0 },
+  { current: "S1", input: 0, next: "S2", output: 0 },
+  { current: "S1", input: 1, next: "S1", output: 0 },
+  { current: "S2", input: 0, next: "S0", output: 0 },
+  { current: "S2", input: 1, next: "S1", output: 1 },
+];
+
+/** 追加範囲p.1に例示された1011を、重なり検出ありのMealy機械にした全8遷移。 */
+export const DIGITAL_CIRCUIT_DETECTOR_1011_TRANSITIONS: DigitalCircuitPatternDetectorTransition[] = [
+  { current: "S0", input: 0, next: "S0", output: 0 },
+  { current: "S0", input: 1, next: "S1", output: 0 },
+  { current: "S1", input: 0, next: "S2", output: 0 },
+  { current: "S1", input: 1, next: "S1", output: 0 },
+  { current: "S2", input: 0, next: "S0", output: 0 },
+  { current: "S2", input: 1, next: "S3", output: 0 },
+  { current: "S3", input: 0, next: "S2", output: 0 },
+  { current: "S3", input: 1, next: "S1", output: 1 },
 ];
 export const DIGITAL_CIRCUIT_EXTRA_FORMULAS: DigitalCircuitStudyCard[] = [
   {
@@ -145,14 +200,56 @@ export const DIGITAL_CIRCUIT_EXTRA_FORMULAS: DigitalCircuitStudyCard[] = [
     prompt: "重なりを許すMealy検出器の4状態は？",
     formula: "\\begin{aligned}00&:\\text{初期}\\\\01&:\\text{1まで一致}\\\\10&:\\text{10まで一致}\\\\11&:\\text{100まで一致}\\end{aligned}",
     explanation: "状態は直前までに一致した接頭辞を表す。状態11で入力1なら1001が完成して出力1、次状態01へ進む。",
-    cue: "一致した接頭辞を状態にする", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4")],
+    cue: "一致した接頭辞を状態にする", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4"), ADD1("1001系列の状態遷移例"), ADD2("状態表・カルノー図・D-FF実現")],
   },
   {
     id: "dc-extra-f-sequence-equations", topic: "state-machines", title: "1001検出器の式",
     prompt: "状態割当00,01,10,11の次状態・出力式は？",
     formula: "\\begin{aligned}S_0^+&=I+S_1\\overline{S_0}\\\\S_1^+&=\\overline I(\\overline{S_1}S_0+S_1\\overline{S_0})\\\\O&=IS_1S_0\\end{aligned}",
     explanation: "状態表で1になる行を積和形へまとめる。出力は状態11でI=1のときだけ1。",
-    cue: "O=I・状態11", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4")],
+    cue: "O=I・状態11", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4"), ADD2("1001系列の次状態式・出力式")],
+  },
+  {
+    id: "dc-add-f-pattern-design", topic: "state-machines", title: "nビット系列検出器の設計",
+    prompt: "Mealy型で状態を何に対応させ、何状態を用意する？",
+    formula: "\\begin{aligned}S_k&:\\text{先頭から }k\\text{ ビット一致}\\\\N_{\\mathrm{state}}&=n\\quad(k=0,1,\\ldots,n-1)\\end{aligned}",
+    explanation: "nビット語の完成は最後の遷移枝で出力1にするため、Mealy型では一致長0〜n−1のn状態で設計できる。Moore型で検出済み状態を独立させる場合は通常n+1状態になる。",
+    cue: "状態＝一致済み接頭辞", diagram: "sequence-detector-101", sourceRefs: [ADD1("p.134〜135・順序回路の設計法とnビットパターン検出")],
+  },
+  {
+    id: "dc-add-f-pattern-overlap", topic: "state-machines", title: "重なりを許す戻り先",
+    prompt: "不一致や検出完了の後、必ず初期状態へ戻してよい？",
+    formula: "S^+=\\text{入力後の末尾と一致する最長の接頭辞状態}",
+    explanation: "必ずS0へ戻すと重なって始まる次の系列を見落とす。たとえば101を検出した直後の末尾1は次の101の先頭として再利用できるためS1へ戻る。",
+    cue: "末尾＝次の接頭辞", example: "\\(10101\\) は101を2回検出", diagram: "sequence-detector-101", sourceRefs: [ADD1("系列を連続入力する状態遷移例")],
+  },
+  {
+    id: "dc-add-f-sequence-101", topic: "state-machines", title: "101系列検出器",
+    prompt: "重なりを許すMealy型101検出器の状態の意味は？",
+    formula: "\\begin{aligned}S_0&:\\text{一致なし}\\\\S_1&:\\text{1まで一致}\\\\S_2&:\\text{10まで一致}\\end{aligned}",
+    explanation: "S2で入力1なら101が完成して出力1。末尾の1を再利用するため次状態はS1となる。",
+    cue: "S2 -- 1/1 → S1", diagram: "sequence-detector-101", sourceRefs: [ADD1("例101・Mealy系列検出")],
+  },
+  {
+    id: "dc-add-f-sequence-1011", topic: "state-machines", title: "1011系列検出器",
+    prompt: "重なりを許すMealy型1011検出器の状態の意味は？",
+    formula: "\\begin{aligned}S_0&:\\text{一致なし}\\\\S_1&:\\text{1まで一致}\\\\S_2&:\\text{10まで一致}\\\\S_3&:\\text{101まで一致}\\end{aligned}",
+    explanation: "S3で入力1なら1011が完成して出力1、末尾1を再利用してS1へ進む。S3で入力0なら1010の末尾10が接頭辞10と一致するためS2へ戻る。",
+    cue: "S3 -- 1/1 → S1", diagram: "sequence-detector-1011", sourceRefs: [ADD1("例1011・状態遷移図")],
+  },
+  {
+    id: "dc-add-f-design-flow", topic: "state-machines", title: "順序回路の設計手順",
+    prompt: "系列検出の状態図からD-FF回路へ進む順番は？",
+    formula: "\\text{状態図}\\to\\text{状態割当}\\to\\text{状態遷移表}\\to\\text{K-map}\\to\\text{式}\\to\\text{回路}",
+    explanation: "先に全状態・全入力の遷移を確定し、各状態を2進符号へ割り当てる。現在状態と入力から次状態ビットと出力を表にし、各列をカルノー図で簡単化してD入力式・出力式をゲートへ置き換える。",
+    cue: "図→割当→表→K-map→式→回路", diagram: "sequence-design-workflow", sourceRefs: [ADD1("p.134〜135・状態遷移図と状態割当"), ADD2("状態表からカルノー図・D-FF回路")],
+  },
+  {
+    id: "dc-add-f-dff-synthesis", topic: "state-machines", title: "D-FFによる状態機械の実現",
+    prompt: "状態表の次状態ビットをD-FFへどう接続する？",
+    formula: "\\begin{aligned}D_1&=S_1^+\\\\D_0&=S_0^+\\\\O&=G(S_1,S_0,I)\\end{aligned}",
+    explanation: "D-FFは有効クロックでDをそのまま次状態Q+へ写す。したがって状態表のS1+列・S0+列をそれぞれカルノー図で簡単化し、その式をD1・D0入力へ接続する。出力列も別に簡単化する。",
+    cue: "D入力＝次状態", diagram: "sequence-design-workflow", sourceRefs: [ADD2("D1n・D0n・Oのカルノー図と実現回路")],
   },
 ];
 
@@ -282,14 +379,14 @@ export const DIGITAL_CIRCUIT_EXTRA_QUESTIONS: DigitalCircuitStudyQuestion[] = [
     formula: "\\begin{aligned}S_0^+&=I+S_1\\overline{S_0}\\\\S_1^+&=\\overline I(\\overline{S_1}S_0+S_1\\overline{S_0})\\\\O&=IS_1S_0\\end{aligned}",
     steps: ["各状態は一致済み接頭辞なし・1・10・100に対応する。", "各状態から入力0と1を1本ずつ、合計8本調べる。", "状態11で入力1の枝だけ1001が完成するため出力1。末尾1を再利用して次状態01へ進む。"],
     explanation: "4状態×2入力なので遷移は必ず8本。自己ループ00--0/0、01--1/0を含め、10--1/0→01と11--1/1→01も落とさない。",
-    diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4・状態表とMealy図")],
+    diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4・状態表とMealy図"), ADD1("1001系列の状態遷移"), ADD2("1001系列の状態表")],
   },
   {
     id: "dc-extra-q-sequence-state", topic: "state-machines", genre: "1001検出", difficulty: 1, format: "choice",
     prompt: "1001系列検出器で『100まで一致』を表す状態は？", answer: "11",
     options: ["00", "01", "10", "11"],
     steps: ["00初期、01は1、10は10、11は100まで一致。"],
-    explanation: "次に1が来れば1001が完成する待機状態。", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4")],
+    explanation: "次に1が来れば1001が完成する待機状態。", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4"), ADD1("1001系列の状態割当")],
   },
   {
     id: "dc-extra-q-sequence-output", topic: "state-machines", genre: "1001検出", difficulty: 2, format: "sequence",
@@ -297,7 +394,7 @@ export const DIGITAL_CIRCUIT_EXTRA_QUESTIONS: DigitalCircuitStudyQuestion[] = [
     accepted: ["1/1", "次状態01、出力1"],
     formula: "O=IS_1S_0",
     steps: ["I=1かつ状態11なので出力1。", "末尾の1は次の検出の先頭にもなるため状態01へ進む。"],
-    explanation: "重なりを許すMealy系列検出器の遷移。", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4")],
+    explanation: "重なりを許すMealy系列検出器の遷移。", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4"), ADD2("状態表と出力式")],
   },
   {
     id: "dc-extra-q-sequence-stream", topic: "state-machines", genre: "1001検出", difficulty: 3, format: "sequence",
@@ -305,7 +402,66 @@ export const DIGITAL_CIRCUIT_EXTRA_QUESTIONS: DigitalCircuitStudyQuestion[] = [
     answer: "01→10→11→01、最後O=1",
     accepted: ["01,10,11,01/1", "01 10 11 01 最後1"],
     steps: ["1で00→01。", "0で01→10。", "0で10→11。", "1で検出して11→01、O=1。"],
-    explanation: "各状態は一致済みの接頭辞を表す。", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4")],
+    explanation: "各状態は一致済みの接頭辞を表す。", diagram: "sequence-detector-1001", sourceRefs: [PAST(4, "問4"), ADD1("連続入力時の状態遷移")],
+  },
+  {
+    id: "dc-add-q-pattern-state-count", topic: "state-machines", genre: "nビット系列検出・状態数", difficulty: 2, format: "choice",
+    prompt: "6ビットの固定系列をMealy型で検出する。各状態を一致済み接頭辞長0〜5へ対応させると、必要な状態数は？",
+    answer: "6状態", accepted: ["6"], options: ["3状態", "4状態", "6状態", "7状態"],
+    formula: "N_{\\mathrm{state}}=n",
+    steps: ["完成前の一致長0,1,2,3,4,5を列挙する。", "検出完了は最後の遷移枝の出力1で表す。", "よってMealy型は6状態。"],
+    explanation: "Moore型で検出済み状態を独立させる場合のn+1状態と混同しない。", diagram: "sequence-design-workflow", sourceRefs: [ADD1("p.135・nビットパターンマッチャー")],
+  },
+  {
+    id: "dc-add-q-sequence-101-full", topic: "state-machines", genre: "101検出・全6遷移", difficulty: 3, format: "sequence",
+    prompt: "状態S0=一致なし、S1=1まで一致、S2=10まで一致とする、重なり許可101 Mealy検出器の全6遷移を次状態/出力で答えよ。",
+    answer: "S0:0→S0/0,1→S1/0; S1:0→S2/0,1→S1/0; S2:0→S0/0,1→S1/1",
+    accepted: ["S0 0 S0/0 1 S1/0;S1 0 S2/0 1 S1/0;S2 0 S0/0 1 S1/1"],
+    steps: ["各状態から入力0と1を1本ずつ、計6本作る。", "入力後の末尾と一致する101の最長接頭辞を次状態にする。", "S2で入力1の枝だけ101が完成して出力1。", "完成後の末尾1を再利用してS1へ進む。"],
+    explanation: "S1の入力1自己ループと、検出枝S2--1/1→S1が重なり検出の要点。", diagram: "sequence-detector-101", sourceRefs: [ADD1("例101・状態遷移設計")],
+  },
+  {
+    id: "dc-add-q-sequence-101-stream", topic: "state-machines", genre: "101重なり検出", difficulty: 3, format: "sequence",
+    prompt: "初期S0から入力列10101を1ビットずつ101 Mealy検出器へ入れる。各クロック後の状態列と出力列を答えよ。",
+    answer: "状態S1→S2→S1→S2→S1、出力00101",
+    accepted: ["S1,S2,S1,S2,S1/00101", "S1 S2 S1 S2 S1 出力0 0 1 0 1"],
+    steps: ["1でS0→S1、O=0。", "0でS1→S2、O=0。", "1で検出しS2→S1、O=1。", "0でS1→S2、O=0。", "1で再度検出しS2→S1、O=1。"],
+    explanation: "10101では末尾の1を次の先頭として共用するため101を2回検出する。", diagram: "sequence-detector-101", sourceRefs: [ADD1("系列の重なりを含む状態遷移例")],
+  },
+  {
+    id: "dc-add-q-sequence-1011-full", topic: "state-machines", genre: "1011検出・全8遷移", difficulty: 3, format: "sequence",
+    prompt: "状態S0=一致なし、S1=1、S2=10、S3=101まで一致とする、重なり許可1011 Mealy検出器の全8遷移を次状態/出力で答えよ。",
+    answer: "S0:0→S0/0,1→S1/0; S1:0→S2/0,1→S1/0; S2:0→S0/0,1→S3/0; S3:0→S2/0,1→S1/1",
+    accepted: ["S0 0 S0/0 1 S1/0;S1 0 S2/0 1 S1/0;S2 0 S0/0 1 S3/0;S3 0 S2/0 1 S1/1"],
+    steps: ["4状態×2入力の8本を漏れなく用意する。", "S1に1を加えた11の末尾1は接頭辞1と一致するのでS1へ戻る。", "S3に1を加えると1011が完成し出力1。", "S3に0を加えた1010では末尾10を残してS2へ戻る。"],
+    explanation: "不一致時も最長接頭辞を残すため、S3--0/0→S2をS0へ戻してはいけない。", diagram: "sequence-detector-1011", sourceRefs: [ADD1("例1011・状態遷移図")],
+  },
+  {
+    id: "dc-add-q-sequence-1011-stream", topic: "state-machines", genre: "1011重なり検出", difficulty: 3, format: "sequence",
+    prompt: "初期S0から入力列1011011を1011 Mealy検出器へ入れる。各クロック後の状態列と出力列を答えよ。",
+    answer: "状態S1→S2→S3→S1→S2→S3→S1、出力0001001",
+    accepted: ["S1,S2,S3,S1,S2,S3,S1/0001001", "S1 S2 S3 S1 S2 S3 S1 出力0 0 0 1 0 0 1"],
+    steps: ["101でS1→S2→S3。", "次の1で1011を検出してS1、O=1。", "検出時の末尾1を次の先頭として保持し、続く0でS2、1でS3、最後の1で再検出する。", "各桁の出力を並べると0001001。"],
+    explanation: "入力1011011には位置1〜4と4〜7の2つの1011が、1ビットを共有して含まれる。", diagram: "sequence-detector-1011", sourceRefs: [ADD1("連続パターン入力の状態遷移")],
+  },
+  {
+    id: "dc-add-q-design-workflow", topic: "state-machines", genre: "順序回路設計手順", difficulty: 3, format: "text",
+    prompt: "系列検出器を仕様からD-FFと論理ゲートの回路へ落とすまでの手順を、状態図・状態割当・状態表・カルノー図を含めて順に答えよ。",
+    answer: "仕様から状態図を作り、各状態へ2進符号を割り当て、全現在状態と入力の状態遷移表を作り、次状態各ビットと出力をカルノー図で簡単化し、その式をD-FF入力と出力ゲートへ実装する",
+    accepted: ["状態図→状態割当→状態遷移表→K-map→次状態式・出力式→D-FF回路"],
+    keywords: ["状態図", "状態割当", "状態", "カルノー", "D-FF", "回路"], minKeywords: 5,
+    steps: ["検出したい系列からMealy状態図を作る。", "状態数を表せるビット数で状態割当する。", "全状態×全入力を列挙して次状態・出力を表にする。", "次状態ビットごとと出力のカルノー図を別々に作る。", "簡単化式をD入力・出力ゲートへ接続する。"],
+    explanation: "途中の状態表を省くと遷移の抜け、K-mapを省くと余分なゲートや式ミスが出やすい。", diagram: "sequence-design-workflow", sourceRefs: [ADD1("状態遷移図・状態割当"), ADD2("状態表・K-map・D-FF論理回路")],
+  },
+  {
+    id: "dc-add-q-1001-synthesis", topic: "state-machines", genre: "1001検出・K-map・回路合成", difficulty: 3, format: "text",
+    prompt: "1001 Mealy検出器を状態S1S0=00,01,10,11へ割り当てた。全8行の状態表から、D1=S1+、D0=S0+、出力Oの簡単化式を導き、D-FF回路へ接続せよ。",
+    answer: "D1=Ī(S̅1S0+S1S̅0)、D0=I+S1S̅0、O=IS1S0",
+    accepted: ["D_1=\\overline I(\\overline{S_1}S_0+S_1\\overline{S_0}),D_0=I+S_1\\overline{S_0},O=IS_1S_0"],
+    keywords: ["D1", "D0", "O", "I", "S1", "S0"], minKeywords: 6,
+    formula: "\\begin{aligned}D_1=S_1^+&=\\overline I(\\overline{S_1}S_0+S_1\\overline{S_0})\\\\D_0=S_0^+&=I+S_1\\overline{S_0}\\\\O&=IS_1S_0\\end{aligned}",
+    steps: ["状態00,01,10,11の各々へI=0,1を与えた8行を作る。", "次状態の上位ビット列をD1の3変数K-mapへ転記する。", "下位ビット列をD0のK-map、出力列をOのK-mapへ転記する。", "各K-mapを1,2,4セルの長方形でまとめて積和形を得る。", "D1式を上位D-FF、D0式を下位D-FF、O式を出力ANDへ接続する。"],
+    explanation: "D-FFではD=Q+なので励起表を別に変換する必要はない。写真2枚目のK-mapと最終回路はこの3式をゲートへ置き換えたもの。", diagram: "sequence-design-workflow", sourceRefs: [ADD2("D1n・D0n・OのK-mapと最終D-FF回路")],
   },
 ];
 
@@ -351,7 +507,7 @@ const DIGITAL_PRACTICE_CALIBRATION: Record<DigitalCircuitStudyQuestion["topic"],
   "state-machines": {
     analysis: "次状態式と出力式から全入力組の状態表を完成し、その表だけを根拠に遷移枝と出力を描く。",
     designCheck: "未使用状態、MealyとMooreの出力位置、系列重なり時の最長接頭辞遷移まで照合する。",
-    sourceBasis: ["範囲ZIP p.7〜10：状態表・Mealy・Moore", "現行範囲過去問 p.3〜4・演習3：状態機械と1001検出器の設計"],
+    sourceBasis: ["範囲ZIP p.7〜10：状態表・Mealy・Moore", "現行範囲過去問 p.3〜4・演習3：状態機械と1001検出器の設計", "追加範囲ノート2枚：状態図→状態割当→状態表→K-map→D-FF回路"],
   },
 };
 
@@ -384,12 +540,12 @@ export const DIGITAL_CIRCUIT_RAPID_CHALLENGES: DigitalCircuitStudyQuestion[] =
 
 const extraById = new Map(DIGITAL_CIRCUIT_EXTRA_QUESTIONS.map((question) => [question.id, question]));
 const replacements = [
-  ["dc-extra-q-truth-table-full", "dc-extra-q-cycle-design", "dc-extra-q-ex3-equation", "dc-extra-q-sequence-full-table"],
-  ["dc-extra-q-xor-seq", "dc-extra-q-cycle-design", "dc-extra-q-past-full-table", "dc-extra-q-sequence-stream"],
-  ["dc-extra-q-truth-from-wave", "dc-extra-q-cycle-design", "dc-extra-q-past-full-table", "dc-extra-q-sequence-output"],
-  ["dc-extra-q-truth-table-full", "dc-extra-q-cycle-timing", "dc-extra-q-past-full-table", "dc-extra-q-sequence-stream"],
-  ["dc-extra-q-truth-table-full", "dc-extra-q-cycle-design", "dc-extra-q-past-full-table", "dc-extra-q-sequence-full-table"],
-  ["dc-extra-q-xor-seq", "dc-extra-q-cycle-design", "dc-extra-q-ex3-equation", "dc-extra-q-sequence-full-table"],
+  ["dc-extra-q-truth-table-full", "dc-extra-q-cycle-design", "dc-extra-q-ex3-equation", "dc-add-q-1001-synthesis"],
+  ["dc-extra-q-xor-seq", "dc-extra-q-cycle-design", "dc-extra-q-past-full-table", "dc-add-q-sequence-101-full"],
+  ["dc-extra-q-truth-from-wave", "dc-extra-q-cycle-design", "dc-extra-q-past-full-table", "dc-add-q-sequence-1011-stream"],
+  ["dc-extra-q-truth-table-full", "dc-extra-q-cycle-timing", "dc-extra-q-past-full-table", "dc-add-q-design-workflow"],
+  ["dc-extra-q-truth-table-full", "dc-extra-q-cycle-design", "dc-extra-q-past-full-table", "dc-add-q-sequence-1011-full"],
+  ["dc-extra-q-xor-seq", "dc-extra-q-cycle-design", "dc-extra-q-ex3-equation", "dc-add-q-1001-synthesis"],
 ] as const;
 
 export const DIGITAL_CIRCUIT_ALL_EXPECTED_EXAMS = DIGITAL_CIRCUIT_EXPECTED_EXAMS.map((exam, examIndex) => {

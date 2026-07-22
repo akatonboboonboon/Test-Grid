@@ -68,7 +68,7 @@ test("all problem surfaces render a blank linked diagram and solution surfaces o
   for (const wiring of ["J0=K0=1", "J1=K1=Q0", "J2=K2=Q0Q1", "共通CLK"]) assert.match(diagrams, new RegExp(wiring));
   assert.match(diagrams, /汎用記入図：具体的なAB列は問題文を使用/);
   assert.match(diagrams, /汎用解析図：具体的な論理式は問題文を使用/);
-  for (const kind of ["xor-timing", "three-jk-ripple", "cyclic-down-10-2", "exercise3-sequential", "past-state-machine", "sequence-detector-1001"]) assert.match(extraDiagrams, new RegExp(kind));
+  for (const kind of ["xor-timing", "three-jk-ripple", "cyclic-down-10-2", "exercise3-sequential", "past-state-machine", "sequence-detector-1001", "sequence-detector-101", "sequence-detector-1011", "sequence-design-workflow"]) assert.match(extraDiagrams, new RegExp(kind));
   assert.match(diagrams, /solution\s*\?/);
   assert.match(extraDiagrams, /solution\s*\?/);
   assert.match(diagrams, /問題文のABを転記して、各区間のYを求める/);

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ネットワーク専用ドリル | TEST//GRID",
-  description: "手書き資料の①〜⑦に並ぶネットワーク用語をOSI層番号へ変換し、フラッシュ暗算と制限時間つき即答で鍛える専用ドリル。",
+  title: "ネットワーク本試験・追試対策 | TEST//GRID",
+  description: "本試験の層＋20文字記述へ進み、追試用のフラッシュ暗算と制限時間つき層即答も練習できるネットワーク対策ページ。",
 };
 
 export default function NetworkLayout({ children }: Readonly<{ children: React.ReactNode }>) {

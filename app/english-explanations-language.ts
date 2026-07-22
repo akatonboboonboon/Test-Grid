@@ -386,7 +386,19 @@ function inferVocabularyShape(expression: string, japanese: string) {
 }
 
 function buildMemoryHint(expression: string) {
-  return VOCAB_ORIGIN_NOTES[expression.toLocaleLowerCase("en")] ?? "";
+  const lower = expression.toLocaleLowerCase("en");
+  const known = VOCAB_ORIGIN_NOTES[lower];
+  if (known) return known;
+  if (/(?:tion|sion|ation)$/u.test(lower)) {
+    return "動詞・語幹に名詞語尾 -tion / -sion を付け、「動作・過程・結果」を表す名詞になった形です。";
+  }
+  if (/(?:able|ible)$/u.test(lower)) {
+    return "接尾辞 -able / -ible は「～できる、～に適した」を表し、語幹の動作が可能な性質を作ります。";
+  }
+  if (expression.includes(" ")) {
+    return "複数の既知語を組み合わせた複合語・定型句です。各語の中心イメージと、英語の修飾語→中心語の順を結び付けて覚えます。";
+  }
+  return "綴り・発音と中心意味を結び付け、同じ語幹を持つ派生語や本文中の組み合わせから覚えます。";
 }
 
 function buildVocabularyExplanation(question: EnglishQuestion) {
@@ -417,8 +429,9 @@ function buildReverseVocabularyExplanation(question: EnglishQuestion) {
 }
 
 function buildOrderExplanation(question: EnglishQuestion) {
-  const guidance = ORDER_GUIDANCE[question.id];
-  if (!guidance) return "";
+  const guidance = ORDER_GUIDANCE[question.id]
+    ?? question.explanation
+    ?? "主語と定動詞を先に置き、目的語・補語を続けた後、前置詞句・副詞句・従属節を意味上の係り先へ接続します。";
   return detail([
     "【完成文】" + question.answer,
     "【文法構造】" + guidance,
@@ -431,7 +444,20 @@ function buildLanguageExplanation(question: EnglishQuestion) {
   if (question.group === "語彙・熟語（日→英）") return buildVocabularyExplanation(question);
   if (question.group === "語彙・熟語（英→日）") return buildReverseVocabularyExplanation(question);
   if (question.group.startsWith("語順整序｜")) return buildOrderExplanation(question);
-  return SPECIAL_EXPLANATIONS[question.id] ?? "";
+  const special = SPECIAL_EXPLANATIONS[question.id];
+  if (special) return special;
+  const correct = question.explanation
+    ?? "文脈・品詞・語形を同時に満たし、教材の意味を正確に再現するためです。";
+  const distractors = question.options
+    ?.filter((option) => option !== question.answer)
+    .map((option) => "「" + option + "」は意味・品詞・語形のいずれかが文脈と一致しません。")
+    .join(" ");
+  return detail([
+    "【正解】「" + question.answer + "」。" + correct,
+    distractors ? "【誤答】" + distractors : "【誤答】模範解答以外は、空欄に必要な意味または文法上の形を満たしません。",
+    "【文法・語彙】前後の語から必要な品詞を決め、接頭辞・語幹・接尾辞または定型表現を一まとまりで確認します。",
+    "【和訳】設問の日本語または本文訳と照合し、英文が表す中心情報を落とさないことが判断基準です。",
+  ]);
 }
 
 const TARGET_QUESTIONS = ENGLISH_QUESTIONS.filter(isLanguageStudyQuestion);

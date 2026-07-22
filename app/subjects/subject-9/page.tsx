@@ -8,6 +8,7 @@ import DigitalCircuitStudyDiagram from "../../digital-circuits-extra-diagrams";
 import {
   DIGITAL_CIRCUIT_ALL_FORMULAS,
   DIGITAL_CIRCUIT_ALL_QUESTIONS,
+  DIGITAL_CIRCUIT_ADDITIONAL_SCOPE_IMAGES,
   DIGITAL_CIRCUIT_CURRENT_SCOPE_PDFS,
   type DigitalCircuitStudyQuestion,
 } from "../../digital-circuits-extra-data";
@@ -251,7 +252,7 @@ export default function DigitalCircuitSubjectPage() {
       </header>
       <main className={styles.main}>
         <section className={styles.hero}>
-          <div className={styles.heroIntro}><span className={styles.eyebrow}>DIGITAL CIRCUITS / 08.03</span><h1>デジタル回路<small>波形 → 状態表 → 状態図 → 回路</small></h1><p>範囲ZIP 10枚と、内容確認でデジタル回路と判明した追加PDF 7ページだけで構成。図を見ながら答え、解答後は同じ図へ模範波形・状態遷移を重ねます。</p></div>
+          <div className={styles.heroIntro}><span className={styles.eyebrow}>DIGITAL CIRCUITS / 08.03</span><h1>デジタル回路<small>波形 → 状態図 → 状態表 → K-map → 回路</small></h1><p>範囲ZIP 10枚、現行範囲PDF 7ページ、追加範囲ノート2枚で構成。追加ノートの系列検出は、状態割当からカルノー図、D-FF入力式、最終論理回路まで一続きで練習できます。</p></div>
           <div className={styles.heroStats}>
             <div className={styles.stat}><strong>{DIGITAL_CIRCUIT_ALL_FORMULAS.length}</strong><span>暗記カード</span></div>
             <div className={styles.stat}><strong>{DIGITAL_CIRCUIT_ALL_QUESTIONS.length}</strong><span>通常演習</span></div>
@@ -270,7 +271,7 @@ export default function DigitalCircuitSubjectPage() {
           <section className={styles.panel}>
             <div className={styles.panelHeading}><div><span className={styles.eyebrow}>CURRENT SCOPE</span><h2>今回の試験範囲</h2></div><p>形式だけの資料と現行範囲を分離済みです。重複するJK・カウンタ・状態遷移は1つの理解項目へ統合しました。</p></div>
             <div className={styles.topicGrid}>{DIGITAL_CIRCUIT_TOPICS.map((topic) => <article key={topic.id} className={styles.topicCard} style={{ "--topic": topic.color } as React.CSSProperties}><span>{topic.number} / P.{topic.pages.join("・")}</span><h3>{topic.title}</h3><p>{topic.description}</p></article>)}</div>
-            <div className={styles.sourceNotice}><b>現行範囲：</b>範囲ZIP {DIGITAL_CIRCUIT_RANGE_PAGES.length}枚 ＋ 追加PDF {DIGITAL_CIRCUIT_CURRENT_SCOPE_PDFS.reduce((sum, file) => sum + file.pages, 0)}ページ。<br /><b>形式のみ：</b>{DIGITAL_CIRCUIT_SOURCE_POLICY.excludedFormatOnlyTopics.join("・")}。これらは形式ZIPにしかないため出題内容へ入れていません。</div>
+            <div className={styles.sourceNotice}><b>現行範囲：</b>範囲ZIP {DIGITAL_CIRCUIT_RANGE_PAGES.length}枚 ＋ 追加PDF {DIGITAL_CIRCUIT_CURRENT_SCOPE_PDFS.reduce((sum, file) => sum + file.pages, 0)}ページ ＋ 追加範囲ノート {DIGITAL_CIRCUIT_ADDITIONAL_SCOPE_IMAGES.length}枚。<br /><b>追加ノート：</b>nビット系列検出、101・1011の重なり検出、状態図→状態割当→状態表→K-map→D-FF回路。<br /><b>形式のみ：</b>{DIGITAL_CIRCUIT_SOURCE_POLICY.excludedFormatOnlyTopics.join("・")}。これらは形式ZIPにしかないため出題内容へ入れていません。</div>
             <div className={styles.actions}><button type="button" onClick={() => changeMode("cards")}>暗記帳へ</button><button type="button" onClick={() => changeMode("practice")}>図付き演習へ</button></div>
           </section>
         )}
@@ -371,7 +372,7 @@ export default function DigitalCircuitSubjectPage() {
           <section className={styles.panel}>
             <div className={styles.panelHeading}><div><span className={styles.eyebrow}>FORMAT GUIDE</span><h2>試験形式ガイド</h2></div><p>形式ZIPの紙面構成と、現行範囲PDFの実問題形式を合わせています。範囲外の題材は追加していません。</p></div>
             <div className={styles.topicGrid}>{DIGITAL_CIRCUIT_EXAM_FORMATS.map((format, index) => <article className={styles.topicCard} style={{ "--topic": DIGITAL_CIRCUIT_TOPICS[index % DIGITAL_CIRCUIT_TOPICS.length].color } as React.CSSProperties} key={format.id}><span>0{index + 1} / FORMAT</span><h3>{format.title}</h3><p>{format.description}</p><b>{format.strategy}</b></article>)}</div>
-            <div className={styles.sourceNotice}><b>今回追加で確認した出題：</b>XORタイミング、JK特性式と波形、3段JKリップル、10→2巡回ダウン、状態表＋Mealy図、1001系列検出の設計。いずれも問題画面へ書き込み用の回路・波形・状態図を表示します。</div>
+            <div className={styles.sourceNotice}><b>今回追加で確認した出題：</b>XORタイミング、JK特性式と波形、3段JKリップル、10→2巡回ダウン、状態表＋Mealy図、1001系列検出に加え、追加ノートの101・1011系列検出と、状態割当→全遷移表→K-map→D-FF回路合成。いずれも問題画面へ書き込み用の回路・表・状態図を表示します。</div>
           </section>
         )}
       </main>

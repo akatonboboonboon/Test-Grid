@@ -262,11 +262,11 @@ export default function StudyHub() {
           <div>
             <p className="eyebrow"><span>REGULAR EXAM / 9 SUBJECTS</span><span>LOCAL STUDY DESK</span></p>
             <h1 id="hub-title">9教科を、<br /><em>ひとつずつ潰す。</em></h1>
-            <p>英語はZIP教材の専用演習、ネットワークは層の暗算・即答・暗記帳、熱・流体力学は熱力学7枚・6単元の公式と全範囲想定試験、確率統計・応用数学もA4想定試験まで収録。ほかの科目もここでまとめて回せます。</p>
+            <p>英語はZIP教材の専用演習、ネットワークは本試験の20文字以上記述と追試用の層暗算、熱・流体力学は熱力学7枚・6単元の公式と全範囲想定試験、確率統計・応用数学もA4想定試験まで収録。ほかの科目もここでまとめて回せます。</p>
           </div>
-          <Link className="hub-primary-link" href="/subjects/network">
+          <Link className="hub-primary-link" href="/subjects/network/written">
             <span>READY NOW</span>
-            <strong>ネットワークから始める</strong>
+            <strong>ネットワーク記述対策から始める</strong>
             <b aria-hidden="true">→</b>
           </Link>
         </section>
@@ -375,11 +375,12 @@ export default function StudyHub() {
                   <div className="subject-actions">
                     {subject.module === "network" ? (
                       <>
-                        <Link className="subject-primary subject-memory-link" href="/subjects/network/cards">暗記帳を開く</Link>
+                        <Link className="subject-primary" href="/subjects/network/written">本試験・20文字記述</Link>
+                        <Link className="subject-secondary subject-memory-link" href="/subjects/network/cards">暗記帳を開く</Link>
                         <Link className="subject-secondary" href="/essentials?subject=network">必須単語・公式</Link>
-                        <Link className="subject-secondary" href="/subjects/network">暗算・層即答</Link>
-                        <Link className="subject-secondary subject-rapid-link" href="/rapid/network">時間制限 即答練習</Link>
-                        <Link className="subject-secondary subject-ranking-link" href="/ranking/network">公式ランキングテスト</Link>
+                        <Link className="subject-secondary" href="/subjects/network">追試・フラッシュ暗算</Link>
+                        <Link className="subject-secondary subject-rapid-link" href="/rapid/network">追試・時間制限つき層即答</Link>
+                        <Link className="subject-secondary subject-ranking-link" href="/ranking/network">連続正解ランキング</Link>
                       </>
                     ) : subject.configured ? (
                       <>

@@ -420,6 +420,36 @@
   grid-template-columns: 21px minmax(0, 1fr);
 }
 
+.sourceExcerpt {
+  background: rgba(76, 187, 210, 0.08);
+  border: 1px solid rgba(11, 14, 19, 0.18);
+  margin-bottom: 9px;
+  padding: 8px 10px;
+}
+
+.sourceExcerpt > span {
+  color: #08743d;
+  display: block;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.sourceExcerpt > strong {
+  display: block;
+  font-size: 8px;
+  margin: 3px 0 5px;
+}
+
+.sourceExcerpt blockquote {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 8px;
+  line-height: 1.55;
+  margin: 0;
+  white-space: pre-line;
+}
+
 .questionPrompt > span {
   align-items: center;
   background: var(--expected-ink);
