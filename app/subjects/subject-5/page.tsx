@@ -12,7 +12,7 @@ import {
   MATERIAL_MECHANICS_EXAM_SPEC,
   MATERIAL_MECHANICS_EXPECTED_EXAMS,
   MATERIAL_MECHANICS_FORMULAS,
-  MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS,
+  MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS,
   MATERIAL_MECHANICS_QUESTIONS,
   MATERIAL_MECHANICS_RANGE_PAGES,
   MATERIAL_MECHANICS_SOURCE_POLICY,
@@ -50,7 +50,7 @@ const PROGRESS_KEY = "test-grid:subject-5:progress:v1";
 const TEST_SESSION_KEY = "test-grid:subject-5:mock-test:v1";
 const ALL_TOPIC_IDS = MATERIAL_MECHANICS_TOPICS.map((topic) => topic.id);
 const KNOWN_TOPIC_IDS = new Set<MaterialMechanicsTopicId>(ALL_TOPIC_IDS);
-const KNOWN_QUESTION_IDS = new Set([...MATERIAL_MECHANICS_QUESTIONS, ...MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS].map((question) => question.id));
+const KNOWN_QUESTION_IDS = new Set(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.map((question) => question.id));
 
 function randomize<T>(items: readonly T[]) {
   const copy = [...items];
@@ -417,7 +417,7 @@ export default function MaterialMechanicsSubjectPage() {
 
   const [practiceTopics, setPracticeTopics] = useState<MaterialMechanicsTopicId[]>([...ALL_TOPIC_IDS]);
   const [practiceSourceFilter, setPracticeSourceFilter] = useState<SourceFilter>("all");
-  const [practiceDeck, setPracticeDeck] = useState([...MATERIAL_MECHANICS_QUESTIONS]);
+  const [practiceDeck, setPracticeDeck] = useState([...MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS]);
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceTypedAnswer, setPracticeTypedAnswer] = useState("");
   const [practiceSelectedChoice, setPracticeSelectedChoice] = useState("");
@@ -504,7 +504,7 @@ export default function MaterialMechanicsSubjectPage() {
 
   const currentPracticeQuestion = practiceDeck[practiceIndex];
   const availableTestQuestions = useMemo(
-    () => MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic) && matchesSource(question, testSourceFilter)),
+    () => MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic) && matchesSource(question, testSourceFilter)),
     [testSourceFilter, testTopics],
   );
   const currentTestQuestion = testQuestions[testIndex];
@@ -569,7 +569,7 @@ export default function MaterialMechanicsSubjectPage() {
 
   function changePracticeTopics(nextTopics: MaterialMechanicsTopicId[]) {
     setPracticeTopics(nextTopics);
-    setPracticeDeck(randomize(MATERIAL_MECHANICS_QUESTIONS.filter((question) => nextTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
+    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => nextTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -578,7 +578,7 @@ export default function MaterialMechanicsSubjectPage() {
 
   function changePracticeSource(source: SourceFilter) {
     setPracticeSourceFilter(source);
-    setPracticeDeck(randomize(MATERIAL_MECHANICS_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, source))));
+    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, source))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -586,7 +586,7 @@ export default function MaterialMechanicsSubjectPage() {
   }
 
   function shufflePractice() {
-    setPracticeDeck(randomize(MATERIAL_MECHANICS_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
+    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -705,7 +705,7 @@ export default function MaterialMechanicsSubjectPage() {
   function resumeSavedTest() {
     if (!savedTestSession) return;
     const questions = savedTestSession.questionIds.flatMap((id) => {
-      const found = MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS.find((question) => question.id === id) ?? MATERIAL_MECHANICS_QUESTIONS.find((question) => question.id === id);
+      const found = MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.find((question) => question.id === id);
       return found ? [found] : [];
     });
     if (!questions.length) {
@@ -713,7 +713,7 @@ export default function MaterialMechanicsSubjectPage() {
       return;
     }
     const results = savedTestSession.results.flatMap((savedResult) => {
-      const question = MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId) ?? MATERIAL_MECHANICS_QUESTIONS.find((item) => item.id === savedResult.questionId);
+      const question = MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId);
       return question ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
     });
     setTestTopics(savedTestSession.selectedTopics);
@@ -747,7 +747,7 @@ export default function MaterialMechanicsSubjectPage() {
           <span><strong>TEST//GRID</strong><small>MATERIAL MECHANICS</small></span>
         </Link>
         <div className="header-actions statistics-header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {MATERIAL_MECHANICS_QUESTIONS.length} QUESTIONS</span>
+          <span className="card-count-label"><i aria-hidden="true" /> {MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.length} PRINT-LEVEL MAJORS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-5">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-5">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-5">時間制限 即答練習</Link>
@@ -778,7 +778,7 @@ export default function MaterialMechanicsSubjectPage() {
         <section className="english-summary statistics-summary" aria-label="収録教材">
           <div><span>TOPICS</span><strong>{MATERIAL_MECHANICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{MATERIAL_MECHANICS_FORMULAS.length}</strong><small>枚</small></div>
-          <div><span>QUESTIONS</span><strong>{MATERIAL_MECHANICS_QUESTIONS.length}</strong><small>問</small></div>
+          <div><span>QUESTIONS</span><strong>{MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.length}</strong><small>本番大問</small></div>
           <p>範囲ZIP{MATERIAL_MECHANICS_RANGE_PAGES.length}ページのねじり・はり・曲げ範囲と、形式2 Q1〜3の範囲一致部だけを演習へ収録。A4想定試験{MATERIAL_MECHANICS_EXPECTED_EXAMS.length}回を、50分初期値・練習用100点・60点ラインで解けます。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
@@ -805,7 +805,7 @@ export default function MaterialMechanicsSubjectPage() {
               <div className="english-guide-grid statistics-topic-grid">
                 {MATERIAL_MECHANICS_TOPICS.map((topic) => {
                   const formulaCount = MATERIAL_MECHANICS_FORMULAS.filter((card) => card.topic === topic.id).length;
-                  const questionCount = MATERIAL_MECHANICS_QUESTIONS.filter((question) => question.topic === topic.id).length;
+                  const questionCount = MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => question.topic === topic.id).length;
                   return (
                     <article key={topic.id} className="statistics-topic-card" style={{ borderTopColor: topic.color }}>
                       <span>{topic.number} / RANGE</span>

@@ -162,24 +162,73 @@ function generateDigitalCircuitFoundationQuestion(seed = Date.now()): DigitalCir
   };
 }
 function calibrateGeneratedDigitalQuestion(question: DigitalCircuitQuestion): DigitalCircuitQuestion {
-  const designInstruction = question.topic === "state-machines"
-    ? "次状態式・出力式から全入力組の状態表を作り、指定行を状態図へ照合する。"
-    : question.topic === "counters"
-      ? "各FFのトグル条件と現在状態を表にし、全段同時更新かリップル伝搬かを区別して追う。"
-      : "有効エッジまたは全入力変化点で区間を分け、各区間の入力・現在状態・次状態を表にする。";
+  const originalAnswer = question.answer;
+  let chainInstruction = "真理値表・式・全区間の結果を一続きで示す";
+  let chainAnswer = originalAnswer;
+  let chainFormula = question.formula ?? "";
+  let keywords: string[] = [];
+  let extraSteps: string[] = [];
+
+  if (question.diagram === "and-timing" || question.diagram === "or-timing") {
+    const isAnd = question.diagram === "and-timing";
+    const truth = isAnd ? "0001" : "0111";
+    chainInstruction = "AB=00,01,10,11の完全な真理値表を作り、積和形を求めてから、指定4区間の出力波形を求める";
+    chainAnswer = `truth=${truth}; ${isAnd ? "Y=AB" : "Y=A+B"}; waveform=${originalAnswer}`;
+    keywords = [truth, "Y", originalAnswer];
+    extraSteps = ["4行の真理値表を先に完成する。", "Y=1となる行から論理式を作る。"];
+  } else if (question.diagram === "d-ff") {
+    chainInstruction = "D-FFの動作表と特性式Q⁺=Dを書き、初期状態から全エッジを追跡する";
+    chainAnswer = `Q^+=D; waveform=${originalAnswer}`;
+    keywords = ["Q", "D", originalAnswer];
+    extraSteps = ["有効エッジ直前のDだけを取り込む。", "エッジ間のD変化ではQを保持する。"];
+  } else if (question.diagram === "jk-ff") {
+    chainInstruction = "JKの4行動作表から特性式を導き、現在Qを用いて全エッジを追跡する";
+    chainFormula = "Q^+=J\\overline Q+\\overline KQ";
+    chainAnswer = `Q^+=JQbar+KbarQ; waveform=${originalAnswer}`;
+    keywords = ["J", "K", "Q", originalAnswer];
+    extraSteps = ["00保持・01リセット・10セット・11反転を表にする。", "各エッジで更新前Qを使う。"];
+  } else if (question.diagram === "parallel-register") {
+    chainInstruction = "共通クロックを明記し、各エッジ直前の入力語と各エッジ直後の出力語を対応表にする";
+    chainAnswer = `Q^+=D at each active edge; words=${originalAnswer}`;
+    keywords = ["Q", "D", originalAnswer];
+    extraSteps = ["全D-FFが共通クロックで同時更新されることを確認する。", "エッジ間は保持する。"];
+  } else if (question.diagram === "ripple-down") {
+    chainInstruction = "全8状態のダウン順を作り、指定状態からの遷移と各段の分周比を求める";
+    chainFormula = "f_{Q_n}=f_{CLK}/2^{n+1}";
+    chainAnswer = `cycle=111,110,101,100,011,010,001,000; requested=${originalAnswer}; divisions=1/2,1/4,1/8`;
+    keywords = ["111", "000", originalAnswer, "1/8"];
+    extraSteps = ["3ビットの一周を先に並べる。", "非同期段間の伝搬遅延も説明する。"];
+  } else if (question.diagram === "sync-counter") {
+    chainInstruction = "8行の状態遷移表からJK励起条件を簡単化し、指定状態からの遷移で検算する";
+    chainAnswer = `J0=K0=1; J1=K1=Q0; J2=K2=Q0Q1; requested=${originalAnswer}`;
+    keywords = ["J0", "Q0", "Q0Q1", originalAnswer];
+    extraSteps = ["Q0は毎回、Q1はQ0=1、Q2はQ1Q0=11で反転する。", "全段が共通CLKで同時更新される。"];
+  } else {
+    chainInstruction = "次状態式・出力式から4行の状態表とMealy状態図を完成し、指定行を照合する";
+    chainFormula = "S^+=A\\overline S,\\quad Y=AS";
+    chainAnswer = `S^+=ASbar; Y=AS; table=S0:0/0,1/0; S1:0/0,0/1; requested=${originalAnswer}`;
+    keywords = ["S", "A", "Y", originalAnswer];
+    extraSteps = ["A,Sの4組を式へ代入する。", "枝ラベルをA/Yとして2状態の図へ移す。"];
+  }
+
   return {
     ...question,
     difficulty: 3,
-    context: "本番形式の生成問題です。問題図へ途中波形・状態列を書き込んでから最終列を入力してください。",
-    prompt: `【設計・検算4段階】(1) ${designInstruction} (2) 全区間または全遷移を図へ記入する。 (3) 端状態・保持・折返しを検算する。 (4) ${question.prompt}`,
-    steps: [designInstruction, ...question.steps, "端状態・保持区間・周回条件を検算する。", "生成された問題図と解答列を区間ごとに照合する。"],
-    explanation: `${question.explanation} 単発の暗記ではなく、表・図・論理式の3表現が一致したところまでを正解とする。`,
+    format: "text",
+    context: "範囲資料の数値・回路だけで最後まで解ける自動生成大問。途中表と図も採点対象とする。",
+    prompt: `(1) ${chainInstruction}。(2) 途中の表・式を示す。(3) 図へ全遷移または全区間を書き込む。(4) ${question.prompt}`,
+    answer: chainAnswer,
+    accepted: [chainAnswer, ...(question.accepted ?? [])],
+    keywords,
+    minKeywords: Math.max(2, keywords.length - 1),
+    formula: chainFormula,
+    steps: [...extraSteps, ...question.steps, "最終結果を元の入力条件へ戻して全区間照合する。"],
+    explanation: `${question.explanation} 単発の最終値ではなく、表→式→図→指定結果が一致した場合に正解となる。`,
     subpartCount: 4,
-    sourceBasis: question.sourceRefs.map((source) => `${source.filename} p.${source.page}${source.note ? `：${source.note}` : ""}`),
+    sourceBasis: [...question.sourceRefs.map((source) => `${source.filename} p.${source.page}${source.note ? `・${source.note}` : ""}`), "範囲内の公式だけで数値を変えた本番形式4段階問題"],
     examLevel: true,
   };
 }
-
 /** 範囲内公式だけを使い、解・図・検算手順まで確定した本番水準の生成問題。 */
 export function generateDigitalCircuitQuestion(seed = Date.now()): DigitalCircuitQuestion {
   return calibrateGeneratedDigitalQuestion(generateDigitalCircuitFoundationQuestion(seed));

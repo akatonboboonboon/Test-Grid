@@ -672,6 +672,47 @@ export const STATISTICS_EXAM_LEVEL_QUESTIONS: StatisticsQuestion[] = [
   ),
 );
 
+/**
+ * 通常演習・時間制限・ランキング用の「大問完答」プール。
+ * 予想模試の各大問をばらばらの小問にせず、前半の中間量も同じ条件から
+ * 自力で導出して、最後の設問まで到達する一つの問題として提示する。
+ */
+export const STATISTICS_PRINT_LEVEL_QUESTIONS: StatisticsQuestion[] = [
+  ...EXPECTED_PAPERS_BY_ID.values(),
+].flatMap((paper) =>
+  paper.sections.map((section) => {
+    const finalQuestion = section.questions.at(-1)!;
+    const allPrompts = section.questions
+      .map((question) => `(${question.sub}) ${question.prompt}`)
+      .join("\n");
+    const allSteps = section.questions.flatMap((question) => [
+      `(${question.sub}) ${question.genre}`,
+      ...question.steps.map((step) => `(${question.sub}) ${step}`),
+    ]);
+    const fullExplanation = section.questions
+      .map((question) => `(${question.sub}) 正解：${question.answer}。${question.explanation}`)
+      .join("\n");
+
+    return {
+      ...finalQuestion,
+      id: `${paper.definition.id}-major-${section.number}-complete`,
+      difficulty: 3,
+      genre: `${section.title}・大問完答`,
+      context: section.context,
+      prompt: `次の大問を最初から解き、途中式・中間量を残して最終設問まで答えよ。\n${allPrompts}\n解答欄には最終設問(${finalQuestion.sub})の答えを入力すること。`,
+      options: section.number === 11 ? [
+        finalQuestion.answer,
+        "平均との差の和は一般に正なので、展開した交差項を右辺へ加える。",
+        "平均との差へ分解するとき符号を反転し、交差項は理由を書かず0と置く。",
+        "各データを先に平均してから二乗するため、偏差平方和そのものが0になる。",
+      ] : finalQuestion.options,
+      steps: allSteps,
+      explanation: fullExplanation,
+      sourcePages: [...new Set(section.questions.flatMap((question) => question.sourcePages ?? []))],
+    } satisfies StatisticsQuestion;
+  }),
+);
+
 export const STATISTICS_EXPECTED_EXAM_AUDIT = STATISTICS_EXPECTED_EXAMS.map((definition) => {
   const paper = EXPECTED_PAPERS_BY_ID.get(definition.id)!;
   return {

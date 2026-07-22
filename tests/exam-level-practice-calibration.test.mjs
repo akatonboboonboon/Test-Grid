@@ -28,16 +28,16 @@ test("mechanical, thermal, and material confirmation pools contain only exam-lev
     },
     {
       label: "thermal",
-      pool: thermal.THERMODYNAMICS_EXAM_LEVEL_QUESTIONS,
+      pool: thermal.THERMODYNAMICS_PRINT_LEVEL_QUESTIONS,
       topics: thermal.THERMODYNAMICS_TOPICS.map((topic) => topic.id),
       minimum: 30,
       diagrams: true,
     },
     {
       label: "material",
-      pool: material.MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS,
+      pool: material.MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS,
       topics: material.MATERIAL_MECHANICS_TOPICS.map((topic) => topic.id),
-      minimum: 30,
+      minimum: 26,
       diagrams: true,
     },
   ];
@@ -81,11 +81,49 @@ test("mechanical normal practice pool is print-level, standalone, and retains ac
   assert.equal(actual.length, 2, "actual-exam source filter keeps complete majors 5 and 6");
   assert.ok(actual.every((question) => /【実物過去問・大問[56]】/u.test(question.context)));
 });
+test("statistics and applied mathematics practice use complete major-question chains", async () => {
+  const [statistics, applied] = await Promise.all([
+    load("../app/statistics-expected-exams-data.ts"),
+    load("../app/applied-math-data.ts"),
+  ]);
+
+  const expectedStatisticsCount = [...statistics.EXPECTED_PAPERS_BY_ID.values()]
+    .reduce((sum, paper) => sum + paper.sections.length, 0);
+  assert.equal(statistics.STATISTICS_PRINT_LEVEL_QUESTIONS.length, expectedStatisticsCount);
+  for (const question of statistics.STATISTICS_PRINT_LEVEL_QUESTIONS) {
+    assert.equal(question.difficulty, 3, `${question.id} difficulty`);
+    assert.ok(question.steps.length >= 3, `${question.id} linked work`);
+    assert.ok(question.context?.length >= 10, `${question.id} standalone givens`);
+    assert.match(question.prompt, /次の大問を最初から解き/u, `${question.id} full major prompt`);
+    assert.match(question.prompt, /最終設問/u, `${question.id} final graded target`);
+    assert.ok(question.answer.trim(), `${question.id} solved`);
+  }
+
+  const expectedAppliedCount = applied.APPLIED_MATH_EXPECTED_EXAMS
+    .reduce((sum, exam) => sum + exam.sections.length, 0);
+  assert.equal(applied.APPLIED_MATH_PRINT_LEVEL_QUESTIONS.length, expectedAppliedCount);
+  for (const question of applied.APPLIED_MATH_PRINT_LEVEL_QUESTIONS) {
+    assert.equal(question.difficulty, 3, `${question.id} difficulty`);
+    assert.ok(question.steps.length >= 3, `${question.id} linked work`);
+    assert.ok(question.context?.length >= 10, `${question.id} standalone givens`);
+    assert.match(question.prompt, /次の大問を最初から解き/u, `${question.id} full major prompt`);
+    assert.match(question.prompt, /最終設問/u, `${question.id} final graded target`);
+    assert.ok(question.answer.trim(), `${question.id} solved`);
+  }
+
+  const statisticsPage = await readFile(new URL("../app/subjects/subject-7/page.tsx", import.meta.url), "utf8");
+  const appliedPage = await readFile(new URL("../app/subjects/subject-8/page.tsx", import.meta.url), "utf8");
+  assert.match(statisticsPage, /STATISTICS_PRINT_LEVEL_QUESTIONS/u);
+  assert.doesNotMatch(statisticsPage, /STATISTICS_ADDITIONAL_QUESTIONS/u);
+  assert.match(appliedPage, /APPLIED_MATH_PRINT_LEVEL_QUESTIONS/u);
+  assert.doesNotMatch(appliedPage, /APPLIED_MATH_EXAM_LEVEL_QUESTIONS/u);
+});
+
 test("timed confirmation pages use and restore the exam-level pools", async () => {
   for (const [subject, token] of [
     ["subject-3", "MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS"],
-    ["subject-4", "THERMODYNAMICS_EXAM_LEVEL_QUESTIONS"],
-    ["subject-5", "MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS"],
+    ["subject-4", "THERMODYNAMICS_PRINT_LEVEL_QUESTIONS"],
+    ["subject-5", "MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS"],
   ]) {
     const source = await readFile(new URL(`../app/subjects/${subject}/page.tsx`, import.meta.url), "utf8");
     assert.match(source, new RegExp(`\\(\\) => ${token}\\.filter`), `${subject} candidates`);

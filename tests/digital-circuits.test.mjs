@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
+import { importTypeScriptGraph } from "./helpers/import-typescript-graph.mjs";
 
 const BASE_URL = new URL("../app/digital-circuits-data.ts", import.meta.url);
 const EXTRA_URL = new URL("../app/digital-circuits-extra-data.ts", import.meta.url);
@@ -22,11 +23,10 @@ async function loadModules() {
   if (!modulesPromise) modulesPromise = (async () => {
     const baseSource = await readFile(BASE_URL, "utf8");
     const baseUrl = dataUrl(baseSource);
-    const extraSource = (await readFile(EXTRA_URL, "utf8"))
-      .replace('"./digital-circuits-data"', JSON.stringify(baseUrl));
+    const loadedExtra = await importTypeScriptGraph(EXTRA_URL);
     const [base, extra, generator, extraGenerator] = await Promise.all([
       import(baseUrl),
-      import(dataUrl(extraSource)),
+      loadedExtra,
       readFile(GENERATOR_URL, "utf8").then((source) => import(dataUrl(source))),
       readFile(EXTRA_GENERATOR_URL, "utf8").then((source) => import(dataUrl(source))),
     ]);
@@ -61,7 +61,7 @@ test("combined deck and practice cover every in-scope topic with solved, sourced
   const { base, extra } = await loadModules();
   assert.deepEqual(base.DIGITAL_CIRCUIT_TOPICS.map((topic) => topic.id), TOPICS);
   assert.ok(extra.DIGITAL_CIRCUIT_ALL_FORMULAS.length >= 38);
-  assert.ok(extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.length >= 47);
+  assert.equal(extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.length, 11);
   assert.equal(new Set(extra.DIGITAL_CIRCUIT_ALL_FORMULAS.map((item) => item.id)).size, extra.DIGITAL_CIRCUIT_ALL_FORMULAS.length);
   assert.equal(new Set(extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.map((item) => item.id)).size, extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.length);
   for (const topic of TOPICS) {
@@ -127,13 +127,15 @@ test("six A4 exams use an adjustable 50-minute practice default, 100-point conve
     assert.equal(exam.paper, "A4 portrait");
     assert.equal(exam.sections.length, 5);
     const questions = exam.sections.flatMap((section) => section.questions);
-    assert.equal(questions.length, 12);
+    assert.equal(questions.length, 5);
     assert.equal(questions.reduce((sum, question) => sum + question.points, 0), 100);
     assert.ok(questions.every((question) => question.diagram), exam.id + " all figures");
-    assert.ok(questions.some((question) => question.sourceRefs.some((source) => source.filename.endsWith(".pdf"))), exam.id + " current-scope PDF");
-    assert.ok(questions.some((question) => question.diagram === "sync-counter"), exam.id + " p.6 synchronous counter");
+    assert.ok(questions.every((question) => question.sourceRefs.length > 0), exam.id + " exact source links");
+    assert.ok(questions.some((question) => question.topic === "counters"), exam.id + " counter major");
     assert.deepEqual(new Set(exam.sections.flatMap((section) => section.topicIds)), new Set(TOPICS));
   }
+  assert.ok(extra.DIGITAL_CIRCUIT_ALL_EXPECTED_EXAMS.some((exam) => exam.sections.flatMap((section) => section.questions).some((question) => question.diagram === "sync-counter")), "the six-paper set covers the p.6 synchronous counter");
+  assert.ok(extra.DIGITAL_CIRCUIT_ALL_EXPECTED_EXAMS.some((exam) => exam.sections.flatMap((section) => section.questions).some((question) => question.sourceRefs.some((source) => source.filename.endsWith(".pdf")))), "the six-paper set covers the current-scope PDFs");
 });
 
 test("on-demand generators are source-backed and never produce an unsolved or figureless question", async () => {

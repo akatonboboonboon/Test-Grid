@@ -795,7 +795,7 @@ function compositePrintLevelQuestion(
       .map((source) => [JSON.stringify(source), source] as const),
   ).values()];
   const questionOutline = section.questions
-    .map((question) => `(${question.sub}) ${question.prompt}`)
+    .map((question) => `(${question.sub}) ${question.prompt.replace(/[。．]+$/u, "")}`)
     .join(" ／ ");
   const linkedSteps = section.questions.flatMap((question) =>
     question.steps.map((step) => `(${question.sub}) ${step}`),
@@ -805,7 +805,7 @@ function compositePrintLevelQuestion(
     id: `${idPrefix}-m${major}`,
     difficulty: 3,
     genre: `${sourceLabel}・大問${major}完答・${section.title}`,
-    prompt: `この大問を最初から通して解け。${questionOutline}。前問の数値は与えられないため、必要な中間量を上の条件から自分で導出し、最後の(${sub})の答えを入力すること。`,
+    prompt: `この大問を最初から通して解け。${questionOutline}。各小問を順に解き、必要な中間量を上の条件から自分で導出し、最後の(${sub})の答えを入力すること。`,
     context: [`【${sourceLabel}・大問${major}】${section.title}`, section.context, finalItem.context]
       .filter(Boolean)
       .join("\n"),

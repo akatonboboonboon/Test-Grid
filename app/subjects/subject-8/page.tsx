@@ -10,7 +10,7 @@ import { DisplayMath, RichMathText } from "../../statistics-math";
 import {
   APPLIED_MATH_EXAM_FORMATS,
   APPLIED_MATH_FORMULAS,
-  APPLIED_MATH_EXAM_LEVEL_QUESTIONS,
+  APPLIED_MATH_PRINT_LEVEL_QUESTIONS,
   APPLIED_MATH_TOPICS,
   type AppliedMathQuestion,
   type AppliedMathTopicId,
@@ -40,7 +40,7 @@ const PROGRESS_KEY = "test-grid:subject-8:progress:v1";
 const TEST_SESSION_KEY = "test-grid:subject-8:mock-test:v1";
 const ALL_TOPIC_IDS = APPLIED_MATH_TOPICS.map((topic) => topic.id);
 const KNOWN_TOPIC_IDS = new Set<AppliedMathTopicId>(ALL_TOPIC_IDS);
-const KNOWN_QUESTION_IDS = new Set(APPLIED_MATH_EXAM_LEVEL_QUESTIONS.map((question) => question.id));
+const KNOWN_QUESTION_IDS = new Set(APPLIED_MATH_PRINT_LEVEL_QUESTIONS.map((question) => question.id));
 
 function randomize<T>(items: readonly T[]) {
   const copy = [...items];
@@ -346,7 +346,7 @@ export default function AppliedMathSubjectPage() {
   const [cardFlipped, setCardFlipped] = useState(false);
 
   const [practiceTopics, setPracticeTopics] = useState<AppliedMathTopicId[]>([...ALL_TOPIC_IDS]);
-  const [practiceDeck, setPracticeDeck] = useState([...APPLIED_MATH_EXAM_LEVEL_QUESTIONS]);
+  const [practiceDeck, setPracticeDeck] = useState([...APPLIED_MATH_PRINT_LEVEL_QUESTIONS]);
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceTypedAnswer, setPracticeTypedAnswer] = useState("");
   const [practiceSelectedChoice, setPracticeSelectedChoice] = useState("");
@@ -416,7 +416,7 @@ export default function AppliedMathSubjectPage() {
 
   const currentPracticeQuestion = practiceDeck[practiceIndex];
   const availableTestQuestions = useMemo(
-    () => APPLIED_MATH_EXAM_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic)),
+    () => APPLIED_MATH_PRINT_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic)),
     [testTopics],
   );
   const currentTestQuestion = testQuestions[testIndex];
@@ -480,7 +480,7 @@ export default function AppliedMathSubjectPage() {
 
   function changePracticeTopics(nextTopics: AppliedMathTopicId[]) {
     setPracticeTopics(nextTopics);
-    setPracticeDeck(randomize(APPLIED_MATH_EXAM_LEVEL_QUESTIONS.filter((question) => nextTopics.includes(question.topic))));
+    setPracticeDeck(randomize(APPLIED_MATH_PRINT_LEVEL_QUESTIONS.filter((question) => nextTopics.includes(question.topic))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -488,7 +488,7 @@ export default function AppliedMathSubjectPage() {
   }
 
   function shufflePractice() {
-    setPracticeDeck(randomize(APPLIED_MATH_EXAM_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic))));
+    setPracticeDeck(randomize(APPLIED_MATH_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -600,7 +600,7 @@ export default function AppliedMathSubjectPage() {
   function resumeSavedTest() {
     if (!savedTestSession) return;
     const questions = savedTestSession.questionIds.flatMap((id) => {
-      const found = APPLIED_MATH_EXAM_LEVEL_QUESTIONS.find((question) => question.id === id);
+      const found = APPLIED_MATH_PRINT_LEVEL_QUESTIONS.find((question) => question.id === id);
       return found ? [found] : [];
     });
     if (!questions.length) {
@@ -608,7 +608,7 @@ export default function AppliedMathSubjectPage() {
       return;
     }
     const results = savedTestSession.results.flatMap((savedResult) => {
-      const question = APPLIED_MATH_EXAM_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId);
+      const question = APPLIED_MATH_PRINT_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId);
       return question ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
     });
     setTestTopics(savedTestSession.selectedTopics);
@@ -639,7 +639,7 @@ export default function AppliedMathSubjectPage() {
           <span><strong>TEST//GRID</strong><small>APPLIED MATHEMATICS</small></span>
         </Link>
         <div className="header-actions statistics-header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {APPLIED_MATH_EXAM_LEVEL_QUESTIONS.length} QUESTIONS</span>
+          <span className="card-count-label"><i aria-hidden="true" /> {APPLIED_MATH_PRINT_LEVEL_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-8">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-8">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-8">時間制限 即答練習</Link>
@@ -670,7 +670,7 @@ export default function AppliedMathSubjectPage() {
         <section className="english-summary statistics-summary" aria-label="収録教材">
           <div><span>TOPICS</span><strong>{APPLIED_MATH_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{APPLIED_MATH_FORMULAS.length}</strong><small>枚</small></div>
-          <div><span>QUESTIONS</span><strong>{APPLIED_MATH_EXAM_LEVEL_QUESTIONS.length}</strong><small>問</small></div>
+          <div><span>QUESTIONS</span><strong>{APPLIED_MATH_PRINT_LEVEL_QUESTIONS.length}</strong><small>問</small></div>
           <p>当初のテスト範囲ZIP 16枚と追加範囲ZIP 6枚の全22枚を学習内容として収録。形式1〜3は紙面・配点・途中式欄の参考だけに使用し、予想試験6回は毎回全9単元を含みます。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
@@ -698,7 +698,7 @@ export default function AppliedMathSubjectPage() {
               <div className="english-guide-grid statistics-topic-grid">
                 {APPLIED_MATH_TOPICS.map((topic) => {
                   const formulaCount = APPLIED_MATH_FORMULAS.filter((card) => card.topic === topic.id).length;
-                  const questionCount = APPLIED_MATH_EXAM_LEVEL_QUESTIONS.filter((question) => question.topic === topic.id).length;
+                  const questionCount = APPLIED_MATH_PRINT_LEVEL_QUESTIONS.filter((question) => question.topic === topic.id).length;
                   return (
                     <article key={topic.id} className="statistics-topic-card" style={{ borderTopColor: topic.color }}>
                       <span>{topic.number} / RANGE</span>

@@ -279,7 +279,10 @@ test("every template produces a solved, finite, source-backed question", async (
       assert.equal(question.templateId, template.id);
       assert.ok(question.answer.trim(), `${question.id} answer`);
       assert.ok(question.acceptedAnswers.length >= 1, `${question.id} accepted answers`);
-      assert.ok(question.steps.length >= 2, `${question.id} steps`);
+      assert.equal(question.difficulty, 3, `${question.id} difficulty`);
+      assert.ok(question.subpartCount >= 3, `${question.id} linked subparts`);
+      assert.ok(question.steps.length >= 3, `${question.id} steps`);
+      assert.ok(question.sourceBasis.length >= 2, `${question.id} source basis`);
       assert.ok(question.reason.length >= 8, `${question.id} reason`);
       assert.ok(question.explanation.length >= 12, `${question.id} explanation`);
       assert.equal(question.generation, "on-demand");

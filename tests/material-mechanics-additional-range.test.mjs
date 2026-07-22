@@ -98,8 +98,8 @@ test("eight generators include four page-10 bending families and hollow formulas
 test("rapid, comprehensive, generated, and ranking pools include the range", async () => {
   const names = ["rapid-quiz-data.ts", "official-ranking-config.ts", "official-ranking-question-ids.ts", "generated-practice-engine.ts"];
   const [rapid, ranking, ids, engine] = await Promise.all(names.map((name) => readFile(new URL(name, APP), "utf8")));
-  assert.match(rapid, /MATERIAL_MECHANICS_RAPID = examLevelPool\([\s\S]*MATERIAL_MECHANICS_QUESTIONS[\s\S]*MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS/);
-  assert.match(rapid, /"subject-5": combineRapidPools\([\s\S]*MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS[\s\S]*MATERIAL_MECHANICS_FORMULAS/);
+  assert.match(rapid, /MATERIAL_MECHANICS_RAPID = examLevelPool\([\s\S]*MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS/);
+  assert.match(rapid, /"subject-5": MATERIAL_MECHANICS_RAPID/);
   assert.match(rapid, /getOfficialRankingEligiblePool[\s\S]*getStaticRapidPool\(subjectId\)\.filter/);
   assert.match(ranking, /"subject-5"/);
   assert.match(ids, /"subject-5":[\s\S]*rapid-exam-mm-e[1-6]-5-1/);

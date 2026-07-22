@@ -18,7 +18,6 @@ test("rapid pools preserve every existing subject diagram as a typed visual", as
 
   assert.match(rapid, /visual\?: RapidQuestionVisual/);
   assert.match(rapid, /getVisual\?\.\(question\)/);
-  assert.match(rapid, /visual: getVisual\?\.\(card\)/);
   for (const extractor of [
     "mechanicalVisual",
     "thermodynamicsVisual",
@@ -56,15 +55,17 @@ test("rapid drill and comprehensive challenge show figures during questions and 
   assert.match(css, /overflow-x: auto/);
 });
 
-test("the eighth digital-circuit exercise always reaches the shared rapid figure renderer", async () => {
-  const [data, rapid, visual] = await Promise.all([
+test("the complete sequential-circuit major always reaches the shared rapid figure renderer", async () => {
+  const [data, major, rapid, visual] = await Promise.all([
     read("digital-circuits-extra-data.ts"),
+    read("digital-circuits-major-questions.ts"),
     read("rapid-quiz-data.ts"),
     read("rapid-question-visual.tsx"),
   ]);
 
   assert.match(data, /id: "dc-extra-q-ex3-equation"[\s\S]{0,900}diagram: "exercise3-sequential"/);
   assert.match(data, /id: "dc-extra-q-ex3-table"[\s\S]{0,900}diagram: "exercise3-sequential"/);
-  assert.match(rapid, /DIGITAL_CIRCUIT_ALL_QUESTIONS[\s\S]*?digitalCircuitVisual/);
+  assert.match(major, /id: "dc-major-sequential-circuit-analysis"[\s\S]{0,1800}diagram: "exercise3-sequential"/);
+  assert.match(rapid, /DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS[\s\S]*?digitalCircuitVisual/);
   assert.match(visual, /DigitalCircuitStudyDiagram kind=\{visual\.kind\}/);
 });

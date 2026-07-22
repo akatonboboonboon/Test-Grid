@@ -93,20 +93,48 @@ function generateDigitalCircuitExtraFoundationQuestion(seed = Date.now()): Digit
   };
 }
 function calibrateGeneratedExtraQuestion(question: DigitalCircuitStudyQuestion): DigitalCircuitStudyQuestion {
-  const designInstruction = question.topic === "state-machines"
-    ? "4状態×2入力の8遷移を接頭辞の一致長から再構成し、重なり検出を含むMealy図へ照合する。"
-    : question.topic === "counters"
-      ? "10進・4ビット二進を併記した全周回表を作り、0010の次に1010を再ロードする条件を確認する。"
-      : "入力変化点で区間を分け、XORの真理値表と論理式の両方から全区間の波形を作る。";
+  const originalAnswer = question.answer;
+  let instruction: string;
+  let answer: string;
+  let formula = question.formula;
+  let keywords: string[];
+  let preparation: string[];
+
+  if (question.diagram === "xor-timing") {
+    instruction = "XORの完全真理値表を作り、最小項から式を導き、指定区間順へ並べ直して波形を描く";
+    answer = `truth=0110; Y=AbarB+ABbar=A xor B; waveform=${originalAnswer}`;
+    formula = "Y=\\overline A B+A\\overline B=A\\oplus B";
+    keywords = ["0110", "A", "B", originalAnswer];
+    preparation = ["表はAB=00,01,10,11順で作る。", "波形は生成された区間順へ戻して並べる。"];
+  } else if (question.diagram === "cyclic-down-10-2") {
+    instruction = "10から2の全周回表を作り、0001検出式と1010への非同期ロード接続を示してから指定3状態を求める";
+    answer = `9 states; detect=0001; init=D0D1barD2barD3bar; SET D3,D1; RST D2,D0; requested=${originalAnswer}`;
+    formula = "init=D_0\\overline{D_1}\\overline{D_2}\\overline{D_3}";
+    keywords = ["9", "0001", "D3", "D1", "D2", "D0", originalAnswer];
+    preparation = ["10-2+1=9状態を一周させる。", "0010の通常次状態0001を検出し1010をロードする。"];
+  } else {
+    instruction = "1001検出器の8遷移表と状態図を完成し、K-mapからD1,D0,Oを導いてから指定遷移を照合する";
+    answer = `D1=Ibar(S1barS0+S1S0bar); D0=I+S1S0bar; O=IS1S0; requested=${originalAnswer}`;
+    formula = "\\begin{aligned}D_1&=\\overline I(\\overline{S_1}S_0+S_1\\overline{S_0})\\\\D_0&=I+S_1\\overline{S_0}\\\\O&=IS_1S_0\\end{aligned}";
+    keywords = ["D1", "D0", "O", "S1", "S0", originalAnswer];
+    preparation = ["4状態それぞれから入力0,1の枝を作る。", "次状態2ビットと出力を別々のK-mapで簡単化する。"];
+  }
+
   return {
     ...question,
     difficulty: 3,
-    context: "現行範囲PDFの過去問・演習と同じ設計手順で解く生成問題です。途中表と図を残してください。",
-    prompt: `【過去問水準4段階】(1) ${designInstruction} (2) 指定図へ全途中結果を記入する。 (3) 未使用状態・周回端・系列重なりを検算する。 (4) ${question.prompt}`,
-    steps: [designInstruction, ...question.steps, "未使用状態・周回端・系列の重なりを検算する。", "問題図と最終答案を全区間または全遷移で照合する。"],
-    explanation: `${question.explanation} 出力列だけでなく、設計表と図が一致するところまでを本番答案として確認する。`,
+    format: "text",
+    context: "現行範囲の過去問・演習と同じ設計手順で解く自動生成大問。途中表と図を省略しない。",
+    prompt: `(1) ${instruction}。(2) 全遷移または全区間を図へ記入する。(3) 未使用状態・端状態・重なり条件を検算する。(4) ${question.prompt}`,
+    answer,
+    accepted: [answer, ...(question.accepted ?? [])],
+    keywords,
+    minKeywords: Math.max(3, keywords.length - 1),
+    formula,
+    steps: [...preparation, ...question.steps, "生成条件へ戻して最終結果と図を照合する。"],
+    explanation: `${question.explanation} 指定された1遷移だけでなく、設計表・簡単化式・回路図まで整合したものを完全解答とする。`,
     subpartCount: 4,
-    sourceBasis: question.sourceRefs.map((source) => `${source.filename} p.${source.page}${source.note ? `：${source.note}` : ""}`),
+    sourceBasis: [...question.sourceRefs.map((sourceRef) => `${sourceRef.filename} p.${sourceRef.page}${sourceRef.note ? `・${sourceRef.note}` : ""}`), "範囲内の公式だけで数値を変えた本番形式4段階問題"],
     examLevel: true,
   };
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
+import { importTypeScriptGraph } from "./helpers/import-typescript-graph.mjs";
 
 function importTypeScript(source) {
   const javascript = ts.transpileModule(source, {
@@ -14,13 +15,12 @@ function importTypeScript(source) {
 }
 
 const figureDataSource = readFile(new URL("../app/smart-control-figure-data.ts", import.meta.url), "utf8");
-const smartDataSource = readFile(new URL("../app/smart-control-data.ts", import.meta.url), "utf8");
 const textbookDataSource = readFile(new URL("../app/smart-control-textbook-data.ts", import.meta.url), "utf8");
 
 test("maps every diagram-dependent smart-control drill and predicted-paper item", async () => {
   const [figureData, smartData, textbookData, katex] = await Promise.all([
     figureDataSource.then(importTypeScript),
-    smartDataSource.then(importTypeScript),
+    importTypeScriptGraph("../app/smart-control-data.ts", import.meta.url),
     textbookDataSource.then(importTypeScript),
     import(new URL("../app/vendor/katex/katex.mjs", import.meta.url)),
   ]);
@@ -38,11 +38,11 @@ test("maps every diagram-dependent smart-control drill and predicted-paper item"
   assert.ok(
     smartData.SMART_CONTROL_QUESTIONS
       .filter((question) => ["response-stability", "feedback", "block-diagram"].includes(question.topic))
-      .every((question) => mapping[question.id]),
+      .every((question) => mapping[question.id] || question.diagramId),
     "all pole, response, feedback, and block-diagram practice questions need an exact figure link",
   );
   assert.ok(
-    textbookData.TEXTBOOK_RESPONSE_QUESTIONS.every((question) => mapping[question.id]),
+    textbookData.TEXTBOOK_RESPONSE_QUESTIONS.every((question) => mapping[question.id] || question.diagramId),
     "all textbook response drills need their figure 5.1, 5.2, or 5.3 context",
   );
 

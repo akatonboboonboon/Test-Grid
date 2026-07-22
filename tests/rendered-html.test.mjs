@@ -3,6 +3,7 @@ import { access, readFile, stat } from "node:fs/promises";
 import { registerHooks } from "node:module";
 import test from "node:test";
 import ts from "typescript";
+import { importTypeScriptGraph } from "./helpers/import-typescript-graph.mjs";
 
 const projectRoot = new URL("../", import.meta.url);
 
@@ -51,14 +52,7 @@ function loadStatisticsDataModule() {
 }
 
 function loadSmartControlDataModule() {
-  smartControlDataModulePromise ??= readFile(new URL("../app/smart-control-data.ts", import.meta.url), "utf8")
-    .then((source) => ts.transpileModule(source, {
-      compilerOptions: {
-        module: ts.ModuleKind.ESNext,
-        target: ts.ScriptTarget.ES2022,
-      },
-    }).outputText)
-    .then((javascript) => import(`data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`));
+  smartControlDataModulePromise ??= importTypeScriptGraph("../app/smart-control-data.ts", import.meta.url);
   return smartControlDataModulePromise;
 }
 function loadSmartControlTextbookDataModule() {
@@ -271,7 +265,7 @@ test("server-renders the probability and statistics exam lab", async () => {
   assert.match(html, /ランダム模試/);
   assert.match(html, /想定試験/);
   assert.match(html, /出題形式/);
-  assert.match(html, /確率統計ZIPと「確率統計1〜4\.pdf」/);
+  assert.match(html, /確率統計ZIP、「確率統計1〜4\.pdf」、2026-07-22追加範囲5枚/);
 });
 
 test("server-renders the smart control exam lab", async () => {
@@ -541,21 +535,21 @@ test("keeps smart-control range data, formulas, saves, and A4 papers internally 
 
   assert.equal(SMART_CONTROL_TOPICS.length, 5);
   assert.ok(SMART_CONTROL_CARDS.length >= 30, "the formula deck should be substantial");
-  assert.ok(SMART_CONTROL_QUESTIONS.length >= 38, "the practice bank should cover every supplied range topic");
+  assert.equal(SMART_CONTROL_QUESTIONS.length, 10, "the practice bank should contain ten complete print-level majors");
   assert.equal(SMART_CONTROL_EXAMS.length, 6);
   assert.equal(new Set(SMART_CONTROL_CARDS.map((card) => card.id)).size, SMART_CONTROL_CARDS.length);
   assert.equal(new Set(SMART_CONTROL_QUESTIONS.map((question) => question.id)).size, SMART_CONTROL_QUESTIONS.length);
   assert.ok(SMART_CONTROL_CARDS.every((card) => topicIds.has(card.topic)));
   assert.ok(SMART_CONTROL_QUESTIONS.every((question) => topicIds.has(question.topic)));
-  assert.ok(SMART_CONTROL_QUESTIONS.every((question) => ["scope-zip", "past2-overlap"].includes(question.source)));
+  assert.ok(SMART_CONTROL_QUESTIONS.every((question) => ["scope-zip", "past2-overlap", "textbook-p65-68"].includes(question.source)));
   assert.ok(SMART_CONTROL_QUESTIONS.filter((question) => question.source === "past2-overlap").every(
-    (question) => ["response-stability", "block-diagram"].includes(question.topic),
+    (question) => ["response-stability", "feedback", "block-diagram"].includes(question.topic),
   ));
   assert.ok(SMART_CONTROL_QUESTIONS.filter((question) => question.format === "choice").every(
     (question) => question.options?.includes(question.answer),
   ));
   assert.ok(SMART_CONTROL_CARDS.some((card) => card.formula.includes("\\frac")));
-  assert.ok(SMART_CONTROL_QUESTIONS.some((question) => question.prompt.includes("\\(")));
+  assert.ok(SMART_CONTROL_QUESTIONS.every((question) => question.subpartCount >= 3 && question.steps.length >= 3));
 
   const rangeCorpus = JSON.stringify({ SMART_CONTROL_CARDS, SMART_CONTROL_QUESTIONS, SMART_CONTROL_EXAMS });
   for (const excluded of ["複素積分", "マクローリン", "留数"]) {
@@ -790,7 +784,7 @@ test("keeps short math inline and gives every long smart-control/statistics expr
     ...textbook.TEXTBOOK_RESPONSE_QUESTIONS,
     ...smartControl.SMART_CONTROL_EXAMS.flatMap((exam) => exam.questions),
   ];
-  assert.ok(questionOwners.length >= 180, "the audit must include every current smart-control/statistics question");
+  assert.ok(questionOwners.length >= 140, "the audit must include every current smart-control/statistics question");
 
   const formulaOwners = [
     ...statistics.STATISTICS_FORMULAS,

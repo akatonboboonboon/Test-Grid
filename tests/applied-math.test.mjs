@@ -323,7 +323,7 @@ test("subject 8 integrates formula cards, practice, random mock, predicted exams
   assert.match(page, /<b>資料注記：<\/b><RichMathText text=/);
   assert.doesNotMatch(page, /<small><b>資料注記：<\/b>追加基本問題[^<]*\\\\\(v\^2\\\\\)/);
   assert.match(ui, /APPLIED_MATH_FORMULAS/);
-  assert.match(ui, /APPLIED_MATH_EXAM_LEVEL_QUESTIONS/);
+  assert.match(page, /APPLIED_MATH_PRINT_LEVEL_QUESTIONS/);
   assert.match(ui, /APPLIED_MATH_EXPECTED_EXAMS/);
   assert.match(ui, /テスト範囲(?:ZIP|\.zip)/i);
   assert.match(ui, /形式(?:資料|1|2|3).*?(?:レイアウト|形式).*?のみ/s);

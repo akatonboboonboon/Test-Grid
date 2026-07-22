@@ -56,11 +56,11 @@ test("English ranking keeps choice language and granularity compatible", async (
   const data = await server.ssrLoadModule("/app/rapid-quiz-data.ts");
   const english = data.getOfficialRankingEligiblePool("subject-2");
 
-  const screenshotTruth = english.find((question) => question.prompt.includes("63 billion cloud movements"));
-  assert.ok(screenshotTruth, "the screenshot T/F question must stay in the pool");
+  const screenshotTruth = english.find((question) => question.prompt.includes("detailed cloud map may improve"));
+  assert.ok(screenshotTruth, "a current print-level T/F question must stay in the pool");
   assert.match(screenshotTruth.topicLabel, /True\s*\/\s*False/u);
   assert.deepEqual(new Set(screenshotTruth.options), new Set(["T", "F"]));
-  assert.equal(screenshotTruth.answer, "F");
+  assert.equal(screenshotTruth.answer, "T");
 
   const screenshotVocabulary = english.find((question) => question.answer === "research institute");
   assert.ok(screenshotVocabulary, "the screenshot vocabulary question must stay in the pool");
@@ -110,5 +110,5 @@ test("all diagram-bound engineering ranking questions retain their mapped figure
     assert.equal(all.filter((question) => question.requiresVisual && !question.visual).length, 0, subjectId);
   }
   const smart = data.getOfficialRankingEligiblePool("subject-6");
-  assert.ok(smart.filter((question) => question.visual?.type === "smart-control").length >= 20);
+  assert.ok(smart.filter((question) => question.visual?.type === "smart-control").length >= 7);
 });

@@ -7,6 +7,7 @@ import {
   type DigitalCircuitQuestion,
   type DigitalCircuitSourceRef,
 } from "./digital-circuits-data";
+import { DIGITAL_CIRCUIT_MAJOR_QUESTIONS } from "./digital-circuits-major-questions";
 
 export type DigitalCircuitExtraDiagramKind =
   | "xor-timing"
@@ -530,49 +531,51 @@ function hardenDigitalPracticeQuestion(question: DigitalCircuitStudyQuestion): D
 }
 
 /** 通常演習・確認テストへ出す、本番難度へ校正済みの図付き問題群。 */
-export const DIGITAL_CIRCUIT_ALL_QUESTIONS: DigitalCircuitStudyQuestion[] =
+/** 旧小問は資料監査用に保持するが、通常・時間制限・ランキングへは流さない。 */
+export const DIGITAL_CIRCUIT_LEGACY_CALIBRATED_QUESTIONS: DigitalCircuitStudyQuestion[] =
   DIGITAL_CIRCUIT_FOUNDATION_QUESTIONS.map(hardenDigitalPracticeQuestion);
+
+export const DIGITAL_CIRCUIT_ALL_QUESTIONS: DigitalCircuitStudyQuestion[] =
+  DIGITAL_CIRCUIT_MAJOR_QUESTIONS;
+
+/** 通常・時間制限・ランキング・総合問題で使う、自己完結した本番大問プール。 */
+export const DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS: DigitalCircuitStudyQuestion[] = DIGITAL_CIRCUIT_MAJOR_QUESTIONS;
 
 /** 全教科共通の時間制限問題へ渡せる本番難度プール。 */
 export const DIGITAL_CIRCUIT_RAPID_CHALLENGES: DigitalCircuitStudyQuestion[] =
-  DIGITAL_CIRCUIT_ALL_QUESTIONS.filter((question) => question.format === "choice" || question.format === "sequence");
+  DIGITAL_CIRCUIT_MAJOR_QUESTIONS;
 
 
-const extraById = new Map(DIGITAL_CIRCUIT_EXTRA_QUESTIONS.map((question) => [question.id, question]));
-const replacements = [
-  ["dc-extra-q-truth-table-full", "dc-extra-q-cycle-design", "dc-extra-q-ex3-equation", "dc-add-q-1001-synthesis"],
-  ["dc-extra-q-xor-seq", "dc-extra-q-cycle-design", "dc-extra-q-past-full-table", "dc-add-q-sequence-101-full"],
-  ["dc-extra-q-truth-from-wave", "dc-extra-q-cycle-design", "dc-extra-q-past-full-table", "dc-add-q-sequence-1011-stream"],
-  ["dc-extra-q-truth-table-full", "dc-extra-q-cycle-timing", "dc-extra-q-past-full-table", "dc-add-q-design-workflow"],
-  ["dc-extra-q-truth-table-full", "dc-extra-q-cycle-design", "dc-extra-q-past-full-table", "dc-add-q-sequence-1011-full"],
-  ["dc-extra-q-xor-seq", "dc-extra-q-cycle-design", "dc-extra-q-ex3-equation", "dc-add-q-1001-synthesis"],
+const DIGITAL_CIRCUIT_EXAM_MAJOR_IDS = [
+  ["dc-major-xor-truth-expression-wave", "dc-major-sr-latch-sequence", "dc-major-parallel-register-chain", "dc-major-sync-counter-design", "dc-major-past-machine-analysis"],
+  ["dc-major-xor-truth-expression-wave", "dc-major-jk-equation-wave", "dc-major-parallel-register-chain", "dc-major-cyclic-down-design", "dc-major-1001-synthesis-stream"],
+  ["dc-major-xor-truth-expression-wave", "dc-major-sr-latch-sequence", "dc-major-parallel-register-chain", "dc-major-ripple-down-wave", "dc-major-101-overlap-stream"],
+  ["dc-major-xor-truth-expression-wave", "dc-major-jk-equation-wave", "dc-major-parallel-register-chain", "dc-major-sync-counter-design", "dc-major-sequential-circuit-analysis"],
+  ["dc-major-xor-truth-expression-wave", "dc-major-sr-latch-sequence", "dc-major-parallel-register-chain", "dc-major-cyclic-down-design", "dc-major-1001-synthesis-stream"],
+  ["dc-major-xor-truth-expression-wave", "dc-major-jk-equation-wave", "dc-major-parallel-register-chain", "dc-major-ripple-down-wave", "dc-major-past-machine-analysis"],
 ] as const;
+const digitalMajorById = new Map(DIGITAL_CIRCUIT_MAJOR_QUESTIONS.map((question) => [question.id, question]));
 
-export const DIGITAL_CIRCUIT_ALL_EXPECTED_EXAMS = DIGITAL_CIRCUIT_EXPECTED_EXAMS.map((exam, examIndex) => {
-  const selected = replacements[examIndex].map((id) => extraById.get(id)).filter(Boolean) as DigitalCircuitStudyQuestion[];
-  const sections = exam.sections.map((section) => ({
-    ...section,
-    questions: section.questions.map((question) => ({ ...question })) as Array<DigitalCircuitStudyQuestion & { major: number; sub: number; points: number }>,
-  }));
-  const targets = [
-    { section: 0, question: 1, extra: selected[0] },
-    { section: 3, question: 1, extra: selected[1] },
-    { section: 4, question: 0, extra: selected[2] },
-    { section: 4, question: 1, extra: selected[3] },
-  ];
-  for (const target of targets) {
-    const current = sections[target.section]?.questions[target.question];
-    if (current && target.extra) {
-      sections[target.section].questions[target.question] = {
-        ...target.extra,
-        major: current.major,
-        sub: current.sub,
-        points: current.points,
-      };
-    }
-  }
-  return { ...exam, sections };
-}) as unknown as DigitalCircuitExpectedExam[];
+/** 5大問すべてを、表・式・波形/回路まで連鎖する自己完結大問へ差し替えたA4模試。 */
+export const DIGITAL_CIRCUIT_ALL_EXPECTED_EXAMS = DIGITAL_CIRCUIT_EXPECTED_EXAMS.map((exam, examIndex) => ({
+  ...exam,
+  subtitle: `${exam.subtitle}・5大問すべて本番資料準拠の連鎖問題`,
+  sections: exam.sections.map((section, sectionIndex) => {
+    const questionId = DIGITAL_CIRCUIT_EXAM_MAJOR_IDS[examIndex]?.[sectionIndex];
+    const majorQuestion = questionId ? digitalMajorById.get(questionId) : undefined;
+    if (!majorQuestion) throw new Error(`${exam.id}: missing print-level major ${sectionIndex + 1}`);
+    return {
+      ...section,
+      context: `${section.context} 表・式・簡単化・波形または回路図を一続きで示すこと。`,
+      questions: [{
+        ...majorQuestion,
+        major: section.number,
+        sub: 1,
+        points: section.points,
+      }],
+    };
+  }),
+})) as unknown as DigitalCircuitExpectedExam[];
 
 const DIGITAL_CIRCUIT_FLAT_EXPECTED_QUESTIONS: DigitalCircuitStudyQuestion[] =
   DIGITAL_CIRCUIT_ALL_EXPECTED_EXAMS.flatMap((exam) =>
@@ -597,6 +600,6 @@ const DIGITAL_CIRCUIT_FLAT_EXPECTED_QUESTIONS: DigitalCircuitStudyQuestion[] =
 
 /** 通常確認と6回分のA4模試72問を一意IDで束ねた、非生成の本番水準flat pool。 */
 export const DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS: DigitalCircuitStudyQuestion[] = [
-  ...DIGITAL_CIRCUIT_ALL_QUESTIONS,
+  ...DIGITAL_CIRCUIT_MAJOR_QUESTIONS,
   ...DIGITAL_CIRCUIT_FLAT_EXPECTED_QUESTIONS,
 ];

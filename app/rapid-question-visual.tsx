@@ -3,6 +3,7 @@ import ThermodynamicsDiagram from "./thermodynamics-diagrams";
 import MaterialMechanicsDiagram from "./material-mechanics-diagrams";
 import SmartControlDiagram from "./smart-control-diagrams";
 import DigitalCircuitStudyDiagram from "./digital-circuits-extra-diagrams";
+import EnglishWeatherFigure from "./english-weather-figure";
 import type { RapidQuestionVisual as RapidQuestionVisualData } from "./rapid-quiz-data";
 
 type Props = {
@@ -18,6 +19,7 @@ export default function RapidQuestionVisual({ visual, solution = false, compact 
 
   return (
     <div className={className} data-rapid-visual={visual.type}>
+      {visual.type === "english-weather-homepage" && <EnglishWeatherFigure />}
       {visual.type === "mechanical-dynamics" && (
         <MechanicalDynamicsDiagram kind={visual.kind} solution={solution} title={title} />
       )}

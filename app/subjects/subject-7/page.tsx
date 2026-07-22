@@ -5,9 +5,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import CardDeckSearch from "../../card-deck-search";
 import CardFaceList from "../../card-face-list";
 import StatisticsExpectedExams from "../../statistics-expected-exams";
-import { STATISTICS_EXAM_LEVEL_QUESTIONS as STATISTICS_EXPECTED_LEVEL_QUESTIONS } from "../../statistics-expected-exams-data";
+import { STATISTICS_PRINT_LEVEL_QUESTIONS } from "../../statistics-expected-exams-data";
 import { DisplayMath, RichMathText } from "../../statistics-math";
-import { STATISTICS_ADDITIONAL_QUESTIONS, STATISTICS_ADDITIONAL_SOURCES } from "../../statistics-additional-data";
+import { STATISTICS_ADDITIONAL_SOURCES } from "../../statistics-additional-data";
 import {
   STATISTICS_EXAM_FORMATS,
   STATISTICS_FORMULAS,
@@ -41,8 +41,7 @@ const TEST_SESSION_KEY = "test-grid:subject-7:mock-test:v1";
 const ALL_TOPIC_IDS = STATISTICS_TOPICS.map((topic) => topic.id);
 const KNOWN_TOPIC_IDS = new Set<StatisticsTopicId>(ALL_TOPIC_IDS);
 const STATISTICS_PRACTICE_QUESTIONS: StatisticsQuestion[] = [
-  ...STATISTICS_EXPECTED_LEVEL_QUESTIONS,
-  ...STATISTICS_ADDITIONAL_QUESTIONS,
+  ...STATISTICS_PRINT_LEVEL_QUESTIONS,
 ];
 const KNOWN_QUESTION_IDS = new Set(STATISTICS_PRACTICE_QUESTIONS.map((question) => question.id));
 

@@ -13,6 +13,7 @@ import {
   type NetworkWrittenLayerChoice,
 } from "../../../network-written-data";
 import { storageRead, storageWrite } from "../../../protocols";
+import NetworkWrittenMocks from "../../../network-written-mocks";
 import styles from "../../../network-written.module.css";
 
 type WrittenProgress = {
@@ -182,6 +183,8 @@ export default function NetworkWrittenPracticePage() {
           <div className={styles.progressBar} aria-label={`用語確認率 ${completion}%`}><i style={{ width: `${completion}%` }} /><b>{completion}%</b></div>
         </section>
 
+        <NetworkWrittenMocks />
+
         <section className={styles.picker} aria-labelledby="term-picker-title">
           <div className={styles.sectionHeading}>
             <span>01 / SELECT</span>
@@ -206,7 +209,7 @@ export default function NetworkWrittenPracticePage() {
                 onChange={(event) => event.target.value && resetResponse(event.target.value)}
               >
                 {!filteredTerms.some((term) => term.id === current.id) && <option value="">候補から選択</option>}
-                {filteredTerms.map((term) => <option key={term.id} value={term.id}>{term.term} — {term.category}</option>)}
+                {filteredTerms.map((term) => <option key={term.id} value={term.id}>{term.term}</option>)}
               </select>
             </label>
             <button type="button" onClick={selectRandomTerm}>ランダムに選ぶ →</button>
@@ -217,7 +220,7 @@ export default function NetworkWrittenPracticePage() {
           <article className={styles.termCard}>
             <div>
               <span>元写真の出題範囲</span>
-              <small>{current.category}</small>
+              <small>層は解答後に表示</small>
             </div>
             <h2>{current.term}</h2>
             <p>このプロトコルが何層で、何をするものかを自分の言葉で説明してください。</p>

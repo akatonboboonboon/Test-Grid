@@ -6,7 +6,6 @@ import CardDeckSearch from "../../card-deck-search";
 import CardFaceList from "../../card-face-list";
 import {
   ENGLISH_PASSAGES,
-  ENGLISH_QUESTIONS,
   ENGLISH_UNITS,
   ENGLISH_VOCAB,
   type EnglishQuestion,
@@ -20,7 +19,7 @@ import {
 import { EnglishQuestionExplanation, EnglishVocabInsight } from "../../english-explanation-panel";
 import EnglishCh18Quiz from "../../english-ch18-quiz";
 import EnglishExpectedExams from "../../english-expected-exams";
-import { ENGLISH_EXAM_LEVEL_QUESTIONS } from "../../english-expected-exams-data";
+import { ENGLISH_PRINT_LEVEL_QUESTIONS } from "../../english-expected-exams-data";
 import EnglishWeatherFigure from "../../english-weather-figure";
 
 type Mode = "cards" | "expected" | "quiz18" | "test" | "reading" | "guide";
@@ -58,14 +57,13 @@ const TEST_SESSION_KEY = "test-grid:english-mock-test:v1";
 const COURSE_UNITS = ENGLISH_UNITS.filter((unit) => unit.id !== "exam-sample");
 const COURSE_UNIT_IDS = COURSE_UNITS.map((unit) => unit.id);
 const COURSE_PASSAGE_IDS = new Set(ENGLISH_PASSAGES.map((passage) => passage.id));
-const STUDY_QUESTIONS = ENGLISH_QUESTIONS.filter((question) => question.unit !== "exam-sample");
-const EXAM_LEVEL_QUESTIONS = ENGLISH_EXAM_LEVEL_QUESTIONS.filter((question) => question.unit !== "exam-sample");
+const PRINT_LEVEL_QUESTIONS = ENGLISH_PRINT_LEVEL_QUESTIONS.filter((question) => question.unit !== "exam-sample");
 
 function questionGenre(question: EnglishQuestion) {
   return question.group.split("｜", 1)[0];
 }
 
-const ALL_QUESTION_GROUPS = Array.from(new Set(EXAM_LEVEL_QUESTIONS.map(questionGenre)));
+const ALL_QUESTION_GROUPS = Array.from(new Set(PRINT_LEVEL_QUESTIONS.map(questionGenre)));
 
 function randomize<T>(items: readonly T[]): T[] {
   const result = [...items];
@@ -194,7 +192,7 @@ function restoreTestSession(): SavedTestSession | null {
       || parsed.questionIds.some((id) => typeof id !== "string")
       || typeof parsed.testIndex !== "number"
     ) return null;
-    const knownIds = new Set(STUDY_QUESTIONS.map((question) => question.id));
+    const knownIds = new Set(PRINT_LEVEL_QUESTIONS.map((question) => question.id));
     if (parsed.questionIds.some((id) => !knownIds.has(id))) return null;
     const restoredTestUnits = normalizeChapterSelection(
       Array.isArray(parsed.testUnits) ? parsed.testUnits : parsed.testUnit,
@@ -347,14 +345,14 @@ export default function EnglishSubjectPage() {
 
   const availableTestGroups = useMemo(
     () => Array.from(new Set(
-      EXAM_LEVEL_QUESTIONS
+      PRINT_LEVEL_QUESTIONS
         .filter((question) => chapterMatches(question.unit, testUnits))
         .map(questionGenre),
     )),
     [testUnits],
   );
   const availableQuestions = useMemo(
-    () => EXAM_LEVEL_QUESTIONS.filter(
+    () => PRINT_LEVEL_QUESTIONS.filter(
       (question) => chapterMatches(question.unit, testUnits)
         && selectedTestGroups.includes(questionGenre(question)),
     ),
@@ -375,11 +373,11 @@ export default function EnglishSubjectPage() {
   const selectedPassage = ENGLISH_PASSAGES.find((passage) => passage.id === selectedPassageId)
     ?? ENGLISH_PASSAGES[0];
   const selectedPassageQuestionsForReference = useMemo(
-    () => STUDY_QUESTIONS.filter((question) => question.passageId === selectedPassageId),
+    () => PRINT_LEVEL_QUESTIONS.filter((question) => question.passageId === selectedPassageId),
     [selectedPassageId],
   );
   const readingPracticeQuestions = useMemo(
-    () => STUDY_QUESTIONS.filter(
+    () => PRINT_LEVEL_QUESTIONS.filter(
       (question) => Boolean(question.passageId)
         && COURSE_PASSAGE_IDS.has(question.passageId as string)
         && chapterMatches(question.unit, readingUnits),
@@ -466,7 +464,7 @@ export default function EnglishSubjectPage() {
   function changeTestChapters(nextUnits: readonly string[]) {
     const normalizedUnits = normalizeChapterSelection(nextUnits, COURSE_UNIT_IDS);
     const groups = Array.from(new Set(
-      STUDY_QUESTIONS
+      PRINT_LEVEL_QUESTIONS
         .filter((question) => chapterMatches(question.unit, normalizedUnits))
         .map(questionGenre),
     ));
@@ -606,7 +604,7 @@ export default function EnglishSubjectPage() {
       setAnnouncement("再開できる保存データがありません。");
       return;
     }
-    const questionsById = new Map(EXAM_LEVEL_QUESTIONS.map((question) => [question.id, question]));
+    const questionsById = new Map(PRINT_LEVEL_QUESTIONS.map((question) => [question.id, question]));
     const questions = session.questionIds
       .map((id) => questionsById.get(id))
       .filter((question): question is EnglishQuestion => Boolean(question));
@@ -625,7 +623,7 @@ export default function EnglishSubjectPage() {
     const nextIndex = Math.min(session.testIndex, questions.length - 1);
     const nextQuestion = questions[nextIndex];
     const unitGroups = Array.from(new Set(
-      EXAM_LEVEL_QUESTIONS
+      PRINT_LEVEL_QUESTIONS
         .filter((question) => chapterMatches(question.unit, session.testUnits))
         .map(questionGenre),
     ));
@@ -720,7 +718,7 @@ export default function EnglishSubjectPage() {
 
   function resetReadingPractice(unitIds: readonly string[] = readingUnits) {
     const normalizedUnits = normalizeChapterSelection(unitIds, COURSE_UNIT_IDS);
-    const questions = STUDY_QUESTIONS.filter(
+    const questions = PRINT_LEVEL_QUESTIONS.filter(
       (question) => Boolean(question.passageId)
         && COURSE_PASSAGE_IDS.has(question.passageId as string)
         && chapterMatches(question.unit, normalizedUnits),
@@ -862,7 +860,7 @@ export default function EnglishSubjectPage() {
           <div className="english-hero-copy">
             <p><span>SUBJECT 01</span><span>EXAM-STYLE PRACTICE</span></p>
             <h1 id="english-title">英語</h1>
-            <small>全{ENGLISH_QUESTIONS.length}問を、語源・活用・文法・本文根拠・誤答理由まで分解して反復します。</small>
+            <small>全{PRINT_LEVEL_QUESTIONS.length}問を、語源・活用・文法・本文根拠・誤答理由まで分解して反復します。</small>
           </div>
           <button className="english-hero-memory-button" type="button" onClick={openCards}>
             <span>VOCABULARY FIRST</span>
@@ -873,7 +871,7 @@ export default function EnglishSubjectPage() {
 
         <section className="english-summary" aria-label="収録教材">
           <div><span>VOCAB</span><strong>{ENGLISH_VOCAB.length}</strong><small>語</small></div>
-          <div><span>QUESTIONS</span><strong>{ENGLISH_QUESTIONS.length}</strong><small>問</small></div>
+          <div><span>QUESTIONS</span><strong>{PRINT_LEVEL_QUESTIONS.length}</strong><small>問</small></div>
           <div><span>PASSAGES</span><strong>{ENGLISH_PASSAGES.length}</strong><small>本</small></div>
           <p>追加範囲のChapter 14・15・16・18、TOEIC Reading、Housing・Medical語彙を収録。全問に詳しい解説を付け、Chapter 16の資料図も表示します。Chapter 14冒頭の対象外欄とChapter 19は出題しません。覚えた {masteredTotal}語／復習 {learningTotal}語。</p>
         </section>

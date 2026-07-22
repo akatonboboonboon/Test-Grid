@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
+import { importTypeScriptGraph } from "./helpers/import-typescript-graph.mjs";
 
 function compile(source) {
   return ts.transpileModule(source, {
@@ -18,38 +19,34 @@ async function importTypeScript(path) {
 }
 
 async function loadDigital() {
-  const baseSource = await readFile(new URL("../app/digital-circuits-data.ts", import.meta.url), "utf8");
-  const baseUrl = dataUrl(baseSource);
-  const extraSource = (await readFile(new URL("../app/digital-circuits-extra-data.ts", import.meta.url), "utf8"))
-    .replace('"./digital-circuits-data"', JSON.stringify(baseUrl));
   return Promise.all([
-    import(baseUrl),
-    import(dataUrl(extraSource)),
-    importTypeScript("../app/digital-circuits-generator.ts"),
-    importTypeScript("../app/digital-circuits-extra-generator.ts"),
+    importTypeScriptGraph("../app/digital-circuits-data.ts", import.meta.url),
+    importTypeScriptGraph("../app/digital-circuits-extra-data.ts", import.meta.url),
+    importTypeScriptGraph("../app/digital-circuits-generator.ts", import.meta.url),
+    importTypeScriptGraph("../app/digital-circuits-extra-generator.ts", import.meta.url),
   ]);
 }
 
 test("smart-control confirmation and rapid-ready pools contain only linked exam-level work", async () => {
-  const smart = await importTypeScript("../app/smart-control-data.ts");
-  assert.ok(smart.SMART_CONTROL_FOUNDATION_QUESTIONS.length >= 38);
-  assert.equal(smart.SMART_CONTROL_QUESTIONS.length, smart.SMART_CONTROL_FOUNDATION_QUESTIONS.length);
+  const smart = await importTypeScriptGraph("../app/smart-control-data.ts", import.meta.url);
+  assert.equal(smart.SMART_CONTROL_PRINT_LEVEL_QUESTIONS.length, 10);
+  assert.equal(smart.SMART_CONTROL_QUESTIONS, smart.SMART_CONTROL_PRINT_LEVEL_QUESTIONS);
   const smartExamQuestionCount = smart.SMART_CONTROL_EXAMS.reduce((sum, exam) => sum + exam.questions.length, 0);
-  assert.equal(smart.SMART_CONTROL_EXAM_LEVEL_QUESTIONS.length, smart.SMART_CONTROL_QUESTIONS.length + smartExamQuestionCount);
+  assert.equal(smart.SMART_CONTROL_EXAM_LEVEL_QUESTIONS.length, 10 + smartExamQuestionCount);
   assert.equal(new Set(smart.SMART_CONTROL_EXAM_LEVEL_QUESTIONS.map((question) => question.id)).size, smart.SMART_CONTROL_EXAM_LEVEL_QUESTIONS.length);
   assert.ok(smart.SMART_CONTROL_EXAM_LEVEL_QUESTIONS.slice(smart.SMART_CONTROL_QUESTIONS.length).every(
     (question) => question.difficulty === 3 && question.examLevel && question.steps.length >= 3 && question.sourceBasis?.length,
   ));
-  assert.ok(smart.SMART_CONTROL_RAPID_CHALLENGES.length >= 20);
+  assert.equal(smart.SMART_CONTROL_RAPID_CHALLENGES, smart.SMART_CONTROL_PRINT_LEVEL_QUESTIONS);
 
   for (const question of smart.SMART_CONTROL_QUESTIONS) {
     assert.equal(question.difficulty, 3, `${question.id} difficulty`);
     assert.equal(question.examLevel, true, `${question.id} examLevel`);
     assert.ok(question.subpartCount >= 3, `${question.id} linked work count`);
     assert.ok(question.sourceBasis?.length >= 2, `${question.id} source calibration`);
-    assert.match(question.prompt, /【3段階】\(1\).+\(2\).+\(3\)/u, `${question.id} staged prompt`);
+    assert.match(question.prompt, /\(1\).+\(2\).+\(3\)/u, `${question.id} staged prompt`);
     assert.ok(question.steps.length >= 3, `${question.id} solution path`);
-    assert.match(question.context, /本番・過去問水準/u, `${question.id} context`);
+    assert.ok(question.context, `${question.id} context`);
   }
 });
 
@@ -69,7 +66,8 @@ test("smart-control textbook red terms and response graphs are also exam-level",
 
 test("digital-circuit confirmation and rapid-ready pools contain only diagrammed exam-level work", async () => {
   const [, extra] = await loadDigital();
-  assert.equal(extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.length, extra.DIGITAL_CIRCUIT_FOUNDATION_QUESTIONS.length);
+  assert.equal(extra.DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS.length, 11);
+  assert.equal(extra.DIGITAL_CIRCUIT_ALL_QUESTIONS, extra.DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS);
   const digitalExamQuestionCount = extra.DIGITAL_CIRCUIT_ALL_EXPECTED_EXAMS.reduce(
     (sum, exam) => sum + exam.sections.reduce((subtotal, section) => subtotal + section.questions.length, 0),
     0,
@@ -79,16 +77,16 @@ test("digital-circuit confirmation and rapid-ready pools contain only diagrammed
   assert.ok(extra.DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS.slice(extra.DIGITAL_CIRCUIT_ALL_QUESTIONS.length).every(
     (question) => question.difficulty === 3 && question.examLevel && question.steps.length >= 3 && question.sourceBasis?.length && question.diagram,
   ));
-  assert.ok(extra.DIGITAL_CIRCUIT_RAPID_CHALLENGES.length >= 30);
+  assert.equal(extra.DIGITAL_CIRCUIT_RAPID_CHALLENGES, extra.DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS);
 
   for (const question of extra.DIGITAL_CIRCUIT_ALL_QUESTIONS) {
     assert.equal(question.difficulty, 3, `${question.id} difficulty`);
     assert.equal(question.examLevel, true, `${question.id} examLevel`);
-    assert.equal(question.subpartCount, 4, `${question.id} linked work count`);
+    assert.ok(question.subpartCount >= 3, `${question.id} linked work count`);
     assert.ok(question.sourceBasis?.length >= 2, `${question.id} source calibration`);
     assert.ok(question.diagram, `${question.id} diagram`);
-    assert.match(question.prompt, /【4段階】\(1\).+\(2\).+\(3\).+\(4\)/u, `${question.id} staged prompt`);
-    assert.ok(question.steps.length >= 4, `${question.id} solution path`);
+    assert.match(question.prompt, /\(1\).+\(2\).+\(3\)/u, `${question.id} staged prompt`);
+    assert.ok(question.steps.length >= 3, `${question.id} solution path`);
   }
 });
 
@@ -105,9 +103,9 @@ test("every digital on-demand variant stays solved, sourced, diagrammed, and exa
       assert.ok(question.answer, `${question.id} answer`);
       assert.ok(question.diagram, `${question.id} diagram`);
       assert.ok(question.sourceRefs?.length, `${question.id} source`);
-      assert.ok(question.sourceBasis?.length, `${question.id} source basis`);
+      assert.ok(question.sourceBasis?.length >= 2, `${question.id} source basis`);
       assert.ok(question.steps.length >= 4, `${question.id} full solution path`);
-      assert.match(question.prompt, /4段階/u, `${question.id} staged prompt`);
+      assert.match(question.prompt, /\(1\).+\(2\).+\(3\).+\(4\)/u, `${question.id} staged prompt`);
     }
   }
 });

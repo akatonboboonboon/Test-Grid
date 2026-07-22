@@ -47,7 +47,8 @@ test("layer filter stays out of fixed ranking and comprehensive pools", async ()
     read("comprehensive-challenge.tsx"),
   ]);
 
-  assert.match(data, /network:\s*networkCardsToRapid\(DEFAULT_CARDS\)/);
+  assert.match(data, /const NETWORK_RAPID = examLevelPool\([\s\S]*?NETWORK_EXAM_LEVEL_QUESTIONS/);
+  assert.match(data, /network:\s*NETWORK_RAPID/);
   assert.doesNotMatch(official, /filterNetworkRapidPoolByLayers/);
   assert.doesNotMatch(comprehensive, /filterNetworkRapidPoolByLayers/);
 });

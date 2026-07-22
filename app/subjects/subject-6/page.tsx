@@ -14,7 +14,7 @@ import {
 import {
   SMART_CONTROL_CARDS as BASE_SMART_CONTROL_CARDS,
   SMART_CONTROL_EXAM_FORMATS,
-  SMART_CONTROL_QUESTIONS as BASE_SMART_CONTROL_QUESTIONS,
+  SMART_CONTROL_PRINT_LEVEL_QUESTIONS,
   SMART_CONTROL_TOPICS,
   type SmartControlQuestion,
   type SmartControlTopicId,
@@ -59,8 +59,7 @@ function LinkedSmartControlDiagram({
 
 const SMART_CONTROL_CARDS = [...BASE_SMART_CONTROL_CARDS, ...TEXTBOOK_RESPONSE_CARDS];
 const SMART_CONTROL_QUESTIONS: SmartControlQuestion[] = [
-  ...BASE_SMART_CONTROL_QUESTIONS,
-  ...TEXTBOOK_RESPONSE_QUESTIONS,
+  ...SMART_CONTROL_PRINT_LEVEL_QUESTIONS,
 ];
 const TEXTBOOK_GRAPH_QUESTIONS: SmartControlQuestion[] = TEXTBOOK_RESPONSE_QUESTIONS.filter(
   (question) => question.genre.startsWith("図5."),
@@ -82,7 +81,7 @@ const PROGRESS_KEY = "test-grid:subject-6:progress:v1";
 const TEST_SESSION_KEY = "test-grid:subject-6:mock-test:v1";
 const ALL_TOPIC_IDS = SMART_CONTROL_TOPICS.map((topic) => topic.id);
 const KNOWN_TOPIC_IDS = new Set<SmartControlTopicId>(ALL_TOPIC_IDS);
-const KNOWN_QUESTION_IDS = new Set(SMART_CONTROL_QUESTIONS.map((question) => question.id));
+const KNOWN_QUESTION_IDS = new Set(SMART_CONTROL_PRINT_LEVEL_QUESTIONS.map((question) => question.id));
 
 function randomize<T>(items: readonly T[]) {
   const copy = [...items];
@@ -630,7 +629,7 @@ export default function SmartControlSubjectPage() {
   function resumeSavedTest() {
     if (!savedTestSession) return;
     const questions = savedTestSession.questionIds.flatMap((id) => {
-      const found = SMART_CONTROL_QUESTIONS.find((question) => question.id === id);
+      const found = SMART_CONTROL_PRINT_LEVEL_QUESTIONS.find((question) => question.id === id);
       return found ? [found] : [];
     });
     if (!questions.length) {
@@ -638,7 +637,7 @@ export default function SmartControlSubjectPage() {
       return;
     }
     const results = savedTestSession.results.flatMap((savedResult) => {
-      const question = SMART_CONTROL_QUESTIONS.find((item) => item.id === savedResult.questionId);
+      const question = SMART_CONTROL_PRINT_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId);
       return question ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
     });
     setTestTopics(savedTestSession.selectedTopics);

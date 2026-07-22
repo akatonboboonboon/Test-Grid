@@ -7,7 +7,7 @@ import DigitalCircuitExpectedExams from "../../digital-circuits-expected-exams";
 import DigitalCircuitStudyDiagram from "../../digital-circuits-extra-diagrams";
 import {
   DIGITAL_CIRCUIT_ALL_FORMULAS,
-  DIGITAL_CIRCUIT_ALL_QUESTIONS,
+  DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS,
   DIGITAL_CIRCUIT_ADDITIONAL_SCOPE_IMAGES,
   DIGITAL_CIRCUIT_CURRENT_SCOPE_PDFS,
   type DigitalCircuitStudyQuestion,
@@ -34,6 +34,7 @@ type TestStored = {
 const TOPIC_IDS = DIGITAL_CIRCUIT_TOPICS.map((topic) => topic.id);
 const PROGRESS_KEY = "test-grid:subject-9:cards:v1";
 const TEST_KEY = "test-grid:subject-9:random-test:v1";
+const KNOWN_QUESTION_IDS = new Set(DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS.map((question) => question.id));
 
 function randomize<T>(values: readonly T[]) {
   const copy = [...values];
@@ -87,7 +88,17 @@ function readProgress(): Record<string, "learning" | "mastered"> {
 function readSavedTest(): TestStored | null {
   if (typeof window === "undefined") return null;
   try {
-    return JSON.parse(window.localStorage.getItem(TEST_KEY) ?? "null") as TestStored | null;
+    const parsed = JSON.parse(window.localStorage.getItem(TEST_KEY) ?? "null") as Partial<TestStored> | null;
+    if (
+      !parsed
+      || parsed.version !== 1
+      || !Array.isArray(parsed.ids)
+      || parsed.ids.length === 0
+      || parsed.ids.some((id) => typeof id !== "string" || !KNOWN_QUESTION_IDS.has(id))
+      || typeof parsed.index !== "number"
+      || typeof parsed.remaining !== "number"
+    ) return null;
+    return parsed as TestStored;
   } catch {
     return null;
   }
@@ -142,7 +153,7 @@ export default function DigitalCircuitSubjectPage() {
   const [cardIndex, setCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [progress, setProgress] = useState<Record<string, "learning" | "mastered">>(() => readProgress());
-  const [practiceDeck, setPracticeDeck] = useState<DigitalCircuitStudyQuestion[]>([...DIGITAL_CIRCUIT_ALL_QUESTIONS]);
+  const [practiceDeck, setPracticeDeck] = useState<DigitalCircuitStudyQuestion[]>([...DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS]);
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceAnswer, setPracticeAnswer] = useState("");
   const [practiceFeedback, setPracticeFeedback] = useState<Feedback | null>(null);
@@ -209,7 +220,7 @@ export default function DigitalCircuitSubjectPage() {
     setFlipped(false);
   }
   function refreshPractice() {
-    const filtered = DIGITAL_CIRCUIT_ALL_QUESTIONS.filter((question) => topics.includes(question.topic));
+    const filtered = DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS.filter((question) => topics.includes(question.topic));
     setPracticeDeck(randomize(filtered));
     setPracticeIndex(0); setPracticeAnswer(""); setPracticeFeedback(null);
   }
@@ -223,7 +234,7 @@ export default function DigitalCircuitSubjectPage() {
     setGeneratedAnswer(""); setGeneratedFeedback(null);
   }
   function startTest() {
-    const pool = DIGITAL_CIRCUIT_ALL_QUESTIONS.filter((question) => topics.includes(question.topic));
+    const pool = DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS.filter((question) => topics.includes(question.topic));
     const count = Math.min(pool.length, Math.max(1, Number.parseInt(testCount, 10) || 20));
     const duration = Math.min(180, Math.max(1, Number.parseInt(testMinutes, 10) || 15)) * 60;
     setTestDeck(randomize(pool).slice(0, count)); setTestIndex(0); setTestAnswers({}); setTestRemaining(duration); setTestPhase("active");
@@ -235,7 +246,7 @@ export default function DigitalCircuitSubjectPage() {
   }
   function resumeTest() {
     if (!savedTest) return;
-    const deck = savedTest.ids.map((id) => DIGITAL_CIRCUIT_ALL_QUESTIONS.find((question) => question.id === id)).filter(Boolean) as DigitalCircuitStudyQuestion[];
+    const deck = savedTest.ids.map((id) => DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS.find((question) => question.id === id)).filter(Boolean) as DigitalCircuitStudyQuestion[];
     if (!deck.length) return;
     setTopics(savedTest.topics); setTestDeck(deck); setTestAnswers(savedTest.answers); setTestIndex(Math.min(savedTest.index, deck.length - 1)); setTestRemaining(savedTest.remaining); setTestPhase("active");
   }
@@ -255,7 +266,7 @@ export default function DigitalCircuitSubjectPage() {
           <div className={styles.heroIntro}><span className={styles.eyebrow}>DIGITAL CIRCUITS / 08.03</span><h1>デジタル回路<small>波形 → 状態図 → 状態表 → K-map → 回路</small></h1><p>範囲ZIP 10枚、現行範囲PDF 7ページ、追加範囲ノート2枚で構成。追加ノートの系列検出は、状態割当からカルノー図、D-FF入力式、最終論理回路まで一続きで練習できます。</p></div>
           <div className={styles.heroStats}>
             <div className={styles.stat}><strong>{DIGITAL_CIRCUIT_ALL_FORMULAS.length}</strong><span>暗記カード</span></div>
-            <div className={styles.stat}><strong>{DIGITAL_CIRCUIT_ALL_QUESTIONS.length}</strong><span>通常演習</span></div>
+            <div className={styles.stat}><strong>{DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS.length}</strong><span>通常演習</span></div>
             <div className={styles.stat}><strong>6</strong><span>A4予想試験</span></div>
             <div className={styles.stat}><strong>50分</strong><span>練習初期値 / 100点換算・目標60</span></div>
           </div>
@@ -344,7 +355,7 @@ export default function DigitalCircuitSubjectPage() {
             {testPhase === "setup" && <>
               <div className={styles.panelHeading}><div><span className={styles.eyebrow}>RANDOM MOCK</span><h2>ランダム模試</h2></div><p>問題数と時間を自由設定。入力・現在位置・残り時間を保存できます。</p></div>
               <TopicFilter selected={topics} onChange={setTopics} legend="模試範囲" />
-              <div className={styles.settings}><label>問題数<input type="number" min="1" max={DIGITAL_CIRCUIT_ALL_QUESTIONS.length} value={testCount} onChange={(event) => setTestCount(event.target.value)} /></label><label>制限時間（分）<input type="number" min="1" max="180" value={testMinutes} onChange={(event) => setTestMinutes(event.target.value)} /></label><button className={styles.primary} type="button" onClick={startTest}>開始</button></div>
+              <div className={styles.settings}><label>問題数<input type="number" min="1" max={DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS.length} value={testCount} onChange={(event) => setTestCount(event.target.value)} /></label><label>制限時間（分）<input type="number" min="1" max="180" value={testMinutes} onChange={(event) => setTestMinutes(event.target.value)} /></label><button className={styles.primary} type="button" onClick={startTest}>開始</button></div>
               {savedTest && <div className={styles.feedback} data-correct="true"><strong>保存中の模試があります</strong><p>Q{savedTest.index + 1}/{savedTest.ids.length} · 残り{formatTime(savedTest.remaining)}</p><div className={styles.actions}><button type="button" onClick={resumeTest}>再開</button><button type="button" className={styles.danger} onClick={() => { window.localStorage.removeItem(TEST_KEY); setSavedTest(null); }}>削除</button></div></div>}
             </>}
             {testPhase === "active" && currentTest && <>

@@ -1,4 +1,5 @@
 import type { SmartControlDiagramId } from "./smart-control-figure-data";
+import { SMART_CONTROL_MAJOR_QUESTIONS } from "./smart-control-major-questions";
 
 export type SmartControlTopicId =
   | "transfer"
@@ -1009,12 +1010,19 @@ function hardenSmartControlQuestion(question: SmartControlQuestion): SmartContro
 }
 
 /** 通常演習・確認テストで使う、本番難度へ校正済みの問題群。 */
-export const SMART_CONTROL_QUESTIONS: SmartControlQuestion[] =
+/** 旧小問は資料監査用に保持するが、通常・時間制限・ランキングへは流さない。 */
+export const SMART_CONTROL_LEGACY_CALIBRATED_QUESTIONS: SmartControlQuestion[] =
   SMART_CONTROL_FOUNDATION_QUESTIONS.map(hardenSmartControlQuestion);
+
+export const SMART_CONTROL_QUESTIONS: SmartControlQuestion[] =
+  SMART_CONTROL_MAJOR_QUESTIONS;
+
+/** 通常・時間制限・ランキング・総合問題で使う、自己完結した本番大問プール。 */
+export const SMART_CONTROL_PRINT_LEVEL_QUESTIONS: SmartControlQuestion[] = SMART_CONTROL_MAJOR_QUESTIONS;
 
 /** 時間制限問題へ流用できる選択式の本番難度問題群。 */
 export const SMART_CONTROL_RAPID_CHALLENGES: SmartControlQuestion[] =
-  SMART_CONTROL_QUESTIONS.filter((question) => question.format === "choice");
+  SMART_CONTROL_MAJOR_QUESTIONS;
 
 
 export const SMART_CONTROL_EXAM_FORMATS: SmartControlExamFormat[] = [
@@ -1385,7 +1393,7 @@ const SMART_CONTROL_EXAM_HARDENING: Record<string, readonly SmartControlExamHard
     {
       promptSuffix: "（2）\\(f(0^+)\\)、\\(f(\\frac{\\pi}{2})\\)、長時間後の挙動を求め、最終値の定理を使えない理由を答えよ。",
       answerSuffix: "（2）\\(f(0^+)=0\\)、\\(f(\\frac{\\pi}{2})=\\frac{\\pi}{8}\\)、長時間では \\(\\frac{t}{4}\\) により発散する。sF(s)が原点極を持つため最終値の定理の安定条件を満たさない。",
-      steps: ["時間関数へ各時刻を代入する。", "線形成分 \(\frac{t}{4}\) が残ることと原点極を対応させる。"],
+      steps: ["時間関数へ各時刻を代入する。", "線形成分 \\(\\frac{t}{4}\\) が残ることと原点極を対応させる。"],
       subpartCount: 4,
     },
     {
@@ -1404,8 +1412,8 @@ const SMART_CONTROL_EXAM_HARDENING: Record<string, readonly SmartControlExamHard
   "smart-exam-4": [
     {
       promptSuffix: "（2）各系の極を複素平面へ置き、単位ステップ応答に最終値が存在するかを答えよ。存在する場合はその値も求めよ。",
-      answerSuffix: "（2）極0の積分系はランプで最終値なし、極−1の一次遅れは最終値1、極±jは持続振動で最終値なし、極−1±jは減衰振動で最終値 \(\frac{1}{2}\)。",
-      steps: ["入力 \(\frac{1}{s}\) を掛けた出力の極も確認する。", "安定な系は直流ゲインG(0)から最終値を求める。"],
+      answerSuffix: "（2）極0の積分系はランプで最終値なし、極−1の一次遅れは最終値1、極±jは持続振動で最終値なし、極−1±jは減衰振動で最終値 \\(\\frac{1}{2}\\)。",
+      steps: ["入力 \\(\\frac{1}{s}\\) を掛けた出力の極も確認する。", "安定な系は直流ゲインG(0)から最終値を求める。"],
       subpartCount: 5,
     },
     {
@@ -1422,8 +1430,8 @@ const SMART_CONTROL_EXAM_HARDENING: Record<string, readonly SmartControlExamHard
     },
     {
       promptSuffix: "（2）\\(G=4\\) として、移動枝へ入れる具体値を求め、移動前後の枝信号を式で照合せよ。",
-      answerSuffix: "（2）加え合わせ点は \(\frac{1}{4}\)、引き出し点は4。いずれも移動後に主経路Gを通した枝信号が移動前と同じになる。",
-      steps: ["一般則へG=4を代入する。", "枝信号をvと置き、移動前後で\(4\times\frac{v}{4}=v\) または \(4v\)となることを確認する。"],
+      answerSuffix: "（2）加え合わせ点は \\(\\frac{1}{4}\\)、引き出し点は4。いずれも移動後に主経路Gを通した枝信号が移動前と同じになる。",
+      steps: ["一般則へG=4を代入する。", "枝信号をvと置き、移動前後で\\(4\\times\\frac{v}{4}=v\\) または \\(4v\\)となることを確認する。"],
       subpartCount: 4,
     },
   ],
@@ -1475,7 +1483,7 @@ const SMART_CONTROL_EXAM_HARDENING: Record<string, readonly SmartControlExamHard
     {
       promptSuffix: "（2）\\(G_1=2,\\ G_2=3,\\ G_3=1\\) を代入して内側ループと全体のゲインを求め、直列積を先に取る誤答との違いを説明せよ。",
       answerSuffix: "（2）内側は \\(\\frac{3}{1+3}=\\frac{3}{4}\\)、全体は \\(2\\times\\frac{3}{4}=\\frac{3}{2}\\)。分母には内側ループの \\(G_2G_3\\) だけが入る。",
-      steps: ["最内側の負帰還を先に \(\frac{3}{4}\) へ簡約する。", "外側のG1=2を最後に掛ける。"],
+      steps: ["最内側の負帰還を先に \\(\\frac{3}{4}\\) へ簡約する。", "外側のG1=2を最後に掛ける。"],
       subpartCount: 4,
     },
   ],
@@ -1532,7 +1540,7 @@ const SMART_CONTROL_FLAT_EXAM_QUESTIONS: SmartControlQuestion[] = SMART_CONTROL_
 
 /** 通常確認と6回分の模試24問を一意IDで束ねた、非生成の本番水準flat pool。 */
 export const SMART_CONTROL_EXAM_LEVEL_QUESTIONS: SmartControlQuestion[] = [
-  ...SMART_CONTROL_QUESTIONS,
+  ...SMART_CONTROL_MAJOR_QUESTIONS,
   ...SMART_CONTROL_FLAT_EXAM_QUESTIONS,
 ];
 

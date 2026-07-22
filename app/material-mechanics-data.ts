@@ -496,6 +496,143 @@ function buildExpectedExam(variant: Variant, index: number): MaterialMechanicsEx
   };
 }
 export const MATERIAL_MECHANICS_EXPECTED_EXAMS: MaterialMechanicsExam[] = VARIANTS.map(buildExpectedExam);
+function uniqueMaterialSources(questions: readonly MaterialMechanicsExamQuestion[]) {
+  const seen = new Set<string>();
+  return questions.flatMap((question) => question.sourceRefs).filter((source) => {
+    const key = JSON.stringify(source);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+const MATERIAL_MAJOR_ERROR_GUIDE: Record<number, string> = {
+  2: "典型的誤答は、直径を半径として断面量へ入れる、角度を度のまま用いる、応力条件とねじり角条件の大きい方を採る、rpmを角速度へ直さない答案である。各条件の許容トルクを別々に求め、小さい方を採用する。",
+  3: "典型的誤答は、動力をkWのまま代入する、中空軸で内外径比の4乗を落とす、中実軸との比較を外径だけで終える答案である。同一トルク・同一許容応力で必要径と断面積比まで比較する。",
+  4: "典型的誤答は、平均コイル径と外径を混同する、GPaをN/mm²へ直さない、応力条件かたわみ条件の片方だけで許容荷重を決める答案である。二つの上限を独立に求め、小さい方を採る。",
+  5: "典型的誤答は、分布荷重を合力へ置き換えた後の作用位置を誤る、反力の符号をSFD/BMDへ引き継がない、曲げのI・ZをねじりのIp・Zpと混同する答案である。荷重図→自由物体図→反力→V(x)→M(x)→Mmax→M/Zの順を崩さない。",
+};
+
+/**
+ * One card is one complete print-level major problem. Formula-recall fields and
+ * isolated substitutions remain available only in the flash-card deck.
+ */
+const MATERIAL_MECHANICS_EXPECTED_PRINT_LEVEL_QUESTIONS: MaterialMechanicsExamQuestion[] =
+  MATERIAL_MECHANICS_EXPECTED_EXAMS.flatMap((exam) =>
+    exam.sections
+      .filter((section) => section.number >= 2)
+      .map((section) => {
+        const finalQuestion = section.questions.at(-1);
+        if (!finalQuestion) throw new Error(exam.id + ": empty major " + section.number);
+        const topic: MaterialMechanicsTopicId = section.number === 2 ? "torsion" : section.topic;
+        return {
+          ...finalQuestion,
+          id: "material-print-e" + exam.number + "-m" + section.number,
+          topic,
+          topicId: topic,
+          major: section.number,
+          sub: 0,
+          points: section.points,
+          genre: "本番大問・" + section.title,
+          difficulty: 3,
+          context: "【全条件】" + section.context + "\n【答案の構造】条件整理と単位統一を行い、図からモデルを立て、中間量を省略せず最終設計量まで一続きで求めること。",
+          prompt: section.questions
+            .map((question, index) => "(" + (index + 1) + ") " + question.prompt.replace(/前(?:2問|二問|問まで|問)/g, "それまでに求めた値"))
+            .join("\n") + "\n【入力】最後の設問の答えを単位付きで入力すること。途中式・図・中間値は解答用紙へ残す。",
+          answer: finalQuestion.answer,
+          formula: finalQuestion.formula,
+          steps: section.questions.flatMap((question, index) =>
+            question.steps.map((step, stepIndex) => "(" + (index + 1) + ")-" + (stepIndex + 1) + " " + step),
+          ),
+          explanation: "この大問は" + section.title + "を、条件整理から最終量まで連続して判定する。 【全小問の正解】" + section.questions.map((question, index) => "(" + (index + 1) + ") " + question.answer).join(" ／ ") + " 【解説】" + section.questions.map((question) => question.explanation).join(" ") + " " + MATERIAL_MAJOR_ERROR_GUIDE[section.number],
+          diagram: section.questions.find((question) => question.diagram)?.diagram,
+          sourceRefs: uniqueMaterialSources(section.questions),
+        };
+      }),
+  );
+
+
+
+function requiredMaterialQuestion(id: string) {
+  const found = MATERIAL_MECHANICS_QUESTIONS.find((question) => question.id === id);
+  if (!found) throw new Error("Missing material source question " + id);
+  return found;
+}
+
+const MATERIAL_MECHANICS_FORMAT2_PRINT_LEVEL_QUESTIONS: MaterialMechanicsExamQuestion[] = (() => {
+  const overhang = [
+    requiredMaterialQuestion("mm-q-overhang-format2"),
+    requiredMaterialQuestion("mm-q-overhang-sfd"),
+  ];
+  const distributed = [
+    requiredMaterialQuestion("mm-q-udl-overhang-reactions"),
+    requiredMaterialQuestion("mm-q-udl-mmax-location"),
+    requiredMaterialQuestion("mm-q-udl-mmax"),
+  ];
+  return [
+    {
+      ...overhang[1],
+      id: "material-print-format2-m2",
+      topic: "beam-statics",
+      topicId: "beam-statics",
+      major: 2,
+      sub: 0,
+      points: 20,
+      genre: "過去問形式・張出しばり複合大問",
+      difficulty: 3,
+      format: "number",
+      context: "【全条件】C-A=100 mm、A-D=200 mm、D-B=200 mm。Cに下向き300 N、Dに上向き150 Nが作用し、A・Bで支持される。上向きを正とする。\n【答案の構造】荷重図と自由物体図を描き、つり合いから反力を決め、SFD/BMDと最大曲げモーメントまで一続きで求めること。",
+      prompt: "(1) 支点反力RA、RBを向き付きで求めよ。\n(2) 各区間のVとMを式または値で示し、SFD/BMDを描け。\n(3) 最大曲げモーメントの大きさを求めよ。\n【入力】(3)の答えを単位付きで入力すること。",
+      answer: "30 N·m",
+      numericAnswer: 30,
+      expectedUnit: "N·m",
+      acceptedUnits: torqueUnits,
+      requiresUnit: true,
+      tolerance: 0.2,
+      keywords: undefined,
+      minKeywords: undefined,
+      dependsOn: undefined,
+      formula: "\\sum F_y=0,\\quad \\sum M_A=0,\\quad \\frac{dM}{dx}=V",
+      steps: [
+        ...overhang.flatMap((question, index) => question.steps.map((step, stepIndex) => "(" + (index + 1) + ")-" + (stepIndex + 1) + " " + step)),
+        "(3)-1 BMDの絶対値を比較し、A-Dの|M|=30 N·mを最大値とする。",
+      ],
+      explanation: "形式2第2問の範囲一致部を、反力だけ・図だけに分割せず一つの大問へ統合した。 【全小問の正解】(1) RA=300 N上向き、RB=150 N下向き。 ／ (2) VはC-Aで-300 N、A-Dで0、D-Bで+150 N。Mは0→-30 N·m、-30 N·m一定、-30→0 N·m。 ／ (3) |M|max=30 N·m。 【解説】典型的誤答はRBを負のまま向きを書かない、集中荷重位置でVを跳ばさない、V=0区間でMを斜線にする答案である。",
+      diagram: "overhang-sfd-bmd",
+      sourceRefs: uniqueMaterialSources(overhang),
+    },
+    {
+      ...distributed[2],
+      id: "material-print-format2-m3",
+      topic: "beam-statics",
+      topicId: "beam-statics",
+      major: 3,
+      sub: 0,
+      points: 20,
+      genre: "過去問形式・等分布荷重ばり複合大問",
+      difficulty: 3,
+      context: "【全条件】A-B=400 mm、B-C=50 mm。A-B全体にw=1.5 N/mm、Cに下向き50 Nが作用する。Aはピン、Bはローラー。xはAから右向きを正とする。\n【答案の構造】分布荷重を合力へ置換した自由物体図から反力を求め、V(x)、M(x)、極値条件を経て最大曲げモーメントまで求めること。",
+      prompt: "(1) 等分布荷重の合力と作用位置を示し、RA、RBを求めよ。\n(2) A-B区間のV(x)、M(x)を求め、SFD/BMDの形を示せ。\n(3) Mが極大となる位置xを求めよ。\n(4) 最大曲げモーメントを求めよ。\n【入力】(4)の答えを単位付きで入力すること。",
+      answer: "28.8 N·m",
+      dependsOn: undefined,
+      formula: "\\sum F_y=0,\\quad \\sum M_A=0,\\quad V=\\frac{dM}{dx},\\quad V=0",
+      steps: [
+        ...distributed[0].steps.map((step, index) => "(1)-" + (index + 1) + " " + step),
+        "(2)-1 A-B区間でV(x)=RA-wx=293.75-1.5x。",
+        "(2)-2 M(0)=0を用いてM(x)=293.75x-0.75x²。",
+        ...distributed.slice(1).flatMap((question, index) => question.steps.map((step, stepIndex) => "(" + (index + 3) + ")-" + (stepIndex + 1) + " " + step)),
+      ],
+      explanation: "形式2第3問の範囲一致部を、反力・極値位置・最大値へ分割せず一つの大問へ統合した。 【全小問の正解】(1) 合力600 N（Aから200 mm）、RA=293.75 N、RB=356.25 N。 ／ (2) V=293.75-1.5x、M=293.75x-0.75x²。 ／ (3) x=195.83 mm。 ／ (4) Mmax=28.78 N·m。 【解説】典型的誤答は600 Nの作用点を端へ置く、V=0ではなくM=0を極値条件にする、N·mmからN·mへの換算を落とす答案である。",
+      diagram: "overhang-udl",
+      sourceRefs: uniqueMaterialSources(distributed),
+    },
+  ];
+})();
+
+export const MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS: MaterialMechanicsExamQuestion[] = [
+  ...MATERIAL_MECHANICS_EXPECTED_PRINT_LEVEL_QUESTIONS,
+  ...MATERIAL_MECHANICS_FORMAT2_PRINT_LEVEL_QUESTIONS,
+];
 
 /** Full-condition, linked-calculation items for the timed confirmation test. */
 export const MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS: MaterialMechanicsExamQuestion[] =

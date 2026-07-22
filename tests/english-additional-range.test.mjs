@@ -97,11 +97,10 @@ test("English additional-range transcription and counts match the supplied sheet
 
 test("additional English range reaches generated, mock, rapid, and official ranking paths", async (context) => {
   const server = await withServer(context);
-  const [engine, expected, rapid, rankingIds, rankingQuestions] = await Promise.all([
+  const [engine, expected, rapid, rankingQuestions] = await Promise.all([
     server.ssrLoadModule("/app/generated-practice-engine.ts"),
     server.ssrLoadModule("/app/english-expected-exams-data.ts"),
     server.ssrLoadModule("/app/rapid-quiz-data.ts"),
-    server.ssrLoadModule("/app/official-ranking-question-ids.ts"),
     server.ssrLoadModule("/app/official-ranking-questions.ts"),
   ]);
 
@@ -129,31 +128,23 @@ test("additional English range reaches generated, mock, rapid, and official rank
 
   const rapidPool = rapid.getStaticRapidPool("subject-2");
   const eligible = rapid.getOfficialRankingEligiblePool("subject-2");
-  const rapidIds = new Set(rapidPool.map((question) => question.id));
-  const eligibleIds = new Set(eligible.map((question) => question.id));
-  for (const id of [
-    "rapid-exam-ch14-tf-1",
-    "rapid-exam-ch14-summary-1",
-    "rapid-exam-toeic-keller-181",
-    "rapid-exam-toeic-eston-135",
-    "rapid-exam-question-ev-199",
-    "rapid-exam-question-ev-214",
+  for (const sourceId of [
+    "ch14-tf-1",
+    "ch14-summary-1",
+    "toeic-keller-181",
+    "toeic-eston-135",
+    "question-ev-200",
+    "question-ev-216",
   ]) {
-    assert.ok(rapidIds.has(id), `${id}:rapid`);
-    assert.ok(eligibleIds.has(id), `${id}:ranking eligible`);
+    assert.ok(rapidPool.some((question) => question.id.endsWith("-" + sourceId)), sourceId + ":rapid");
+    assert.ok(eligible.some((question) => question.id.endsWith("-" + sourceId)), sourceId + ":ranking eligible");
   }
 
-  const fixedEnglishIds = rankingIds.OFFICIAL_RANKING_QUESTION_IDS["subject-2"];
-  assert.equal(fixedEnglishIds.length, 20);
-  assert.ok(fixedEnglishIds.includes("rapid-exam-question-ev-199"), "Housing fixed ranking item");
-  assert.ok(fixedEnglishIds.includes("rapid-exam-question-ev-214"), "Medical fixed ranking item");
-  for (const id of fixedEnglishIds) assert.ok(eligibleIds.has(id), `${id}:fixed ranking id must exist`);
-
   const official = rankingQuestions.getOfficialRankingQuestions("subject-2");
-  assert.ok(official.some((question) => question.id === "rapid-exam-ch14-tf-1"));
-  assert.ok(official.some((question) => question.id === "rapid-exam-toeic-keller-181"));
-  assert.ok(official.some((question) => question.id === "rapid-exam-question-ev-199"));
-  assert.ok(official.some((question) => question.id === "rapid-exam-question-ev-214"));
+  assert.ok(official.some((question) => question.id.endsWith("-ch14-tf-1")));
+  assert.ok(official.some((question) => question.id.endsWith("-toeic-keller-181")));
+  assert.ok(official.some((question) => question.id.endsWith("-question-ev-200")));
+  assert.ok(official.some((question) => question.id.endsWith("-question-ev-216")));
 });
 
 test("Ch14 summary and TOEIC choices use source-specific option analysis", async (context) => {

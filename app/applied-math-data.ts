@@ -858,6 +858,36 @@ export const APPLIED_MATH_EXAM_LEVEL_QUESTIONS: AppliedMathQuestion[] = APPLIED_
     ),
   );
 
+/** 模試の各大問を、前問を省略しない一続きの本番型問題として出すプール。 */
+export const APPLIED_MATH_PRINT_LEVEL_QUESTIONS: AppliedMathQuestion[] =
+  APPLIED_MATH_EXPECTED_EXAMS.flatMap((exam) =>
+    exam.sections.map((section) => {
+      const finalQuestion = section.questions.at(-1)!;
+      const allPrompts = section.questions
+        .map((question) => `(${question.sub}) ${question.prompt}`)
+        .join("\n");
+      const allSteps = section.questions.flatMap((question) => [
+        `(${question.sub}) ${question.genre}`,
+        ...question.steps.map((step) => `(${question.sub}) ${step}`),
+      ]);
+      const fullExplanation = section.questions
+        .map((question) => `(${question.sub}) 正解：${question.answer}。${question.explanation}`)
+        .join("\n");
+
+      return {
+        ...finalQuestion,
+        id: `${exam.id}-major-${section.number}-complete`,
+        difficulty: 3,
+        genre: `${section.title}・大問完答`,
+        context: section.context,
+        prompt: `次の大問を最初から解き、途中式・中間量を残して最終設問まで答えよ。\n${allPrompts}\n解答欄には最終設問(${finalQuestion.sub})の答えを入力すること。`,
+        steps: allSteps,
+        explanation: fullExplanation,
+        sourcePages: [...new Set(section.questions.flatMap((question) => question.sourcePages))],
+      } satisfies AppliedMathQuestion;
+    }),
+  );
+
 export const APPLIED_MATH_EXAM_FORMATS = [
   {
     id: "format1-no1",

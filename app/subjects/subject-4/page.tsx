@@ -12,8 +12,7 @@ import {
   THERMODYNAMICS_EXAM_SPEC,
   THERMODYNAMICS_EXPECTED_EXAMS,
   THERMODYNAMICS_FORMULAS,
-  THERMODYNAMICS_EXAM_LEVEL_QUESTIONS,
-  THERMODYNAMICS_QUESTIONS,
+  THERMODYNAMICS_PRINT_LEVEL_QUESTIONS,
   THERMODYNAMICS_RANGE_PAGES,
   THERMODYNAMICS_TOPICS,
   type ThermodynamicsQuestion,
@@ -46,7 +45,7 @@ const PROGRESS_KEY = "test-grid:subject-4:progress:v1";
 const TEST_SESSION_KEY = "test-grid:subject-4:mock-test:v1";
 const ALL_TOPIC_IDS = THERMODYNAMICS_TOPICS.map((topic) => topic.id);
 const KNOWN_TOPIC_IDS = new Set<ThermodynamicsTopicId>(ALL_TOPIC_IDS);
-const KNOWN_QUESTION_IDS = new Set([...THERMODYNAMICS_QUESTIONS, ...THERMODYNAMICS_EXAM_LEVEL_QUESTIONS].map((question) => question.id));
+const KNOWN_QUESTION_IDS = new Set(THERMODYNAMICS_PRINT_LEVEL_QUESTIONS.map((question) => question.id));
 
 function randomize<T>(items: readonly T[]) {
   const copy = [...items];
@@ -381,7 +380,7 @@ export default function ThermodynamicsSubjectPage() {
   const [cardFlipped, setCardFlipped] = useState(false);
 
   const [practiceTopics, setPracticeTopics] = useState<ThermodynamicsTopicId[]>([...ALL_TOPIC_IDS]);
-  const [practiceDeck, setPracticeDeck] = useState([...THERMODYNAMICS_QUESTIONS]);
+  const [practiceDeck, setPracticeDeck] = useState([...THERMODYNAMICS_PRINT_LEVEL_QUESTIONS]);
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceTypedAnswer, setPracticeTypedAnswer] = useState("");
   const [practiceSelectedChoice, setPracticeSelectedChoice] = useState("");
@@ -466,7 +465,7 @@ export default function ThermodynamicsSubjectPage() {
 
   const currentPracticeQuestion = practiceDeck[practiceIndex];
   const availableTestQuestions = useMemo(
-    () => THERMODYNAMICS_EXAM_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic)),
+    () => THERMODYNAMICS_PRINT_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic)),
     [testTopics],
   );
   const currentTestQuestion = testQuestions[testIndex];
@@ -531,7 +530,7 @@ export default function ThermodynamicsSubjectPage() {
 
   function changePracticeTopics(nextTopics: ThermodynamicsTopicId[]) {
     setPracticeTopics(nextTopics);
-    setPracticeDeck(randomize(THERMODYNAMICS_QUESTIONS.filter((question) => nextTopics.includes(question.topic))));
+    setPracticeDeck(randomize(THERMODYNAMICS_PRINT_LEVEL_QUESTIONS.filter((question) => nextTopics.includes(question.topic))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -539,7 +538,7 @@ export default function ThermodynamicsSubjectPage() {
   }
 
   function shufflePractice() {
-    setPracticeDeck(randomize(THERMODYNAMICS_QUESTIONS.filter((question) => practiceTopics.includes(question.topic))));
+    setPracticeDeck(randomize(THERMODYNAMICS_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -657,7 +656,7 @@ export default function ThermodynamicsSubjectPage() {
   function resumeSavedTest() {
     if (!savedTestSession) return;
     const questions = savedTestSession.questionIds.flatMap((id) => {
-      const found = THERMODYNAMICS_EXAM_LEVEL_QUESTIONS.find((question) => question.id === id) ?? THERMODYNAMICS_QUESTIONS.find((question) => question.id === id);
+      const found = THERMODYNAMICS_PRINT_LEVEL_QUESTIONS.find((question) => question.id === id);
       return found ? [found] : [];
     });
     if (!questions.length) {
@@ -665,7 +664,7 @@ export default function ThermodynamicsSubjectPage() {
       return;
     }
     const results = savedTestSession.results.flatMap((savedResult) => {
-      const question = THERMODYNAMICS_EXAM_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId) ?? THERMODYNAMICS_QUESTIONS.find((item) => item.id === savedResult.questionId);
+      const question = THERMODYNAMICS_PRINT_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId);
       return question ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
     });
     setTestTopics(savedTestSession.selectedTopics);
@@ -698,7 +697,7 @@ export default function ThermodynamicsSubjectPage() {
           <span><strong>TEST//GRID</strong><small>THERMODYNAMICS</small></span>
         </Link>
         <div className="header-actions statistics-header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {THERMODYNAMICS_QUESTIONS.length} QUESTIONS</span>
+          <span className="card-count-label"><i aria-hidden="true" /> {THERMODYNAMICS_PRINT_LEVEL_QUESTIONS.length} PRINT-LEVEL MAJORS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-4">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-4">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-4">時間制限 即答練習</Link>
@@ -729,7 +728,7 @@ export default function ThermodynamicsSubjectPage() {
         <section className="english-summary statistics-summary" aria-label="収録教材">
           <div><span>TOPICS</span><strong>{THERMODYNAMICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{THERMODYNAMICS_FORMULAS.length}</strong><small>枚</small></div>
-          <div><span>QUESTIONS</span><strong>{THERMODYNAMICS_QUESTIONS.length}</strong><small>問</small></div>
+          <div><span>QUESTIONS</span><strong>{THERMODYNAMICS_PRINT_LEVEL_QUESTIONS.length}</strong><small>本番大問</small></div>
           <p>テスト範囲ZIPを主教材に、追加2枚の冷凍サイクル・逆カルノーまで収録。形式3は今回範囲と確認できた部分だけを使い、形式1・2と形式3の未確認部分は紙面参考に限定します。想定試験{THERMODYNAMICS_EXPECTED_EXAMS.length}回は練習用100点換算・60点ライン。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
@@ -756,7 +755,7 @@ export default function ThermodynamicsSubjectPage() {
               <div className="english-guide-grid statistics-topic-grid">
                 {THERMODYNAMICS_TOPICS.map((topic) => {
                   const formulaCount = THERMODYNAMICS_FORMULAS.filter((card) => card.topic === topic.id).length;
-                  const questionCount = THERMODYNAMICS_QUESTIONS.filter((question) => question.topic === topic.id).length;
+                  const questionCount = THERMODYNAMICS_PRINT_LEVEL_QUESTIONS.filter((question) => question.topic === topic.id).length;
                   return (
                     <article key={topic.id} className="statistics-topic-card" style={{ borderTopColor: topic.color }}>
                       <span>{topic.number} / RANGE</span>

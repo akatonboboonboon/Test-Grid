@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
+import { importTypeScriptGraph } from "./helpers/import-typescript-graph.mjs";
 
-const BASE_URL = new URL("../app/digital-circuits-data.ts", import.meta.url);
 const EXTRA_URL = new URL("../app/digital-circuits-extra-data.ts", import.meta.url);
 const DIAGRAM_URL = new URL("../app/digital-circuits-extra-diagrams.tsx", import.meta.url);
 const GENERATOR_URL = new URL("../app/digital-circuits-extra-generator.ts", import.meta.url);
@@ -14,10 +14,7 @@ const compile = (source) => ts.transpileModule(source, {
 const dataUrl = (source) => "data:text/javascript;base64," + Buffer.from(compile(source)).toString("base64");
 
 async function loadExtra() {
-  const baseUrl = dataUrl(await readFile(BASE_URL, "utf8"));
-  const source = (await readFile(EXTRA_URL, "utf8"))
-    .replace('"./digital-circuits-data"', JSON.stringify(baseUrl));
-  return import(dataUrl(source));
+  return importTypeScriptGraph(EXTRA_URL);
 }
 
 test("past-machine source table and S1S0 graph retain all eight exact transitions", async () => {
@@ -120,19 +117,19 @@ test("added practice covers full waveform table, circuit/timing, full state tabl
   assert.match(extra.DIGITAL_CIRCUIT_EXTRA_QUESTIONS.find((item) => item.id === "dc-extra-q-past-full-table").explanation, /表.*S0S1.*グラフ.*S1S0/);
 });
 
-test("every predicted paper carries past-paper-level synthesis work", async () => {
+test("every predicted paper carries five complete, past-paper-level major problems", async () => {
   const extra = await loadExtra();
   for (const exam of extra.DIGITAL_CIRCUIT_ALL_EXPECTED_EXAMS) {
     const questions = exam.sections.flatMap((section) => section.questions);
-    assert.equal(questions.length, 12);
-    assert.ok(questions.filter((question) => question.difficulty >= 2).length >= 7, exam.id);
-    assert.ok(questions.filter((question) => question.difficulty >= 3).length >= 2, exam.id);
-    assert.ok(questions.some((question) => question.id === "dc-extra-q-cycle-design" || question.id === "dc-extra-q-cycle-timing" || question.id === "dc-extra-q-three-jk"), exam.id);
-    assert.ok(questions.some((question) => question.id === "dc-extra-q-past-full-table" || question.id === "dc-extra-q-ex3-equation" || question.id === "dc-extra-q-ex3-table"), exam.id);
-    assert.ok(questions.some((question) => [
-      "dc-add-q-1001-synthesis", "dc-add-q-sequence-101-full", "dc-add-q-sequence-1011-stream",
-      "dc-add-q-design-workflow", "dc-add-q-sequence-1011-full",
-    ].includes(question.id)), exam.id);
+    assert.equal(exam.sections.length, 5);
+    assert.equal(questions.length, 5);
+    assert.equal(questions.reduce((sum, question) => sum + question.points, 0), 100);
+    assert.ok(exam.sections.every((section) => section.questions.length === 1), exam.id);
+    assert.ok(questions.every((question) => question.difficulty === 3 && question.examLevel), exam.id);
+    assert.ok(questions.every((question) => question.subpartCount >= 3 && question.steps.length >= 3), exam.id);
+    assert.ok(questions.every((question) => question.diagram && question.sourceBasis?.length >= 2), exam.id);
+    assert.ok(questions.some((question) => question.topic === "counters"), exam.id);
+    assert.ok(questions.some((question) => question.topic === "state-machines"), exam.id);
   }
 });
 test("generated variants keep their three stable IDs and use neutral canonical diagrams", async () => {

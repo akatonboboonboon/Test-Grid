@@ -70,6 +70,7 @@ export type ThermodynamicsDiagramKind =
   | "carnot-pv"
   | "carnot-ts"
   | "refrigeration-cycle"
+  | "entropy-transfer"
   | "reversed-carnot-ts";
 
 export type ThermodynamicsFormulaCard = {
@@ -1840,6 +1841,65 @@ export const THERMODYNAMICS_EXPECTED_EXAMS: ThermodynamicsExpectedExam[] = Array
   { length: 6 },
   (_, index) => buildThermodynamicsExam(index + 1),
 );
+
+
+function uniqueThermodynamicsSources(questions: readonly ThermodynamicsExamQuestion[]) {
+  const seen = new Set<string>();
+  return questions.flatMap((question) => question.sourceRefs).filter((source) => {
+    const key = JSON.stringify(source);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+const THERMODYNAMICS_MAJOR_ERROR_GUIDE: Record<number, string> = {
+  1: "典型的誤答は、第2法則をエネルギー保存だけで説明する、圧縮時の体積比を逆にする、摂氏温度を状態方程式へ直接入れる答案である。法則の文章、P-V線図、絶対温度による二状態式を相互に照合する。",
+  2: "典型的誤答は、断熱指数の位置を取り違える、圧縮なのに終圧・終温を低くする、境界仕事と工業仕事を同じ値にする、仕事の符号規約を落とす答案である。三つの断熱関係とP-V線図で検算する。",
+  3: "典型的誤答は、JとkJを混在させる、熱を失う高温側を正にする、二熱源の変化を絶対値で加える答案である。各系の熱の向きを決めてから符号付きで合計し、第2法則で正負を照合する。",
+  4: "典型的誤答は、mmとcmを混在させる、最大体積を行程容積だけとする、圧縮比を逆にする、吸気温度を℃のまま断熱式へ入れる答案である。ピストン図からVc・Vs・ε・η・T2を一列でつなぐ。",
+  5: "典型的誤答は、℃の比をそのまま使う、Q1とQ2を逆にする、冷凍COPと暖房COPを混同する、kcal/hをkWへ直さず動力を求める答案である。熱機関図・冷凍装置図・T-S線図と熱収支を対応させる。",
+};
+
+/**
+ * Complete, self-contained major problems used by normal calculation practice
+ * and the timed confirmation test. Each item contains every required condition.
+ */
+export const THERMODYNAMICS_PRINT_LEVEL_QUESTIONS: ThermodynamicsExamQuestion[] =
+  THERMODYNAMICS_EXPECTED_EXAMS.flatMap((exam) =>
+    exam.sections.map((section) => {
+      const finalQuestion = section.questions.at(-1);
+      if (!finalQuestion) throw new Error(exam.id + ": empty major " + section.number);
+      const topic: ThermodynamicsTopicId = section.number === 1
+        ? (exam.number % 2 === 1 ? "second-law" : "polytropic")
+        : section.number === 5
+          ? (exam.number % 2 === 1 ? "carnot" : "refrigeration")
+          : section.topic;
+      return {
+        ...finalQuestion,
+        id: "thermo-print-e" + exam.number + "-m" + section.number,
+        topic,
+        topicId: topic,
+        major: section.number,
+        sub: 0,
+        points: section.points,
+        genre: "本番大問・" + section.title,
+        difficulty: 3,
+        context: "【全条件】" + section.context + "\n【答案の構造】状態・系・符号規約と単位を整理し、必要な線図または装置図を示してから、中間量を省略せず最終量まで求めること。",
+        prompt: section.questions
+          .map((question, index) => "(" + (index + 1) + ") " + question.prompt.replace(/前(?:二問|問まで|問)/g, "それまでに求めた値"))
+          .join("\n") + "\n【入力】最後の設問の答えを入力すること。途中式・図・中間値は解答用紙へ残す。",
+        answer: finalQuestion.answer,
+        formula: finalQuestion.formula,
+        steps: section.questions.flatMap((question, index) =>
+          question.steps.map((step, stepIndex) => "(" + (index + 1) + ")-" + (stepIndex + 1) + " " + step),
+        ),
+        explanation: "この大問は" + section.title + "を、状態・図・収支から最終量まで連続して判定する。 【全小問の正解】" + section.questions.map((question, index) => "(" + (index + 1) + ") " + question.answer).join(" ／ ") + " 【解説】" + section.questions.map((question) => question.explanation).join(" ") + " " + THERMODYNAMICS_MAJOR_ERROR_GUIDE[section.number],
+        diagram: section.number === 3 ? "entropy-transfer" : finalQuestion.diagram ?? section.questions.find((question) => question.diagram)?.diagram,
+        sourceRefs: uniqueThermodynamicsSources(section.questions),
+      };
+    }),
+  );
 
 /** Full-condition, multi-stage items for the timed confirmation test. */
 export const THERMODYNAMICS_EXAM_LEVEL_QUESTIONS: ThermodynamicsExamQuestion[] =

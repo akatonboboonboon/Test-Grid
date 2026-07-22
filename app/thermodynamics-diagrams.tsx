@@ -9,6 +9,7 @@ export type ThermodynamicsDiagramKind =
   | "carnot-pv"
   | "carnot-ts"
   | "refrigeration-cycle"
+  | "entropy-transfer"
   | "reversed-carnot-ts";
 
 type DiagramProps = {
@@ -18,7 +19,7 @@ type DiagramProps = {
   className?: string;
 };
 
-type AxisDiagramKind = Exclude<ThermodynamicsDiagramKind, "piston" | "refrigeration-cycle">;
+type AxisDiagramKind = Exclude<ThermodynamicsDiagramKind, "piston" | "refrigeration-cycle" | "entropy-transfer">;
 
 const axisLabels: Record<AxisDiagramKind, [string, string]> = {
   pv: ["V", "P"],
@@ -202,6 +203,34 @@ function PistonDiagram({ solution, arrowId }: { solution: boolean; arrowId: stri
   );
 }
 
+
+function EntropyTransferDiagram({ solution, arrowId }: { solution: boolean; arrowId: string }) {
+  return (
+    <svg viewBox="0 0 420 220" role="img" aria-label={"高温熱源から低温熱源への熱移動図" + (solution ? "の符号付き模範例" : "の空欄")}>
+      <ArrowMarker id={arrowId} />
+      <rect x="24" y="58" width="132" height="82" rx="5" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <rect x="264" y="58" width="132" height="82" rx="5" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <path d="M160 99 H255" fill="none" markerEnd={"url(#" + arrowId + ")"} stroke="currentColor" strokeWidth="3" />
+      <text x="208" y="88" textAnchor="middle" fontWeight="700">Q</text>
+      {solution ? (
+        <g className="thermodynamics-diagram-solution">
+          <text x="90" y="83" textAnchor="middle" fontWeight="700">高温熱源 T₁</text>
+          <text x="90" y="112" textAnchor="middle">ΔS₁ = −Q/T₁</text>
+          <text x="330" y="83" textAnchor="middle" fontWeight="700">低温熱源 T₂</text>
+          <text x="330" y="112" textAnchor="middle">ΔS₂ = +Q/T₂</text>
+          <text x="210" y="180" textAnchor="middle" fontWeight="700">T₁ &gt; T₂ ⇒ ΔS全体 &gt; 0（不可逆）</text>
+        </g>
+      ) : (
+        <g opacity="0.48">
+          <text x="90" y="102" textAnchor="middle">熱を失う側</text>
+          <text x="330" y="102" textAnchor="middle">熱を受け取る側</text>
+          <text x="210" y="180" textAnchor="middle">各符号と全体の増減を記入</text>
+        </g>
+      )}
+    </svg>
+  );
+}
+
 function RefrigerationCycleDiagram({ solution, arrowId }: { solution: boolean; arrowId: string }) {
   return (
     <svg viewBox="0 0 420 250" role="img" aria-label={`蒸気圧縮冷凍サイクル装置図${solution ? "の模範例" : "の空欄"}`}>
@@ -250,7 +279,9 @@ export default function ThermodynamicsDiagram({ kind, solution = false, title, c
       {title && <figcaption>{title}</figcaption>}
       {kind === "piston"
         ? <PistonDiagram solution={solution} arrowId={arrowId} />
-        : kind === "refrigeration-cycle"
+        : kind === "entropy-transfer"
+          ? <EntropyTransferDiagram solution={solution} arrowId={arrowId} />
+          : kind === "refrigeration-cycle"
           ? <RefrigerationCycleDiagram solution={solution} arrowId={arrowId} />
           : <AxisDiagram kind={kind} solution={solution} arrowId={arrowId} />}
     </figure>

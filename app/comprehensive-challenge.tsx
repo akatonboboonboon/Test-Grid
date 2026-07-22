@@ -17,13 +17,11 @@ import {
   createBalancedRapidSession,
   getComprehensiveRapidPool,
   isRapidAnswerCorrect,
-  networkCardsToRapid,
   normalizeOverallQuestionCount,
   type RapidQuestion,
   type RapidQuestionInstance,
   type RapidSubjectMeta,
 } from "./rapid-quiz-data";
-import { DEFAULT_CARDS, normalizeCards, storageRead } from "./protocols";
 import { type StudySubject, type SubjectId } from "./study-data";
 
 type OverallAnswerResult = {
@@ -72,13 +70,7 @@ function initialPools() {
 }
 
 function loadOverallPools() {
-  const pools = initialPools();
-  const networkCards = normalizeCards(storageRead<unknown>("layer-sum-cards-v1", DEFAULT_CARDS))
-    .filter((card) => card.enabled && card.label.trim());
-  pools.network = networkCardsToRapid(networkCards);
-
-
-  return pools;
+  return initialPools();
 }
 
 function clampLimitSeconds(value: number) {

@@ -5,7 +5,7 @@ import test from "node:test";
 const app = new URL("../app/", import.meta.url);
 const read = (path) => readFile(new URL(path, app), "utf8");
 
-test("uses exam-level non-generated questions in rapid and comprehensive pools", async () => {
+test("routes every subject through its print-level non-generated pool", async () => {
   const [rapid, drill, overall] = await Promise.all([
     read("rapid-quiz-data.ts"),
     read("rapid-answer-drill.tsx"),
@@ -13,67 +13,87 @@ test("uses exam-level non-generated questions in rapid and comprehensive pools",
   ]);
 
   for (const source of [
-    "ENGLISH_EXAM_LEVEL_QUESTIONS",
-    "ENGLISH_CH18_ACTUAL_QUIZ_QUESTIONS",
+    "ENGLISH_PRINT_LEVEL_QUESTIONS",
+    "NETWORK_EXAM_LEVEL_QUESTIONS",
     "MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS",
+    "THERMODYNAMICS_PRINT_LEVEL_QUESTIONS",
+    "MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS",
+    "SMART_CONTROL_PRINT_LEVEL_QUESTIONS",
+    "STATISTICS_PRINT_LEVEL_QUESTIONS",
+    "APPLIED_MATH_PRINT_LEVEL_QUESTIONS",
+    "DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS",
+  ]) assert.match(rapid, new RegExp(source), source);
+
+  for (const staleSource of [
     "THERMODYNAMICS_EXAM_LEVEL_QUESTIONS",
     "MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS",
     "SMART_CONTROL_EXAM_LEVEL_QUESTIONS",
     "TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS",
-    "STATISTICS_EXAM_LEVEL_QUESTIONS",
     "APPLIED_MATH_EXAM_LEVEL_QUESTIONS",
     "DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS",
-  ]) assert.match(rapid, new RegExp(source));
-
-  for (const cardSource of [
     "THERMODYNAMICS_FORMULAS",
     "MATERIAL_MECHANICS_FORMULAS",
     "SMART_CONTROL_CARDS",
     "TEXTBOOK_RESPONSE_CARDS",
-    "STATISTICS_FORMULAS",
-    "APPLIED_MATH_FORMULAS",
     "DIGITAL_CIRCUIT_ALL_FORMULAS",
-  ]) assert.match(rapid, new RegExp(cardSource));
+  ]) assert.doesNotMatch(rapid, new RegExp(staleSource), staleSource);
 
-  assert.match(rapid, /const COMPREHENSIVE_POOLS/);
-  assert.match(rapid, /COMPREHENSIVE_QUESTIONS_PER_SUBJECT = 546/);
-  assert.match(rapid, /COMPREHENSIVE_MAX_QUESTIONS = 9 \* COMPREHENSIVE_QUESTIONS_PER_SUBJECT/);
-  assert.match(rapid, /count > COMPREHENSIVE_MAX_QUESTIONS/);
-  assert.match(rapid, /Math\.min\(COMPREHENSIVE_MAX_QUESTIONS/);
-  assert.match(rapid, /getComprehensiveRapidPool/);
-  assert.match(rapid, /function formulaCardPool/);
-  assert.match(rapid, /rapid-card-\$\{card\.id\}/);
-  assert.match(rapid, /暗記・公式カード/);
-  assert.match(rapid, /Σを使わない形/);
-  assert.match(rapid, /\(question\.difficulty \?\? 1\) >= 2/);
-  assert.match(rapid, /recommendedSeconds: subjectId === "subject-2" \? 60 : 90/);
-  assert.match(rapid, /sourceBasis:/);
-  assert.match(rapid, /const MECHANICAL_RAPID = examLevelPool\([\s\S]*?MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS,[\s\S]*?question\.difficulty === 3/);
-  assert.match(rapid, /"subject-3": examLevelPool\([\s\S]*?MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS,[\s\S]*?question\.difficulty === 3/);
-  assert.doesNotMatch(rapid, /MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS|MECHANICAL_DYNAMICS_QUESTIONS/);
-  assert.doesNotMatch(rapid, /formulaCardPool\("subject-3"|MECHANICAL_DYNAMICS_FORMULAS/);
-  assert.match(rapid, /function mechanicalRapidDistractors/);
-  assert.match(rapid, /numeric \* 2 \* Math\.PI/);
-  assert.match(rapid, /numeric \* Math\.SQRT2/);
-  assert.doesNotMatch(rapid, /numeric \* 0\.95|numeric \* 1\.05|numeric \* 1\.1/);
-  assert.match(rapid, /const THERMODYNAMICS_RAPID = examLevelPool\([\s\S]*?\[\.\.\.THERMODYNAMICS_QUESTIONS, \.\.\.THERMODYNAMICS_EXAM_LEVEL_QUESTIONS\]/);
-  assert.match(rapid, /const STATISTICS_RAPID = examLevelPool\([\s\S]*?\[\.\.\.STATISTICS_QUESTIONS, \.\.\.STATISTICS_EXAM_LEVEL_QUESTIONS\]/);
-  assert.match(rapid, /getOfficialRankingEligiblePool\([\s\S]*?getStaticRapidPool\(subjectId\)\.filter\(isRankingEligibleRapidQuestion\)/);
-  assert.match(rapid, /"subject-4": combineRapidPools\([\s\S]*?formulaCardPool\("subject-4", THERMODYNAMICS_FORMULAS/);
-  assert.match(rapid, /"subject-7": combineRapidPools\([\s\S]*?formulaCardPool\("subject-7", STATISTICS_FORMULAS/);
-  assert.match(rapid, /追加p\.8〜9の冷凍サイクル・逆カルノーCOP/);
-  assert.match(rapid, /追加範囲5ページ（チェビシェフの不等式を含む）/);
-  assert.match(rapid, /network:[\s\S]*networkCardsToRapid/);
-  assert.doesNotMatch(rapid, /generated-practice-engine|generated-practice-history/);
+  for (const [constant, source] of [
+    ["ENGLISH_RAPID", "ENGLISH_PRINT_LEVEL_QUESTIONS"],
+    ["NETWORK_RAPID", "NETWORK_EXAM_LEVEL_QUESTIONS"],
+    ["MECHANICAL_RAPID", "MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS"],
+    ["THERMODYNAMICS_RAPID", "THERMODYNAMICS_PRINT_LEVEL_QUESTIONS"],
+    ["MATERIAL_MECHANICS_RAPID", "MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS"],
+    ["SMART_CONTROL_RAPID", "SMART_CONTROL_PRINT_LEVEL_QUESTIONS"],
+    ["STATISTICS_RAPID", "STATISTICS_PRINT_LEVEL_QUESTIONS"],
+    ["APPLIED_MATH_RAPID", "APPLIED_MATH_PRINT_LEVEL_QUESTIONS"],
+    ["DIGITAL_CIRCUITS_RAPID", "DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS"],
+  ]) {
+    const start = rapid.indexOf("const " + constant + " = examLevelPool");
+    assert.ok(start >= 0, constant);
+    assert.ok(rapid.slice(start, start + 260).includes(source), constant + " source");
+  }
 
-  assert.match(drill, /defaultLimitSeconds = subjectId === "network" \? 8/);
-  assert.match(drill, /Math\.min\(300/);
-  assert.match(drill, /currentQuestion\.steps\.map/);
-  assert.match(overall, /getComprehensiveRapidPool/);
-  assert.match(overall, /useState\(90\)/);
-  assert.match(overall, /非生成問題/);
-  assert.match(overall, /currentQuestion\.steps\.map/);
-  assert.doesNotMatch(overall, /getStaticRapidPool/);
+  assert.ok(rapid.includes("const COMPREHENSIVE_POOLS"));
+  assert.ok(rapid.includes("ENGLISH_CH18_ACTUAL_QUIZ_QUESTIONS"));
+  assert.ok(rapid.includes("network: NETWORK_RAPID"));
+  assert.equal(rapid.includes("network: networkCardsToRapid"), false);
+  assert.equal(rapid.includes("networkCardsToRapid(DEFAULT_CARDS)"), false);
+  assert.equal(rapid.includes("function formulaCardPool"), false);
+  assert.equal(rapid.includes("rapid-card-"), false);
+  assert.equal(rapid.includes("combineRapidPools"), false);
+  assert.equal(rapid.includes("generated-practice-engine"), false);
+  assert.equal(rapid.includes("generated-practice-history"), false);
+
+  assert.ok(rapid.includes("COMPREHENSIVE_QUESTIONS_PER_SUBJECT = 546"));
+  assert.ok(rapid.includes("COMPREHENSIVE_MAX_QUESTIONS = 9 * COMPREHENSIVE_QUESTIONS_PER_SUBJECT"));
+  assert.ok(rapid.includes("const EXAM_LEVEL_SECONDS: Record<SubjectId, number>"));
+  for (const seconds of [
+    '"subject-2": 90',
+    "network: 90",
+    '"subject-3": 300',
+    '"subject-4": 300',
+    '"subject-5": 300',
+    '"subject-6": 240',
+    '"subject-7": 240',
+    '"subject-8": 300',
+    '"subject-9": 240',
+  ]) assert.ok(rapid.includes(seconds), seconds);
+  assert.ok(rapid.includes("function mechanicalRapidDistractors"));
+  assert.ok(rapid.includes("function subjectRapidDistractors"));
+  for (const staleNumeric of ["numeric * 0.95", "numeric * 1.05", "numeric * 1.1"]) {
+    assert.equal(rapid.includes(staleNumeric), false, staleNumeric);
+  }
+  assert.ok(rapid.includes("getStaticRapidPool(subjectId).filter(isRankingEligibleRapidQuestion)"));
+
+  assert.ok(drill.includes('defaultLimitSeconds = subjectId === "network" ? 8'));
+  assert.ok(drill.includes("currentQuestion.steps.map"));
+  assert.ok(overall.includes("getComprehensiveRapidPool"));
+  for (const staleOverall of ["networkCardsToRapid", "DEFAULT_CARDS", "normalizeCards", "storageRead", "getStaticRapidPool"]) {
+    assert.equal(overall.includes(staleOverall), false, staleOverall);
+  }
+  assert.ok(overall.includes("非生成問題"));
+  assert.ok(overall.includes("currentQuestion.steps.map"));
 });
 test("adds reversed-Carnot COP and unit conversion to the thermodynamics essentials", async () => {
   const [essentials, catalog] = await Promise.all([

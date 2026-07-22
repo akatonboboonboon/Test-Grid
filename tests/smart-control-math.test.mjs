@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
+import { importTypeScriptGraph } from "./helpers/import-typescript-graph.mjs";
 
 function compileDataModule(source) {
   return ts.transpileModule(source, {
@@ -40,17 +41,15 @@ function displayedStrings(owner) {
   return values;
 }
 
-const smartSourcePromise = readFile(new URL("../app/smart-control-data.ts", import.meta.url), "utf8");
 const textbookSourcePromise = readFile(new URL("../app/smart-control-textbook-data.ts", import.meta.url), "utf8");
 
 test("smart-control formulas use TeX fractions instead of slash-style pseudo math", async () => {
-  const [smartSource, textbookSource, katex] = await Promise.all([
-    smartSourcePromise,
+  const [textbookSource, katex] = await Promise.all([
     textbookSourcePromise,
     import(new URL("../app/vendor/katex/katex.mjs", import.meta.url)),
   ]);
   const [smart, textbook] = await Promise.all([
-    importDataModule(smartSource),
+    importTypeScriptGraph("../app/smart-control-data.ts", import.meta.url),
     importDataModule(textbookSource),
   ]);
   const corpus = [
@@ -94,7 +93,7 @@ test("smart-control formulas use TeX fractions instead of slash-style pseudo mat
   assert.ok(formulaCount >= 75, "the audit must cover every smart-control formula and predicted exam");
   assert.ok(inlineMathCount >= 150, "the audit must cover prompts, answers, choices, steps, explanations, and cues");
   assert.match(smart.SMART_CONTROL_CARDS.find((card) => card.id === "smart-first-order-impulse").prompt, /G\(s\)=\\frac\{K\}\{Ts\+1\}/);
-  assert.match(smart.SMART_CONTROL_QUESTIONS.find((question) => question.id === "smart-q-feedback-3").answer, /\\frac\{K\}\{s-1\+K\}/);
+  assert.match(smart.SMART_CONTROL_QUESTIONS.find((question) => question.id === "smart-major-feedback-type1-chain").formula, /\\frac\{G\}\{1\+GH\}/);
   assert.match(textbook.TEXTBOOK_RESPONSE_QUESTIONS.find((question) => question.id === "textbook-response-q07-overshoot-formula").answer, /\\frac/);
 });
 

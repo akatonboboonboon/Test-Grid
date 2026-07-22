@@ -170,3 +170,125 @@ export function evaluateNetworkWrittenAnswer(
     estimatedScore,
   };
 }
+
+export type NetworkWrittenExamQuestion = {
+  id: string;
+  topic: "層＋20文字記述";
+  group: "本試験形式・層と働き";
+  format: "choice";
+  difficulty: 3;
+  context: string;
+  prompt: string;
+  answer: string;
+  accepted: string[];
+  options: string[];
+  explanation: string;
+  steps: string[];
+  sourceBasis: string;
+  termId: string;
+  minimumCharacters: 20;
+};
+
+export type NetworkWrittenMockPaper = {
+  id: string;
+  number: number;
+  title: string;
+  durationMinutes: 50;
+  totalPoints: 100;
+  pointsPerQuestion: 10;
+  termIds: string[];
+};
+
+const EXAM_CONTEXT =
+  "本試験の記述答案を選択式に置き換えた問題です。層だけでなく、20文字以上に相当する働きの説明まで正しいものを選びます。";
+
+function retargetModelAnswer(source: NetworkWrittenTerm, target: NetworkWrittenTerm) {
+  const remainder = source.modelAnswer.startsWith(source.term)
+    ? source.modelAnswer.slice(source.term.length)
+    : `は${source.modelAnswer}`;
+  return `${target.term}${remainder}`;
+}
+
+function layerStatement(layerLabel: string, description: string) {
+  return `${layerLabel}｜${description}`;
+}
+
+function rotateOptions(options: string[], offset: number) {
+  const amount = offset % options.length;
+  return [...options.slice(amount), ...options.slice(0, amount)];
+}
+
+/**
+ * 時間制限・ランキング・総合問題で使う本試験形式の選択問題。
+ * 単なる「第何層？」ではなく、層と働きの両方が一致しないと正解できない。
+ */
+export const NETWORK_EXAM_LEVEL_QUESTIONS: NetworkWrittenExamQuestion[] = NETWORK_WRITTEN_TERMS.map((term, index, terms) => {
+  const expectedLayerLabel = term.layerLabel;
+  const wrongLayer = ([1, 2, 3, 4, 5, 6, 7] as Layer[])
+    .find((layer) => !term.expectedLayers.includes(layer)) ?? 1;
+  const sameLayerOther = terms.find((candidate) => (
+    candidate.id !== term.id
+    && candidate.expectedLayers.some((layer) => term.expectedLayers.includes(layer))
+  )) ?? terms[(index + 1) % terms.length];
+  const differentLayerOther = terms.find((candidate) => (
+    candidate.id !== term.id
+    && candidate.expectedLayers.every((layer) => !term.expectedLayers.includes(layer))
+  )) ?? terms[(index + 2) % terms.length];
+  const answer = layerStatement(expectedLayerLabel, term.modelAnswer);
+  const options = rotateOptions([
+    answer,
+    layerStatement(LAYER_LABELS[wrongLayer], term.modelAnswer),
+    layerStatement(expectedLayerLabel, retargetModelAnswer(sameLayerOther, term)),
+    layerStatement(LAYER_LABELS[wrongLayer], retargetModelAnswer(differentLayerOther, term)),
+  ], index % 4);
+  return {
+    id: `network-written-choice-${term.id}`,
+    topic: "層＋20文字記述",
+    group: "本試験形式・層と働き",
+    format: "choice",
+    difficulty: 3,
+    context: EXAM_CONTEXT,
+    prompt: `${term.term}について、層と働きの両方が正しい説明を選びなさい。`,
+    answer,
+    accepted: [answer],
+    options,
+    explanation: [
+      term.fullName ? `正式名称：${term.fullName}。` : "",
+      `正しい層：${term.layerLabel}。${term.layerReason}`,
+      `働き：${term.modelAnswer}`,
+      "誤答は、層だけを入れ替えたもの、または同じ層の別プロトコルの働きを混ぜたものです。",
+    ].filter(Boolean).join("\n"),
+    steps: [
+      "略称を正式名称へ展開する。",
+      "主要な働きからOSI層を判定する。",
+      "選択肢の説明が、そのプロトコル自身の働きかまで照合する。",
+    ],
+    sourceBasis: "最初に提供された層別写真から作成した96プロトコル（形式資料の印字語は除外）",
+    termId: term.id,
+    minimumCharacters: 20,
+  };
+});
+
+function buildBalancedMockTermIds(paperIndex: number) {
+  const picked = new Set<string>();
+  ([1, 2, 3, 4, 5, 6, 7] as Layer[]).forEach((layer) => {
+    const candidates = NETWORK_WRITTEN_TERMS.filter((term) => term.expectedLayers.includes(layer));
+    const candidate = candidates[(paperIndex * 5 + layer - 1) % candidates.length];
+    if (candidate) picked.add(candidate.id);
+  });
+  for (let offset = 0; picked.size < 10 && offset < NETWORK_WRITTEN_TERMS.length; offset += 1) {
+    picked.add(NETWORK_WRITTEN_TERMS[(paperIndex * 17 + offset) % NETWORK_WRITTEN_TERMS.length].id);
+  }
+  return [...picked].slice(0, 10);
+}
+
+/** 50分・10語・100点。答案は各語について「層＋20文字以上の働き」を書く。 */
+export const NETWORK_WRITTEN_MOCKS: NetworkWrittenMockPaper[] = Array.from({ length: 6 }, (_, index) => ({
+  id: `network-written-mock-${String(index + 1).padStart(2, "0")}`,
+  number: index + 1,
+  title: `ネットワーク記述模試 ${String(index + 1).padStart(2, "0")}`,
+  durationMinutes: 50,
+  totalPoints: 100,
+  pointsPerQuestion: 10,
+  termIds: buildBalancedMockTermIds(index),
+}));

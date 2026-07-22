@@ -69,8 +69,8 @@ export function officialRankingInstruction(question: RapidQuestion) {
   if (/(?:一文整序|語順整序|並び替え)/u.test(topic)) {
     return "語句を正しい順に並べた英文を選んでください。";
   }
-  if (question.subjectId === "network" && question.options.some((option) => /^L[1-7]$/iu.test(option.trim()))) {
-    return "表示されたプロトコルが属するOSI参照モデルの層を選んでください。";
+  if (question.subjectId === "network") {
+    return "プロトコルの層と、20文字以上に相当する働きの説明が両方正しい選択肢を選んでください。";
   }
   return "設問を読み、最も適切な選択肢を選んでください。";
 }

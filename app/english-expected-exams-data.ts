@@ -736,6 +736,32 @@ const PASSAGE_ID_BY_UNIT: Partial<Record<EnglishExpectedUnit, string>> = {
   ch18: "passage-wheelchair",
 };
 
+
+function buildOrderRankingOptions(answer: string) {
+  const tokens = answer.trim().split(/\s+/u);
+  if (tokens.length < 4) return [answer];
+  const swapAt = (left: number, right: number) => {
+    const copy = [...tokens];
+    [copy[left], copy[right]] = [copy[right], copy[left]];
+    return copy.join(" ");
+  };
+  const middle = Math.max(1, Math.floor(tokens.length / 2) - 1);
+  const candidates = [
+    answer,
+    swapAt(0, 1),
+    swapAt(middle, middle + 1),
+    swapAt(tokens.length - 2, tokens.length - 1),
+    [...tokens.slice(1), tokens[0]].join(" "),
+  ];
+  return [...new Set(candidates)].slice(0, 4);
+}
+
+export function englishExamQuestionNeedsReference(question: Pick<EnglishQuestion, "format" | "group">) {
+  return question.format === "order"
+    || question.format === "translation"
+    || /(?:True\s*\/\s*False|本文|長文|要約|Abstract|内容理解|和訳|翻訳|抜粋|整序|並び替え)/iu.test(question.group);
+}
+
 /**
  * 本番と同じ大問比率で作った、通常確認テスト向けの実戦問題プール。
  * 単語だけに偏らず、文法・要約・一文整序・本文参照・和訳を毎回含む
@@ -751,7 +777,7 @@ export const ENGLISH_EXAM_LEVEL_QUESTIONS: EnglishQuestion[] = ENGLISH_EXPECTED_
     prompt: question.prompt,
     answer: question.answer,
     accepted: question.accepted,
-    options: question.options,
+    options: question.options ?? (question.section === "order" ? buildOrderRankingOptions(question.answer) : undefined),
     tokens: question.tokens,
     explanation: `${question.explanation}\n\n出典・根拠：${question.reference.label}${question.reference.quote ? `\n本文：${question.reference.quote}` : ""}${question.reference.translation ? `\n和訳：${question.reference.translation}` : ""}`,
     reference: question.reference.quote
@@ -761,8 +787,26 @@ export const ENGLISH_EXAM_LEVEL_QUESTIONS: EnglishQuestion[] = ENGLISH_EXPECTED_
           translation: question.reference.translation,
         }
       : undefined,
-    passageId: ["order", "sentence-ja-en", "true-false", "reading", "translation"].includes(question.section)
+    passageId: ["summary-abstract", "order", "sentence-ja-en", "true-false", "reading", "translation"].includes(question.section)
       ? PASSAGE_ID_BY_UNIT[question.unit]
       : undefined,
   })),
 );
+
+
+/**
+ * 通常演習・時間制限・ランキング・総合問題へ渡す、本番構造だけの英語プール。
+ * 本文依存問題は参照本文が揃ったものだけを残し、暗記帳用の単独カード問題とは分離する。
+ */
+export const ENGLISH_PRINT_LEVEL_QUESTIONS: EnglishQuestion[] = ENGLISH_EXAM_LEVEL_QUESTIONS
+  .filter((question) => !englishExamQuestionNeedsReference(question) || Boolean(question.reference?.quote.trim()))
+  .map((question) => {
+    if (question.options?.length) return question;
+    if (question.unit === "ch18" && question.group === "前置詞＋関係代名詞") {
+      return { ...question, options: [question.answer, "with", "by", "for"] };
+    }
+    if (question.unit === "ch16" && question.group === "語形・文脈" && question.answer === "mapped") {
+      return { ...question, options: ["mapped", "mapping", "map", "maps"] };
+    }
+    return question;
+  });
