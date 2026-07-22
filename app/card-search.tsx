@@ -12,7 +12,7 @@ import { TEXTBOOK_RESPONSE_QUESTIONS } from "./smart-control-textbook-data";
 import { STATISTICS_QUESTIONS } from "./statistics-data";
 import { APPLIED_MATH_QUESTIONS } from "./applied-math-data";
 import { DIGITAL_CIRCUIT_ALL_QUESTIONS } from "./digital-circuits-extra-data";
-import { MATERIAL_MECHANICS_QUESTIONS } from "./material-mechanics-data";
+import { MATERIAL_MECHANICS_FORMULAS, MATERIAL_MECHANICS_QUESTIONS } from "./material-mechanics-data";
 import {
   RAPID_SUBJECTS,
   RAPID_SUBJECT_IDS,
@@ -133,8 +133,39 @@ function reviewQuestionsToCards(
     options: question.options?.length ? [...question.options] : [question.answer],
     explanation: question.explanation || "正解は「" + question.answer + "」です。教科ページの解説と途中式も確認してください。",
     studyHref: meta.cardHref,
+    difficulty: 2,
+    recommendedSeconds: 60,
+    steps: ["問題の条件を整理する。", "答えを再現して選択肢と照合する。", "教科ページの解説と途中式を確認する。"],
+    sourceBasis: "各教科ページの収録問題・振り返りカード",
   } satisfies RapidQuestion));
 }
+const MATERIAL_FORMULA_SEARCH_IDS = new Set(
+  MATERIAL_MECHANICS_FORMULAS.map((card) => `rapid-card-${card.id}`),
+);
+
+function materialFormulaCardsToSearchCards(): RapidQuestion[] {
+  return MATERIAL_MECHANICS_FORMULAS.map((card) => ({
+    id: `rapid-card-${card.id}`,
+    subjectId: "subject-5",
+    topicLabel: `${card.title} / 暗記・公式`,
+    prompt: `${card.title}：${card.prompt}`,
+    answer: card.formula,
+    acceptedOptions: [card.formula],
+    options: [card.formula],
+    explanation: `${card.explanation} 覚え方：${card.cue}`,
+    studyHref: "/subjects/subject-5?mode=cards",
+    mathOptions: true,
+    difficulty: 3,
+    recommendedSeconds: 45,
+    steps: [
+      "表面のタイトルと問いから、対象となる荷重・断面・記号を整理する。",
+      `手掛かり「${card.cue}」から公式を再現する。`,
+      "裏面の公式と解説を照合し、適用条件まで確認する。",
+    ],
+    sourceBasis: "材料力学範囲ZIP13ページ / 暗記・公式カード",
+  }));
+}
+
 
 function loadAllCards() {
   const result: RapidQuestion[] = [];
@@ -146,7 +177,10 @@ function loadAllCards() {
       continue;
     }
 
-    result.push(...getStaticRapidPool(subjectId));
+    const staticCards = getStaticRapidPool(subjectId);
+    result.push(...(subjectId === "subject-5"
+      ? staticCards.filter((card) => !MATERIAL_FORMULA_SEARCH_IDS.has(card.id))
+      : staticCards));
   }
 
   result.push(
@@ -154,6 +188,7 @@ function loadAllCards() {
     ...reviewQuestionsToCards("subject-3", MECHANICAL_DYNAMICS_QUESTIONS),
     ...reviewQuestionsToCards("subject-4", THERMODYNAMICS_QUESTIONS),
     ...reviewQuestionsToCards("subject-5", MATERIAL_MECHANICS_QUESTIONS),
+    ...materialFormulaCardsToSearchCards(),
     ...reviewQuestionsToCards("subject-6", [...SMART_CONTROL_QUESTIONS, ...TEXTBOOK_RESPONSE_QUESTIONS]),
     ...reviewQuestionsToCards("subject-7", STATISTICS_QUESTIONS),
     ...reviewQuestionsToCards("subject-8", APPLIED_MATH_QUESTIONS),

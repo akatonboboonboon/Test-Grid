@@ -19,7 +19,11 @@ export type MaterialMechanicsDiagramKind =
   | "load-resultants"
   | "sfd-bmd"
   | "overhang-sfd-bmd"
-  | "beam-section-stress";
+  | "beam-section-stress"
+  | "additional-simple-point-rect"
+  | "additional-simple-udl-rect"
+  | "additional-cantilever-tip-hollow"
+  | "additional-cantilever-udl-hollow";
 
 export type MaterialMechanicsTopic = {
   id: MaterialMechanicsTopicId;
@@ -118,6 +122,10 @@ const RANGE_FILENAMES = [
   "PXL_20260717_135759152.jpg",
   "PXL_20260717_135806323.jpg",
   "材力テスト範囲プリント.jpg",
+  "PXL_20260722_061249575.MP.jpg",
+  "PXL_20260722_061315221.MP.jpg",
+  "PXL_20260722_061318328.MP.jpg",
+  "PXL_20260722_061322324.MP.jpg",
 ] as const;
 
 function rangeRef(page: number, note?: string): MaterialMechanicsSourceRef {
@@ -140,17 +148,27 @@ export const MATERIAL_MECHANICS_RANGE_PAGES: MaterialMechanicsRangePage[] = [
   { number: 7, filename: RANGE_FILENAMES[6], topics: ["beam-statics"], summary: "片持ちばりの反力・固定端モーメントと分布荷重の扱い。", orientation: "landscape-source" },
   { number: 8, filename: RANGE_FILENAMES[7], topics: ["beam-statics"], summary: "せん断力図SFDと曲げモーメント図BMDの符号・形状。", orientation: "landscape-source" },
   { number: 9, filename: RANGE_FILENAMES[8], topics: ["torsion", "shaft-design", "coil-spring"], summary: "ねじり・中空軸・密巻コイルばねのまとめ演習と確認値。", orientation: "portrait-source" },
+  { number: 10, filename: RANGE_FILENAMES[9], topics: ["beam-statics"], summary: "単純支持ばりの偏心集中荷重、長方形断面の断面二次モーメント・断面係数・曲げ応力。", orientation: "portrait-source" },
+  { number: 11, filename: RANGE_FILENAMES[10], topics: ["beam-statics"], summary: "単純支持ばりの全長等分布荷重、SFD・BMD、長方形断面の最大曲げ応力。", orientation: "portrait-source" },
+  { number: 12, filename: RANGE_FILENAMES[11], topics: ["beam-statics"], summary: "自由端集中荷重を受ける片持ちばりと、中空円断面の曲げ応力。", orientation: "portrait-source" },
+  { number: 13, filename: RANGE_FILENAMES[12], topics: ["beam-statics"], summary: "全長等分布荷重を受ける片持ちばりのV・Mと、中空円断面の曲げ応力。", orientation: "portrait-source" },
 ];
 
 export const MATERIAL_MECHANICS_TOPICS: MaterialMechanicsTopic[] = [
   { id: "torsion", number: "01", title: "丸軸のねじり", shortTitle: "ねじり基礎", description: "せん断ひずみ、せん断応力、トルク、ねじり角を式の意味から扱う。", pages: [1, 2, 3, 9], color: "#ffbd59" },
   { id: "shaft-design", number: "02", title: "中実・中空軸の設計", shortTitle: "軸設計", description: "極断面二次モーメント、極断面係数、伝達動力、許容応力設計を扱う。", pages: [2, 3, 9], color: "#ff8e5b" },
   { id: "coil-spring", number: "03", title: "密巻コイルばね", shortTitle: "コイルばね", description: "ばね定数、たわみ、線材に生じるねじり応力を扱う。", pages: [4, 9], color: "#d998ff" },
-  { id: "beam-statics", number: "04", title: "はりの反力・SFD・BMD", shortTitle: "はり", description: "支点、等価集中荷重、反力、せん断力図、曲げモーメント図を扱う。", pages: [5, 6, 7, 8], color: "#63d8cb" },
+  { id: "beam-statics", number: "04", title: "はりの反力・SFD・BMD・曲げ応力", shortTitle: "はり", description: "支点、等価集中荷重、反力、せん断力図、曲げモーメント図、断面二次モーメント・断面係数と曲げ応力を扱う。", pages: [5, 6, 7, 8, 10, 11, 12, 13], color: "#63d8cb" },
 ];
 
 type FormulaSeed = Omit<MaterialMechanicsFormulaCard, "sourceRefs"> & { pages: number[] };
 const FORMULA_SEEDS: FormulaSeed[] = [
+  { id: "mm-f-bending-stress", topic: "beam-statics", title: "曲げ応力の基本式", prompt: "中立軸から距離yの曲げ応力と、最外縁の最大曲げ応力は？", formula: "\\sigma=\\frac{My}{I}=\\frac{M}{Z}", explanation: "曲げ応力は中立軸で0、最外縁で最大となる。Iは曲げに対する断面二次モーメント、Z=I/cは断面係数であり、ねじりの極断面量Ip・Zpとは区別する。", cue: "曲げはIとZ（Ip・Zpではない）", diagram: "beam-section-stress", pages: [10, 11, 12, 13] },
+  { id: "mm-f-rectangle-bending", topic: "beam-statics", title: "長方形断面の曲げ断面量", prompt: "幅b、高さhの長方形断面のIとZは？", formula: "I=\\frac{bh^3}{12},\\qquad Z=\\frac{bh^2}{6}", explanation: "高さhの3乗・2乗が効く。曲げ軸に対するIを用い、最外縁距離h/2で割るとZになる。", cue: "長方形：Iは12、Zは6", diagram: "additional-simple-point-rect", pages: [10, 11] },
+  { id: "mm-f-hollow-bending", topic: "beam-statics", title: "中空円断面の曲げ断面量", prompt: "外径do、内径diの中空円断面のIとZは？", formula: "I=\\frac{\\pi(d_o^4-d_i^4)}{64},\\qquad Z=\\frac{\\pi(d_o^4-d_i^4)}{32d_o}", explanation: "曲げのIは64分のπで、Zは最外縁do/2で割る。ねじりのIp・Zpとは係数が異なる。", cue: "中空円の曲げ：64と32do", diagram: "additional-cantilever-tip-hollow", pages: [12, 13] },
+  { id: "mm-f-simple-point-general", topic: "beam-statics", title: "単純支持ばりの偏心集中荷重", prompt: "支間L=a+bで左支点からaの位置に集中荷重Pがあるときの反力とMmaxは？", formula: "R_A=\\frac{Pb}{L},\\qquad R_B=\\frac{Pa}{L},\\qquad M_{max}=\\frac{Pab}{L}", explanation: "モーメントのつり合いで反力を求め、荷重点で左右の曲げモーメントが一致して最大となる。", cue: "反力は反対側距離、最大MはPab/L", diagram: "additional-simple-point-rect", pages: [10] },
+  { id: "mm-f-cantilever-tip", topic: "beam-statics", title: "片持ちばりの自由端集中荷重", prompt: "長さLの片持ちばり自由端に集中荷重Pが作用するときの固定端反力とモーメントは？", formula: "R=P,\\qquad |M_0|=PL", explanation: "せん断力は全長で一定、曲げモーメントは自由端0から固定端へ直線的に増え、固定端で絶対値が最大となる。", cue: "自由端荷重：PとPL", diagram: "additional-cantilever-tip-hollow", pages: [12] },
+  { id: "mm-f-cantilever-udl-free", topic: "beam-statics", title: "片持ちばり等分布荷重（自由端座標）", prompt: "自由端をx=0とする全長等分布荷重wのV(x)、M(x)、固定端最大値は？", formula: "V(x)=-wx,\\qquad M(x)=-\\frac{wx^2}{2},\\qquad |M_0|=\\frac{wL^2}{2}", explanation: "自由端条件V(0)=M(0)=0から積分する。固定端x=Lで曲げモーメントの絶対値が最大となる。", cue: "自由端からx：Vは一次、Mは二次", diagram: "additional-cantilever-udl-hollow", pages: [13] },
   { id: "mm-f-shear-strain", topic: "torsion", title: "ねじりのせん断ひずみ", prompt: "軸中心から半径rのせん断ひずみは？", formula: "\\gamma(r)=r\\frac{d\\theta}{dx}", explanation: "同じ断面の回転でも外側ほど移動距離が大きいため、ひずみは半径に比例する。", cue: "半径×単位長さ当たりのねじれ", diagram: "solid-shaft", pages: [1] },
   { id: "mm-f-shear-stress", topic: "torsion", title: "せん断応力分布", prompt: "フックの法則を使ったせん断応力は？", formula: "\\tau(r)=G\\gamma(r)=Gr\\frac{d\\theta}{dx}", explanation: "線形弾性範囲ではせん断応力はせん断ひずみに横弾性係数Gを掛ける。", cue: "G×ひずみ、外周が最大", diagram: "solid-shaft", pages: [1] },
   { id: "mm-f-polar-moment", topic: "torsion", title: "極断面二次モーメント", prompt: "極断面二次モーメントの定義と直交軸の関係は？", formula: "I_p=\\int_A r^2\\,dA=I_x+I_y", explanation: "断面の各微小面積を軸中心からの距離の二乗で重み付けした量。", cue: "r²を面積積分", pages: [1, 2] },
@@ -187,6 +205,18 @@ const forceUnits = { N: 1, kN: 1000 };
 const stiffnessUnits = { "N/mm": 1, "kN/m": 1, "N/m": 0.001 };
 
 export const MATERIAL_MECHANICS_QUESTIONS: MaterialMechanicsQuestion[] = [
+  question({ id: "mm-q-add-c3-reactions", topic: "beam-statics", genre: "追加例題3・固定端反力", difficulty: 2, format: "text", context: "長さL=2.0 mの片持ちばり自由端にP=4.0 kNが下向きに作用する。断面は外径do=100 mm、内径di=80 mmの中空円。", prompt: "固定端の鉛直反力Rと反力モーメントの大きさ|M0|を求めよ。", answer: "\\(R=4.0\\,\\mathrm{kN},\\;|M_0|=8.0\\,\\mathrm{kN\\,m}\\)", keywords: ["4.0", "8.0", "上向き"], minKeywords: 2, formula: "R=P,\\quad |M_0|=PL", steps: ["鉛直力のつり合いから固定端反力は荷重と逆向きで\\(R=P=4.0\\,\\mathrm{kN}\\)。", "荷重Pの固定端まわり腕長はL=2.0 m。", "\\(|M_0|=PL=4.0(2.0)=8.0\\,\\mathrm{kN m}\\)。反力モーメントは荷重の回転を打ち消す向き。"], explanation: "固定端は力反力とモーメント反力の両方を持つ。", diagram: "additional-cantilever-tip-hollow", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c3-mmax", topic: "beam-statics", genre: "追加例題3・SFD/BMD", difficulty: 3, format: "number", context: "L=2.0 mの片持ちばり自由端にP=4.0 kN。自由端から固定端へxを測る。", prompt: "V(x)、M(x)とSFD/BMDの形を確認し、最大曲げモーメントの大きさを求めよ。", answer: "8.0 kN·m", numericAnswer: 8000, expectedUnit: "N·m", acceptedUnits: torqueUnits, requiresUnit: true, tolerance: 40, formula: "V(x)=-P,\\quad M(x)=-Px,\\quad |M_{max}|=PL", steps: ["自由端荷重直後から固定端まで\\(V(x)=-4.0\\) kNで、SFDは一定。", "自由端条件M(0)=0より\\(M(x)=-4.0x\\) kN·mで、BMDは三角形。", "固定端x=2.0 mで\\(|M_{max}|=4.0(2.0)=8.0\\,\\mathrm{kN m}\\)。"], explanation: "負号は曲げの向きを表し、応力の大きさには|Mmax|を使う。", diagram: "additional-cantilever-tip-hollow", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c3-stress", topic: "beam-statics", genre: "追加例題3・中空円曲げ応力", difficulty: 3, format: "number", context: "|Mmax|=8.0 kN·m。中空円断面do=100 mm、di=80 mm。", prompt: "曲げのIとZを求め、最大曲げ応力の大きさを求めよ。", answer: "138.02 MPa", numericAnswer: 138.02, expectedUnit: "MPa", acceptedUnits: stressUnits, requiresUnit: true, tolerance: 0.15, formula: "I=\\frac{\\pi(d_o^4-d_i^4)}{64},\\quad Z=\\frac{\\pi(d_o^4-d_i^4)}{32d_o}", steps: ["\\(I=\\pi(100^4-80^4)/64=2.8981\\times10^6\\,\\mathrm{mm^4}\\)。これは曲げのIであり極断面二次モーメントIpではない。", "\\(Z=I/(d_o/2)=57962.4\\,\\mathrm{mm^3}\\)。", "\\(\\sigma_{max}=8.0\\times10^6/57962.4=138.02\\,\\mathrm{MPa}\\)。"], explanation: "中空円の曲げ断面係数はπ(do⁴−di⁴)/(32do)。ねじり用Zpの半分になる。", diagram: "additional-cantilever-tip-hollow", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c4-reactions", topic: "beam-statics", genre: "追加例題4・固定端反力", difficulty: 2, format: "text", context: "長さL=3.0 mの片持ちばり全体にw=0.50 kN/mの下向き等分布荷重。断面はdo=100 mm、di=80 mmの中空円。", prompt: "合力、固定端鉛直反力R、反力モーメントの大きさ|M0|を求めよ。", answer: "合力1.50 kNが中央に作用し、\\(R=1.50\\,\\mathrm{kN},\\;|M_0|=2.25\\,\\mathrm{kN\\,m}\\)", keywords: ["1.50", "2.25", "中央"], minKeywords: 3, formula: "R=wL,\\quad |M_0|=\\frac{wL^2}{2}", steps: ["荷重図の面積から合力\\(W=wL=0.50(3.0)=1.50\\,\\mathrm{kN}\\)。", "合力は固定端からL/2=1.50 mの位置に作用する。", "\\(R=W=1.50\\,\\mathrm{kN}\\)、\\(|M_0|=W(L/2)=1.50(1.50)=2.25\\,\\mathrm{kN m}\\)。"], explanation: "固定端反力は次問のSFD/BMD端値と一致する。", diagram: "additional-cantilever-udl-hollow", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c4-mmax", topic: "beam-statics", genre: "追加例題4・SFD/BMD", difficulty: 3, format: "number", context: "L=3.0 m、w=0.50 kN/m。自由端をx=0、固定端をx=Lとする。", prompt: "V(x)、M(x)を示してSFD/BMDを説明し、最大曲げモーメントの大きさを求めよ。", answer: "2.25 kN·m", numericAnswer: 2250, expectedUnit: "N·m", acceptedUnits: torqueUnits, requiresUnit: true, tolerance: 20, formula: "V(x)=-wx,\\quad M(x)=-\\frac{wx^2}{2}", steps: ["自由端条件V(0)=0から\\(V(x)=-0.50x\\) kN。SFDは三角形。", "自由端条件M(0)=0から\\(M(x)=-0.25x^2\\) kN·m。BMDは放物線。", "固定端x=3.0 mで\\(|M_{max}|=0.50(3.0)^2/2=2.25\\,\\mathrm{kN m}\\)。"], explanation: "自由端座標ではV=-wx、M=-wx²/2となり、いずれも固定端で絶対値最大。", diagram: "additional-cantilever-udl-hollow", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c4-stress", topic: "beam-statics", genre: "追加例題4・中空円曲げ応力", difficulty: 3, format: "number", context: "|Mmax|=2.25 kN·m。中空円断面do=100 mm、di=80 mm。", prompt: "最大曲げ応力の大きさを求めよ。", answer: "38.82 MPa", numericAnswer: 38.82, expectedUnit: "MPa", acceptedUnits: stressUnits, requiresUnit: true, tolerance: 0.12, formula: "\\sigma_{max}=\\frac{|M_{max}|}{Z},\\quad Z=\\frac{\\pi(d_o^4-d_i^4)}{32d_o}", steps: ["曲げ断面係数\\(Z=\\pi(100^4-80^4)/(32(100))=57962.4\\,\\mathrm{mm^3}\\)。", "\\(|M_{max}|=2.25\\times10^6\\,\\mathrm{Nmm}\\)。", "\\(\\sigma_{max}=2.25\\times10^6/57962.4=38.82\\,\\mathrm{MPa}\\)。"], explanation: "同じ中空円断面でも荷重状態が変わればMmaxが変わり、応力はMmaxに比例する。", diagram: "additional-cantilever-udl-hollow", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c1-reactions", topic: "beam-statics", genre: "追加例題1・支点反力", difficulty: 2, format: "text", context: "支間L=4.0 mの単純支持ばり。左支点Aからa=2.5 m（右支点Bまでb=1.5 m）の位置にP=8.0 kNが下向きに作用する。断面は幅50 mm、高さ120 mmの長方形。", prompt: "支点反力RA、RBを求めよ。", answer: "\\(R_A=3.0\\,\\mathrm{kN},\\;R_B=5.0\\,\\mathrm{kN}\\)（ともに上向き）", keywords: ["3.0", "5.0", "上向き"], minKeywords: 3, formula: "R_A=\\frac{Pb}{L},\\quad R_B=\\frac{Pa}{L}", steps: ["B点回りまたは一般式から、A反力には反対側距離b=1.5 mを掛ける。", "\\(R_A=8.0(1.5)/4.0=3.0\\,\\mathrm{kN}\\)。", "\\(R_B=8.0(2.5)/4.0=5.0\\,\\mathrm{kN}\\)、確認：RA+RB=P=8.0 kN。"], explanation: "偏心集中荷重では近い支点Bの反力が大きくなる。次問のSFD/BMDへ反力を引き継ぐ。", diagram: "additional-simple-point-rect", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c1-mmax", topic: "beam-statics", genre: "追加例題1・SFD/BMD", difficulty: 3, format: "number", context: "L=4.0 m、P=8.0 kN、a=2.5 m、b=1.5 m、RA=3.0 kN、RB=5.0 kN。", prompt: "SFD/BMDの要点を確認し、最大曲げモーメントMmaxを求めよ。", answer: "7.50 kN·m", numericAnswer: 7500, expectedUnit: "N·m", acceptedUnits: torqueUnits, requiresUnit: true, tolerance: 30, formula: "M_{max}=R_Aa=\\frac{Pab}{L}", steps: ["荷重点の左ではV=+3.0 kN、右ではV=3.0-8.0=-5.0 kNとなり、荷重点で符号が変わる。", "BMDはAの0から荷重点まで傾き+3.0で直線増加し、その後傾き-5.0でBの0へ戻る。", "\\(M_{max}=3.0(2.5)=Pab/L=8.0(2.5)(1.5)/4.0=7.50\\,\\mathrm{kN m}\\)。"], explanation: "集中荷重位置でVが正から負へ変わるため、同位置でMが最大となる。", diagram: "additional-simple-point-rect", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c1-stress", topic: "beam-statics", genre: "追加例題1・長方形曲げ応力", difficulty: 3, format: "number", context: "Mmax=7.50 kN·m。長方形断面は幅b=50 mm、高さh=120 mm。", prompt: "断面係数Zを求め、最大曲げ応力の大きさを求めよ。", answer: "62.5 MPa", numericAnswer: 62.5, expectedUnit: "MPa", acceptedUnits: stressUnits, requiresUnit: true, tolerance: 0.2, formula: "Z=\\frac{bh^2}{6},\\quad \\sigma_{max}=\\frac{M_{max}}{Z}", steps: ["曲げの断面係数は\\(Z=50(120)^2/6=120000\\,\\mathrm{mm^3}\\)。極断面係数Zpは使わない。", "\\(M_{max}=7.50\\times10^6\\,\\mathrm{Nmm}\\)へ単位変換する。", "\\(\\sigma_{max}=7.50\\times10^6/120000=62.5\\,\\mathrm{N/mm^2}=62.5\\,\\mathrm{MPa}\\)。"], explanation: "上下縁で引張・圧縮の符号は逆だが、最大値の大きさは同じ。", diagram: "additional-simple-point-rect", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c2-reactions", topic: "beam-statics", genre: "追加例題2・支点反力", difficulty: 2, format: "text", context: "支間L=4.0 mの単純支持ばり全体にw=6.0 kN/mの下向き等分布荷重。断面は幅50 mm、高さ120 mmの長方形。", prompt: "等価集中荷重と支点反力RA、RBを求めよ。", answer: "合力24.0 kNが中央に作用し、\\(R_A=R_B=12.0\\,\\mathrm{kN}\\)（上向き）", keywords: ["24.0", "12.0", "中央"], minKeywords: 3, formula: "W=wL,\\quad R_A=R_B=\\frac{wL}{2}", steps: ["分布荷重図の面積から\\(W=6.0(4.0)=24.0\\,\\mathrm{kN}\\)。", "長方形荷重図の図心は支間中央x=L/2=2.0 m。", "左右対称かつRA+RB=Wより\\(R_A=R_B=12.0\\,\\mathrm{kN}\\)。"], explanation: "反力を次問のV(x)、M(x)の初期値として使う。", diagram: "additional-simple-udl-rect", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c2-mmax", topic: "beam-statics", genre: "追加例題2・SFD/BMD", difficulty: 3, format: "number", context: "L=4.0 m、w=6.0 kN/m、RA=RB=12.0 kN。", prompt: "V(x)、M(x)から最大曲げモーメントMmaxを求めよ。", answer: "12.0 kN·m", numericAnswer: 12000, expectedUnit: "N·m", acceptedUnits: torqueUnits, requiresUnit: true, tolerance: 50, formula: "V=R_A-wx,\\quad M=R_Ax-\\frac{wx^2}{2}", steps: ["\\(V(x)=12.0-6.0x\\) kNは直線で、V=0よりx=2.0 m。", "\\(M(x)=12.0x-3.0x^2\\) kN·mは両端0の放物線。", "中央へ代入し\\(M_{max}=12.0(2.0)-3.0(2.0)^2=12.0\\,\\mathrm{kN m}=wL^2/8\\)。"], explanation: "SFDは直線、BMDは放物線となり、V=0の中央でMが最大。", diagram: "additional-simple-udl-rect", pages: [10, 11, 12, 13] }),
+  question({ id: "mm-q-add-c2-stress", topic: "beam-statics", genre: "追加例題2・長方形曲げ応力", difficulty: 3, format: "number", context: "Mmax=12.0 kN·m。長方形断面は幅b=50 mm、高さh=120 mm。", prompt: "最大曲げ応力の大きさを求めよ。", answer: "100 MPa", numericAnswer: 100, expectedUnit: "MPa", acceptedUnits: stressUnits, requiresUnit: true, tolerance: 0.3, formula: "I=\\frac{bh^3}{12},\\quad Z=\\frac{bh^2}{6},\\quad \\sigma_{max}=\\frac{M_{max}}{Z}", steps: ["\\(I=50(120)^3/12=7.20\\times10^6\\,\\mathrm{mm^4}\\)。", "\\(Z=I/(h/2)=50(120)^2/6=120000\\,\\mathrm{mm^3}\\)。", "\\(\\sigma_{max}=12.0\\times10^6/120000=100\\,\\mathrm{MPa}\\)。"], explanation: "曲げには断面二次モーメントIと断面係数Zを使い、極断面量Ip・Zpは使わない。", diagram: "additional-simple-udl-rect", pages: [10, 11, 12, 13] }),
   question({ id: "mm-q-strain-distribution", topic: "torsion", genre: "応力分布", difficulty: 1, format: "choice", prompt: "一様な中実丸軸をねじったとき、せん断応力τの半径方向分布として正しいものを選べ。", answer: "中心で0、外周へ向かって直線的に増加する", options: ["断面全体で一定", "中心で最大、外周で0", "中心で0、外周へ向かって直線的に増加する", "半径によらず放物線状に減少する"], formula: "\\tau(r)=\\frac{Tr}{I_p}", steps: ["\\(\\tau=Gr\\,d\\theta/dx\\)より半径rに比例する。", "したがってr=0で0、r=Rで最大。"], explanation: "ねじりのせん断応力は外周ほど大きい。問題図は応力の向きと外周最大を示すが、選択肢の答えは図中に書いていない。", diagram: "solid-shaft", pages: [1, 3] }),
   question({ id: "mm-q-ip-definition", topic: "torsion", genre: "定義", difficulty: 1, format: "text", prompt: "極断面二次モーメントIpの積分定義と、直交する断面二次モーメントIx、Iyとの関係を書け。", answer: "\\(I_p=\\int_A r^2\\,dA=I_x+I_y\\)", accepted: ["Ip=∫r²dA=Ix+Iy"], keywords: ["r^2", "I_x+I_y"], minKeywords: 2, formula: "I_p=\\int_A r^2\\,dA=I_x+I_y", steps: ["極Oから微小面積dAまでの距離をrとする。", "\\(r^2=x^2+y^2\\)を面積積分する。"], explanation: "範囲ノート2ページの定義と直交軸の関係。", pages: [1, 2] }),
   question({ id: "mm-q-solid-g", topic: "torsion", genre: "まとめ演習1(1)", difficulty: 2, format: "number", context: "直径d=20 mm、長さL=300 mmの中実丸軸。トルクT=500 N·m、ねじれ角Θ=7.0°。", prompt: "横弾性係数Gを求めよ。", answer: "78.2 GPa", numericAnswer: 78.2, expectedUnit: "GPa", acceptedUnits: gpaUnits, requiresUnit: true, tolerance: 0.5, formula: "G=\\frac{TL}{\\Theta I_p},\\quad I_p=\\frac{\\pi d^4}{32}", steps: ["\\(I_p=\\pi(20)^4/32=1.571\\times10^4\\,\\mathrm{mm^4}\\)", "\\(T=5.00\\times10^5\\,\\mathrm{Nmm},\\;\\Theta=7\\pi/180=0.1222\\,\\mathrm{rad}\\)", "\\(G=TL/(\\Theta I_p)=7.82\\times10^4\\,\\mathrm{N/mm^2}=78.2\\,\\mathrm{GPa}\\)"], explanation: "度をradへ、N·mをN·mmへ直してから代入する。", diagram: "solid-shaft", pages: [9] }),
@@ -256,6 +286,111 @@ function examQuestion(base: Omit<MaterialMechanicsExamQuestion, "topicId" | "sou
   };
 }
 
+type BeamExamFamily = "simple-point-rect" | "simple-udl-rect" | "cantilever-tip-hollow" | "cantilever-udl-hollow";
+type BeamExamCase = {
+  family: BeamExamFamily;
+  diagram: Extract<MaterialMechanicsDiagramKind,
+    | "additional-simple-point-rect"
+    | "additional-simple-udl-rect"
+    | "additional-cantilever-tip-hollow"
+    | "additional-cantilever-udl-hollow">;
+  L: number;
+  P?: number;
+  w?: number;
+  a?: number;
+  b?: number;
+  width?: number;
+  height?: number;
+  do?: number;
+  di?: number;
+};
+
+const BEAM_EXAM_CASES: BeamExamCase[] = [
+  { family: "simple-point-rect", diagram: "additional-simple-point-rect", L: 4, P: 8, a: 2.5, b: 1.5, width: 50, height: 120 },
+  { family: "simple-udl-rect", diagram: "additional-simple-udl-rect", L: 4, w: 6, width: 50, height: 120 },
+  { family: "cantilever-tip-hollow", diagram: "additional-cantilever-tip-hollow", L: 2, P: 4, do: 100, di: 80 },
+  { family: "cantilever-udl-hollow", diagram: "additional-cantilever-udl-hollow", L: 3, w: 0.5, do: 100, di: 80 },
+  { family: "simple-point-rect", diagram: "additional-simple-point-rect", L: 5, P: 6, a: 2, b: 3, width: 60, height: 140 },
+  { family: "cantilever-udl-hollow", diagram: "additional-cantilever-udl-hollow", L: 2.5, w: 0.8, do: 120, di: 90 },
+];
+
+function buildBeamExamSection(beam: BeamExamCase, examPrefix: string): MaterialMechanicsExamSection {
+  const isSimple = beam.family.startsWith("simple-");
+  const isPoint = beam.family.includes("point") || beam.family.includes("tip");
+  const isRect = beam.family.endsWith("rect");
+  const P = beam.P ?? 0;
+  const w = beam.w ?? 0;
+  const a = beam.a ?? 0;
+  const b = beam.b ?? 0;
+  const reactionA = beam.family === "simple-point-rect" ? P * b / beam.L : beam.family === "simple-udl-rect" ? w * beam.L / 2 : isPoint ? P : w * beam.L;
+  const reactionB = beam.family === "simple-point-rect" ? P * a / beam.L : beam.family === "simple-udl-rect" ? reactionA : 0;
+  const maxMoment = beam.family === "simple-point-rect" ? P * a * b / beam.L : beam.family === "simple-udl-rect" ? w * beam.L ** 2 / 8 : beam.family === "cantilever-tip-hollow" ? P * beam.L : w * beam.L ** 2 / 2;
+  const sectionModulus = isRect
+    ? (beam.width ?? 0) * (beam.height ?? 0) ** 2 / 6
+    : Math.PI * ((beam.do ?? 0) ** 4 - (beam.di ?? 0) ** 4) / (32 * (beam.do ?? 1));
+  const stress = maxMoment * 1e6 / sectionModulus;
+  const loadContext = beam.family === "simple-point-rect"
+    ? `支間L=${beam.L} mの単純支持ばりで、Aからa=${a} m（Bまでb=${b} m）に集中荷重P=${P} kN。`
+    : beam.family === "simple-udl-rect"
+      ? `支間L=${beam.L} mの単純支持ばり全長に等分布荷重w=${w} kN/m。`
+      : beam.family === "cantilever-tip-hollow"
+        ? `長さL=${beam.L} mの片持ちばり自由端に集中荷重P=${P} kN。自由端をx=0とする。`
+        : `長さL=${beam.L} mの片持ちばり全長に等分布荷重w=${w} kN/m。自由端をx=0とする。`;
+  const sectionContext = isRect
+    ? `断面は幅b=${beam.width} mm、高さh=${beam.height} mmの長方形。`
+    : `断面は外径do=${beam.do} mm、内径di=${beam.di} mmの中空円。`;
+  const reactionAnswer = isSimple
+    ? `\\(R_A=${fixed(reactionA, 3)}\\,\\mathrm{kN},\\;R_B=${fixed(reactionB, 3)}\\,\\mathrm{kN}\\)（上向き）`
+    : `\\(R=${fixed(reactionA, 3)}\\,\\mathrm{kN},\\;|M_0|=${fixed(maxMoment, 3)}\\,\\mathrm{kN\\,m}\\)`;
+  const reactionFormula = beam.family === "simple-point-rect"
+    ? "R_A=\\frac{Pb}{L},\\quad R_B=\\frac{Pa}{L}"
+    : beam.family === "simple-udl-rect"
+      ? "R_A=R_B=\\frac{wL}{2}"
+      : beam.family === "cantilever-tip-hollow"
+        ? "R=P,\\quad |M_0|=PL"
+        : "R=wL,\\quad |M_0|=\\frac{wL^2}{2}";
+  const reactionSteps = beam.family === "simple-point-rect"
+    ? [`\\(R_A=${P}(${b})/${beam.L}=${fixed(reactionA, 3)}\\,\\mathrm{kN}\\)。`, `\\(R_B=${P}(${a})/${beam.L}=${fixed(reactionB, 3)}\\,\\mathrm{kN}\\)。`, `確認：\\(R_A+R_B=${fixed(P, 3)}\\,\\mathrm{kN}=P\\)。`]
+    : beam.family === "simple-udl-rect"
+      ? [`合力は\\(W=wL=${w}(${beam.L})=${fixed(w * beam.L, 3)}\\,\\mathrm{kN}\\)、作用位置は中央。`, "左右対称なので合力を二等分する。", `\\(R_A=R_B=${fixed(reactionA, 3)}\\,\\mathrm{kN}\\)。`]
+      : beam.family === "cantilever-tip-hollow"
+        ? [`鉛直力のつり合いから\\(R=P=${fixed(P, 3)}\\,\\mathrm{kN}\\)。`, `荷重の固定端まわり腕長はL=${beam.L} m。`, `\\(|M_0|=PL=${fixed(maxMoment, 3)}\\,\\mathrm{kN m}\\)。`]
+        : [`合力は\\(W=wL=${fixed(reactionA, 3)}\\,\\mathrm{kN}\\)、作用位置は固定端からL/2。`, `鉛直力のつり合いから\\(R=${fixed(reactionA, 3)}\\,\\mathrm{kN}\\)。`, `\\(|M_0|=wL^2/2=${fixed(maxMoment, 3)}\\,\\mathrm{kN m}\\)。`];
+  const vmFormula = beam.family === "simple-point-rect"
+    ? "V=R_A\\;(x<a),\\;V=-R_B\\;(x>a),\\quad M_{max}=\\frac{Pab}{L}"
+    : beam.family === "simple-udl-rect"
+      ? "V=R_A-wx,\\quad M=R_Ax-\\frac{wx^2}{2},\\quad M_{max}=\\frac{wL^2}{8}"
+      : beam.family === "cantilever-tip-hollow"
+        ? "V=-P,\\quad M=-Px,\\quad |M_{max}|=PL"
+        : "V=-wx,\\quad M=-\\frac{wx^2}{2},\\quad |M_{max}|=\\frac{wL^2}{2}";
+  const vmSteps = beam.family === "simple-point-rect"
+    ? [`荷重点左側は\\(V=+R_A=${fixed(reactionA, 3)}\\) kN、右側は\\(V=-R_B=-${fixed(reactionB, 3)}\\) kN。`, "BMDは両支点で0、荷重点まで直線増加して以後直線減少する。", `\\(M_{max}=Pab/L=${P}(${a})(${b})/${beam.L}=${fixed(maxMoment, 3)}\\,\\mathrm{kN m}\\)。`]
+    : beam.family === "simple-udl-rect"
+      ? [`\\(V(x)=${fixed(reactionA, 3)}-${w}x\\) kN、V=0はx=L/2。`, `\\(M(x)=${fixed(reactionA, 3)}x-${fixed(w / 2, 3)}x^2\\) kN·mで、BMDは放物線。`, `\\(M_{max}=wL^2/8=${fixed(maxMoment, 3)}\\,\\mathrm{kN m}\\)。`]
+      : beam.family === "cantilever-tip-hollow"
+        ? [`自由端から固定端まで\\(V=-${P}\\) kNでSFDは一定。`, `\\(M(x)=-${P}x\\) kN·mでBMDは三角形。`, `固定端x=Lで\\(|M_{max}|=PL=${fixed(maxMoment, 3)}\\,\\mathrm{kN m}\\)。`]
+        : [`自由端条件から\\(V(x)=-${w}x\\) kNでSFDは三角形。`, `\\(M(x)=-${fixed(w / 2, 3)}x^2\\) kN·mでBMDは放物線。`, `固定端x=Lで\\(|M_{max}|=wL^2/2=${fixed(maxMoment, 3)}\\,\\mathrm{kN m}\\)。`];
+  const sectionFormula = isRect
+    ? "I=\\frac{bh^3}{12},\\quad Z=\\frac{bh^2}{6},\\quad \\sigma_{max}=\\frac{M_{max}}{Z}"
+    : "I=\\frac{\\pi(d_o^4-d_i^4)}{64},\\quad Z=\\frac{\\pi(d_o^4-d_i^4)}{32d_o},\\quad \\sigma_{max}=\\frac{|M_{max}|}{Z}";
+  const sectionSteps = isRect
+    ? [`曲げの\\(I=${fixed((beam.width ?? 0) * (beam.height ?? 0) ** 3 / 12, 1)}\\,\\mathrm{mm^4}\\)。`, `\\(Z=bh^2/6=${fixed(sectionModulus, 1)}\\,\\mathrm{mm^3}\\)。`, `\\(\\sigma_{max}=${fixed(maxMoment, 3)}\\times10^6/${fixed(sectionModulus, 1)}=${fixed(stress, 2)}\\,\\mathrm{MPa}\\)。`]
+    : [`曲げの\\(I=\\pi(d_o^4-d_i^4)/64=${fixed(sectionModulus * (beam.do ?? 0) / 2, 1)}\\,\\mathrm{mm^4}\\)。`, `\\(Z=I/(d_o/2)=${fixed(sectionModulus, 1)}\\,\\mathrm{mm^3}\\)。`, `\\(\\sigma_{max}=${fixed(maxMoment, 3)}\\times10^6/${fixed(sectionModulus, 1)}=${fixed(stress, 2)}\\,\\mathrm{MPa}\\)。`];
+
+  return {
+    number: 5,
+    title: "はりの反力・SFD/BMD・最大曲げ応力",
+    topic: "beam-statics",
+    topicIds: ["beam-statics"],
+    points: 20,
+    context: `${loadContext}${sectionContext} 曲げにはI・Zを用い、ねじり用のIp・Zpは用いない。`,
+    questions: [
+      examQuestion({ id: `${examPrefix}-5-1`, major: 5, sub: 1, points: 7, topic: "beam-statics", genre: "反力", difficulty: 2, format: "text", prompt: isSimple ? "支点反力RA、RBを求めよ。" : "固定端鉛直反力Rと反力モーメントの大きさ|M0|を求めよ。", answer: reactionAnswer, keywords: [fixed(reactionA, 3).toString(), fixed(isSimple ? reactionB : maxMoment, 3).toString()], minKeywords: 2, formula: reactionFormula, steps: reactionSteps, explanation: "反力を次問のSFD/BMDへ引き継ぐ。力とモーメントのつり合いを単位付きで確認する。", diagram: beam.diagram, pages: [10, 11, 12, 13] }),
+      examQuestion({ id: `${examPrefix}-5-2`, major: 5, sub: 2, points: 7, topic: "beam-statics", genre: "SFD/BMDと最大曲げモーメント", difficulty: 3, format: "diagram", prompt: "前問の反力を用いてV(x)、M(x)を示し、SFD/BMDを描いて最大曲げモーメントの大きさを求めよ。", answer: `\\(|M_{max}|=${fixed(maxMoment, 3)}\\,\\mathrm{kN\\,m}\\)。式と図の形は解答手順のとおり。`, keywords: ["V", "M", fixed(maxMoment, 3).toString()], minKeywords: 3, dependsOn: [`${examPrefix}-5-1`], formula: vmFormula, steps: vmSteps, explanation: "荷重状態に応じたV・Mを作り、最大曲げモーメントを次問へ引き継ぐ。", diagram: beam.diagram, pages: [10, 11, 12, 13] }),
+      examQuestion({ id: `${examPrefix}-5-3`, major: 5, sub: 3, points: 6, topic: "beam-statics", genre: "最大曲げ応力", difficulty: 3, format: "number", prompt: "前問の|Mmax|と断面係数Zを用いて、最外縁の最大曲げ応力の大きさを求めよ。", answer: `${fixed(stress, 2)} MPa`, numericAnswer: fixed(stress, 5), expectedUnit: "MPa", acceptedUnits: stressUnits, requiresUnit: true, tolerance: Math.max(0.1, stress * 0.005), dependsOn: [`${examPrefix}-5-2`], formula: sectionFormula, steps: sectionSteps, explanation: "曲げのI・Zを使う。極断面二次モーメントIp・極断面係数Zpへの取り違えに注意する。", diagram: beam.diagram, pages: [10, 11, 12, 13] }),
+    ],
+  };
+}
 function buildExpectedExam(variant: Variant, index: number): MaterialMechanicsExam {
   const examPrefix = `mm-e${index + 1}`;
   const ip = Math.PI * variant.d ** 4 / 32;
@@ -284,12 +419,7 @@ function buildExpectedExam(variant: Variant, index: number): MaterialMechanicsEx
   const springAllowableLoad = Math.min(springStressLoad, springDeflectionLoad);
   const springGoverning = springStressLoad <= springDeflectionLoad ? "線材の許容せん断応力" : "許容たわみ";
 
-  const beamReaction = variant.beamW * variant.beamL / 2;
-  const beamMoment = variant.beamW * variant.beamL ** 2 / 8;
-  const beamSectionModulus = Math.PI * variant.beamD ** 3 / 32;
-  const beamStress = beamMoment * 1e6 / beamSectionModulus;
-
-  const sections: MaterialMechanicsExamSection[] = [
+  const baseSections: MaterialMechanicsExamSection[] = [
     {
       number: 1,
       title: "ねじり設計の前提",
@@ -340,20 +470,11 @@ function buildExpectedExam(variant: Variant, index: number): MaterialMechanicsEx
         examQuestion({ id: `${examPrefix}-4-3`, major: 4, sub: 3, points: 7, topic: "coil-spring", genre: "二条件の許容荷重", difficulty: 3, format: "number", prompt: "前問までのkとPτを使い、許容たわみからPδを求め、二条件を満たす許容荷重を決定せよ。", answer: `${fixed(springAllowableLoad, 1)} N（${springGoverning}が支配）`, numericAnswer: fixed(springAllowableLoad, 5), expectedUnit: "N", acceptedUnits: forceUnits, requiresUnit: true, tolerance: Math.max(2, springAllowableLoad * 0.005), dependsOn: [`${examPrefix}-4-1`, `${examPrefix}-4-2`], formula: "P_{al}=\\min(P_\\tau,P_\\delta),\\qquad P_\\delta=k\\delta_{al}", steps: [`前問より \\(k=${fixed(springK, 3)}\\,\\mathrm{N/mm}\\)、\\(P_\\tau=${fixed(springStressLoad, 1)}\\,\\mathrm{N}\\)。`, `\\(P_\\delta=k\\delta_{al}=${fixed(springK, 3)}(${variant.springDeflectionLimit})=${fixed(springDeflectionLoad, 1)}\\,\\mathrm{N}\\)`, `\\(P_{al}=\\min(${fixed(springStressLoad, 1)},${fixed(springDeflectionLoad, 1)})=${fixed(springAllowableLoad, 1)}\\,\\mathrm{N}\\)`, `支配条件は${springGoverning}。`], explanation: "応力だけでなく変形量も設計条件である。小さい許容荷重を採用して両方を同時に満たす。", diagram: "coil-spring", pages: [4, 9] }),
       ],
     },
-    {
-      number: 5,
-      title: "はりの反力・SFD/BMD・最大応力",
-      topic: "beam-statics",
-      topicIds: ["beam-statics"],
-      points: 20,
-      context: `支間L=${variant.beamL} mの単純支持ばり全体に等分布荷重w=${variant.beamW} kN/m。断面は直径d=${variant.beamD} mmの中実円。下向き荷重を正のwとし、単純支持端のM=0とする。`,
-      questions: [
-        examQuestion({ id: `${examPrefix}-5-1`, major: 5, sub: 1, points: 7, topic: "beam-statics", genre: "等価荷重と支点反力", difficulty: 2, format: "number", prompt: "分布荷重を等価集中荷重へ置換し、支点反力RA（=RB）を求めよ。", answer: `${fixed(beamReaction, 2)} kN`, numericAnswer: fixed(beamReaction, 5), expectedUnit: "kN", acceptedUnits: { kN: 1, N: 0.001 }, requiresUnit: true, tolerance: Math.max(0.03, beamReaction * 0.005), formula: "R_A=R_B=\\frac{wL}{2}", steps: [`\\(W=wL=${variant.beamW}(${variant.beamL})=${fixed(variant.beamW * variant.beamL, 2)}\\,\\mathrm{kN}\\)`, "合力Wは支間中央L/2に作用する。", `対称性とつり合いより \\(R_A=R_B=W/2=${fixed(beamReaction, 2)}\\,\\mathrm{kN}\\)。`], explanation: "反力は次問のV(x)とM(x)の初期値になるため、向きと作用位置を荷重図へ明記する。", diagram: "simply-supported-udl", pages: [5, 6], overlap: { question: 3, sub: 1 } }),
-        examQuestion({ id: `${examPrefix}-5-2`, major: 5, sub: 2, points: 7, topic: "beam-statics", genre: "SFD/BMDと最大曲げモーメント", difficulty: 3, format: "diagram", prompt: "前問の反力を用いてV(x)、M(x)を示し、SFD/BMDを描いて最大曲げモーメントを求めよ。", answer: `\\(V(x)=${fixed(beamReaction, 2)}-${variant.beamW}x\\)、\\(M(x)=${fixed(beamReaction, 2)}x-${fixed(variant.beamW / 2, 3)}x^2\\)。SFDは直線、BMDは放物線、中央でMmax=${fixed(beamMoment, 3)} kN·m。`, keywords: ["V(x)", "M(x)", "直線", "放物線", fixed(beamMoment, 3).toString()], minKeywords: 4, dependsOn: [`${examPrefix}-5-1`], formula: "\\begin{aligned}V(x)&=R_A-wx\\\\M(x)&=R_Ax-\\frac{wx^2}{2}\\\\M_{max}&=\\frac{wL^2}{8}\\end{aligned}", steps: [`前問より \\(R_A=${fixed(beamReaction, 2)}\\,\\mathrm{kN}\\)。`, `\\(V(x)=R_A-wx\\) は傾き-wの直線で、\\(V=0\\) は \\(x=R_A/w=${fixed(variant.beamL / 2, 3)}\\,\\mathrm{m}\\)。`, `\\(M(x)=R_Ax-wx^2/2\\) は両端0の放物線。`, `中央へ代入し \\(M_{max}=wL^2/8=${fixed(beamMoment, 3)}\\,\\mathrm{kNm}\\)。`], explanation: "形式2第3問と同じく、反力→V=0位置→M最大→SFD/BMDの順で一つの荷重状態を追う。", diagram: "sfd-bmd", pages: [6, 8], overlap: { question: 3, sub: 4 } }),
-        examQuestion({ id: `${examPrefix}-5-3`, major: 5, sub: 3, points: 6, topic: "beam-statics", genre: "最大曲げ応力", difficulty: 3, format: "number", prompt: "前問のMmaxと中実円断面の断面係数を使い、上下縁の最大曲げ応力の大きさを求めよ。", answer: `${fixed(beamStress, 2)} MPa`, numericAnswer: fixed(beamStress, 5), expectedUnit: "MPa", acceptedUnits: stressUnits, requiresUnit: true, tolerance: Math.max(0.3, beamStress * 0.005), dependsOn: [`${examPrefix}-5-2`], formula: "\\sigma_{max}=\\frac{M_{max}}{Z},\\qquad Z=\\frac{\\pi d^3}{32}", steps: [`前問より \\(M_{max}=${fixed(beamMoment, 3)}\\,\\mathrm{kNm}=${fixed(beamMoment * 1e6, 0)}\\,\\mathrm{Nmm}\\)。`, `\\(Z=\\pi(${variant.beamD})^3/32=${fixed(beamSectionModulus, 1)}\\,\\mathrm{mm^3}\\)。`, `\\(\\sigma_{max}=M_{max}/Z=${fixed(beamStress, 2)}\\,\\mathrm{N/mm^2}=${fixed(beamStress, 2)}\\,\\mathrm{MPa}\\)。`], explanation: "形式2第5問(1)(4)の範囲重複を、前問で得た最大曲げモーメントへ接続した。上縁と下縁では引張・圧縮の符号が逆で大きさは同じ。", diagram: "beam-section-stress", pages: [8], overlap: { question: 5, sub: 4 } }),
-      ],
-    },
   ];
+
+  const beamCase = BEAM_EXAM_CASES[index];
+  if (!beamCase) throw new Error("Unknown beam exam variant " + (index + 1));
+  const sections: MaterialMechanicsExamSection[] = [...baseSections, buildBeamExamSection(beamCase, examPrefix)];
 
   return {
     id: `material-mechanics-expected-${index + 1}`,
@@ -369,7 +490,7 @@ function buildExpectedExam(variant: Variant, index: number): MaterialMechanicsEx
     scoreLabel: "100点換算",
     passPercent: 60,
     paper: "A4 portrait",
-    officialConditionsNote: "ねじり・軸設計・密巻コイルばね・はりを、前問結果を引き継ぐ連続計算で出題。形式2は第2・3問の反力/SFD/BMDと、第5問(1)(4)の断面係数・曲げ応力だけを範囲重複として採用し、第4問の断面二次モーメント導出などは除外。",
+    officialConditionsNote: "全13ページの範囲資料に準拠し、ねじり・軸設計・密巻コイルばね・はりを連続計算で出題する。はりは反力→SFD/BMD→最大曲げモーメント→曲げ応力を扱い、曲げのI・Zを使用する。EI、Castigliano、曲率および形式2第4問は範囲外。",
     sections,
     questions: sections.flatMap((section) => section.questions),
   };
@@ -406,22 +527,29 @@ export const MATERIAL_MECHANICS_EXAM_FORMATS = [
   { id: "multi-step", title: "連続する軸設計", description: "断面量→応力条件→ねじり角条件→許容動力を前問の値でつなぐ。", strategy: "記号式→数値式→結果→単位を一列に残す。" },
   { id: "power", title: "伝達動力と中空軸比較", description: "rpmからトルクを求め、中空・中実の必要径と材料量を比較する。", strategy: "rpmのままP=Tωへ入れず、同じT・τalで比較する。" },
   { id: "spring", title: "コイルばね二条件設計", description: "ばね定数、応力上限、たわみ上限から安全な荷重を決める。", strategy: "平均直径Dを用い、二つの許容荷重の小さい方を採る。" },
-  { id: "beam", title: "反力→SFD/BMD→最大応力", description: "等価荷重、反力、V、M、最大曲げ応力を同じはりで連続して求める。", strategy: "前問の反力とMmaxを次問へ引き継ぎ、N・mmへ単位統一する。" },
+  { id: "beam", title: "反力→SFD/BMD→Mmax→曲げ応力", description: "追加範囲4ケース（単純支持・集中/等分布、片持ち・集中/等分布）で、反力から最大曲げ応力まで連続して求める。", strategy: "荷重と支持条件に合うV・Mを作り、曲げのI・Zへ接続する。Ip・Zpと混同しない。" },
 ] as const;
 
 export const MATERIAL_MECHANICS_SOURCE_POLICY = {
   included: [
-    "材料力学範囲ZIP 9枚",
+    "材料力学範囲ZIP 13枚（1〜13ページ）",
+    "追加範囲10ページ：偏心集中荷重の単純支持ばり＋長方形断面の曲げ",
+    "追加範囲11ページ：等分布荷重の単純支持ばり＋長方形断面の曲げ",
+    "追加範囲12ページ：自由端集中荷重の片持ちばり＋中空円断面の曲げ",
+    "追加範囲13ページ：等分布荷重の片持ちばり＋中空円断面の曲げ",
     "材力テスト形式2の第2・3問（支点反力・SFD・BMD）",
-    "材力テスト形式2の第5問(1)(4)（中実円の断面係数と、前問Mmaxを用いる曲げ応力）",
+    "材力テスト形式2の第5問(1)(4)（断面係数と、前問Mmaxを用いる曲げ応力）",
   ],
   formatOnly: ["材料力学形式1 ZIP", "材力テスト形式3 PDF", "材力テスト形式2の紙面・配点"],
   excluded: [
     "形式1・形式3の旧範囲内容",
-    "形式2第4問の長方形断面二次モーメント導出と第5問(2)(3)の旧数値条件",
+    "材力テスト形式2の第4問は出題形式の参照にも内容ソースにも使用せず、第5問(2)(3)の旧数値条件も除外する",
+    "EIを用いるたわみ・たわみ角",
+    "カスティリアーノの定理（Castigliano）",
+    "曲率・曲率半径・M/EI関係",
     "コイルばねのWahl係数・直接せん断補正",
   ],
-  note: "範囲ZIPを正本とし、形式2は今回の連続計算へ直接接続できる反力・SFD/BMD・中実円の最大曲げ応力だけを採用しています。",
+  note: "範囲ZIP全13ページを正本とする。曲げの追加範囲は反力→SFD/BMD→Mmax→σ=M/Zまでとし、I・Zを用いる。EI、Castigliano、曲率、および形式2第4問は対象外。",
 } as const;
 
 export const MATERIAL_MECHANICS_EXAM_SPEC = {

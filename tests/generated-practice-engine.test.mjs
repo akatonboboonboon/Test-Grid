@@ -72,7 +72,7 @@ test("on-demand generation metadata exposes only subjects with source-backed gen
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "network"), false);
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-5"), true);
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-9"), true);
-  assert.equal(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.length, 40);
+  assert.equal(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.length, 44);
   assert.deepEqual(
     [...new Set(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.map((template) => template.subjectId))],
     SUBJECT_IDS,

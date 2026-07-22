@@ -292,6 +292,10 @@ export const GENERATED_PRACTICE_SOURCE_REFERENCES = {
   "material-hollow-shaft-stress": ["mm-f-power", "mm-f-hollow-ratio", "mm-f-tau-max"],
   "material-coil-spring-deflection": ["mm-f-spring-rate", "mm-f-spring-stress", "mm-f-spring-deflection"],
   "material-simple-beam-udl": ["mm-f-resultant", "mm-f-equilibrium", "mm-f-simple-udl", "mm-f-beam-diff", "mm-q-udl-mmax"],
+  "material-simple-beam-point-rect": ["mm-f-bending-stress", "mm-f-rectangle-bending", "mm-f-simple-point-general"],
+  "material-simple-beam-udl-rect": ["mm-f-bending-stress", "mm-f-rectangle-bending", "mm-f-simple-udl"],
+  "material-cantilever-tip-hollow": ["mm-f-bending-stress", "mm-f-hollow-bending", "mm-f-cantilever-tip"],
+  "material-cantilever-udl-hollow": ["mm-f-bending-stress", "mm-f-hollow-bending", "mm-f-cantilever-udl-free"],
   "smart-first-order-step": ["smart-first-order-step", "smart-pole-definition", "smart-stability-rule"],
   "smart-first-order-pole": ["smart-pole-definition", "smart-stability-rule"],
   "smart-negative-feedback": ["smart-negative-feedback", "smart-characteristic-equation", "smart-pole-definition"],
@@ -1535,6 +1539,10 @@ const MATERIAL_GENERATED_VISUALS: Record<MaterialMechanicsGeneratorTemplateId, M
   "material-hollow-shaft-stress": "hollow-shaft",
   "material-coil-spring-deflection": "coil-spring",
   "material-simple-beam-udl": "simply-supported-udl",
+  "material-simple-beam-point-rect": "additional-simple-point-rect",
+  "material-simple-beam-udl-rect": "additional-simple-udl-rect",
+  "material-cantilever-tip-hollow": "additional-cantilever-tip-hollow",
+  "material-cantilever-udl-hollow": "additional-cantilever-udl-hollow",
 };
 
 function materialGenerated(
@@ -1657,6 +1665,10 @@ const TEMPLATES: PracticeTemplate[] = [
   { id: "material-hollow-shaft-stress", subjectId: "subject-5", kind: "calculation", title: "中空丸軸の最大せん断応力", build: (seedKey, rng) => materialGenerated("material-hollow-shaft-stress", seedKey, rng) },
   { id: "material-coil-spring-deflection", subjectId: "subject-5", kind: "calculation", title: "密巻コイルばねのたわみ", build: (seedKey, rng) => materialGenerated("material-coil-spring-deflection", seedKey, rng) },
   { id: "material-simple-beam-udl", subjectId: "subject-5", kind: "calculation", title: "等分布荷重を受ける単純支持ばり", build: (seedKey, rng) => materialGenerated("material-simple-beam-udl", seedKey, rng) },
+  { id: "material-simple-beam-point-rect", subjectId: "subject-5", kind: "calculation", title: "集中荷重・長方形断面の単純支持ばり", build: (seedKey, rng) => materialGenerated("material-simple-beam-point-rect", seedKey, rng) },
+  { id: "material-simple-beam-udl-rect", subjectId: "subject-5", kind: "calculation", title: "等分布荷重・長方形断面の単純支持ばり", build: (seedKey, rng) => materialGenerated("material-simple-beam-udl-rect", seedKey, rng) },
+  { id: "material-cantilever-tip-hollow", subjectId: "subject-5", kind: "calculation", title: "先端集中荷重・中空円断面の片持ちばり", build: (seedKey, rng) => materialGenerated("material-cantilever-tip-hollow", seedKey, rng) },
+  { id: "material-cantilever-udl-hollow", subjectId: "subject-5", kind: "calculation", title: "等分布荷重・中空円断面の片持ちばり", build: (seedKey, rng) => materialGenerated("material-cantilever-udl-hollow", seedKey, rng) },
   { id: "smart-first-order-step", subjectId: "subject-6", kind: "calculation", title: "一次遅れ応答", build: smartStep },
   { id: "smart-first-order-pole", subjectId: "subject-6", kind: "calculation", title: "極", build: smartPole },
   { id: "smart-negative-feedback", subjectId: "subject-6", kind: "calculation", title: "負帰還", build: smartFeedback },

@@ -766,7 +766,7 @@ export default function MaterialMechanicsSubjectPage() {
           <div className="english-hero-copy statistics-hero-copy">
             <p><span>SUBJECT 05</span><span>RANGE-VERIFIED ONLY</span></p>
             <h1 id="statistics-title">材料力学</h1>
-            <small>範囲ZIPの{MATERIAL_MECHANICS_RANGE_PAGES.length}枚を正本に、ねじり・軸設計・コイルばね・はりを学習します。形式2は範囲と一致する第1〜3問相当だけを採用し、形式1・3は紙面構成の参照に限定しています。</small>
+            <small>範囲ZIPの{MATERIAL_MECHANICS_RANGE_PAGES.length}ページを正本に、ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを学習します。形式2はQ1〜3の範囲一致部だけを照合し、Q4は追加曲げ範囲の出典に使わず、形式1・3は紙面構成の参照に限定しています。</small>
           </div>
           <button className="english-hero-memory-button statistics-hero-card-button" type="button" onClick={() => changeMode("cards")}>
             <span>FORMULAS FIRST</span>
@@ -779,7 +779,7 @@ export default function MaterialMechanicsSubjectPage() {
           <div><span>TOPICS</span><strong>{MATERIAL_MECHANICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{MATERIAL_MECHANICS_FORMULAS.length}</strong><small>枚</small></div>
           <div><span>QUESTIONS</span><strong>{MATERIAL_MECHANICS_QUESTIONS.length}</strong><small>問</small></div>
-          <p>範囲ZIP9枚と、形式2の範囲一致部だけを演習へ収録。A4想定試験{MATERIAL_MECHANICS_EXPECTED_EXAMS.length}回を、50分初期値・練習用100点・60点ラインで解けます。公式は {totalMastered}枚暗記済み。</p>
+          <p>範囲ZIP{MATERIAL_MECHANICS_RANGE_PAGES.length}ページのねじり・はり・曲げ範囲と、形式2 Q1〜3の範囲一致部だけを演習へ収録。A4想定試験{MATERIAL_MECHANICS_EXPECTED_EXAMS.length}回を、50分初期値・練習用100点・60点ラインで解けます。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
         <section ref={workspaceRef} id="statistics-workspace" className="english-workspace statistics-workspace">
@@ -796,11 +796,11 @@ export default function MaterialMechanicsSubjectPage() {
             <section className="english-guide-workspace statistics-scope-workspace" aria-labelledby="statistics-scope-title">
               <div className="english-panel-heading statistics-panel-heading">
                 <div><span>COURSE RANGE</span><h2 id="statistics-scope-title">今回の試験範囲</h2></div>
-                <p>テスト範囲ZIPの{MATERIAL_MECHANICS_RANGE_PAGES.length}枚を正本として整理した{MATERIAL_MECHANICS_TOPICS.length}単元です。形式2は範囲ZIPと一致するはり部分だけを追加しています。</p>
+                <p>テスト範囲ZIPの{MATERIAL_MECHANICS_RANGE_PAGES.length}ページを正本として整理した{MATERIAL_MECHANICS_TOPICS.length}単元です。追加ページ10〜13の曲げ応力・断面量・単純支持/片持ちばりも含み、形式2はQ1〜3の範囲一致部だけを照合資料として使います。</p>
               </div>
               <div className="english-guide-tip statistics-source-policy">
                 <span>SOURCE POLICY</span>
-                <p><b>出題する：</b>範囲ZIP9枚＋形式2の第1〜3問相当　／　<b>除外：</b>形式2の曲げ応力・断面二次モーメント、形式1・3の旧範囲内容<br /><small>{MATERIAL_MECHANICS_SOURCE_POLICY.note} 正式な試験時間と配点は資料で確認できないため、50分・100点・60点は練習用です。</small></p>
+                <p><b>出題する：</b>範囲ZIP{MATERIAL_MECHANICS_RANGE_PAGES.length}ページ（曲げ応力・長方形/中空円断面I/Zを含む）＋形式2 Q1〜3の範囲一致部　／　<b>出典除外：</b>形式2 Q4、形式1・3の旧範囲内容　／　<b>範囲外：</b>EIによるたわみ、曲率、カスティリアーノの定理<br /><small>{MATERIAL_MECHANICS_SOURCE_POLICY.note} 正式な試験時間と配点は資料で確認できないため、50分・100点・60点は練習用です。</small></p>
               </div>
               <div className="english-guide-grid statistics-topic-grid">
                 {MATERIAL_MECHANICS_TOPICS.map((topic) => {
@@ -986,8 +986,8 @@ export default function MaterialMechanicsSubjectPage() {
 
           {mode === "guide" && (
             <section className="english-guide-workspace statistics-guide-workspace" aria-labelledby="statistics-guide-title">
-              <div className="english-panel-heading statistics-panel-heading"><div><span>FORMAT GUIDE</span><h2 id="statistics-guide-title">出題形式ガイド</h2></div><p>形式1・3は紙面構成だけを参照し、形式2は範囲ZIPと一致する支点・反力・SFD・BMDだけを演習へ反映しています。</p></div>
-              <div className="english-guide-tip statistics-format-notice"><span>SOURCE POLICY</span><p>範囲ZIPが今回範囲の正本です。A4模試は{MATERIAL_MECHANICS_EXAM_SPEC.bigQuestionCount}大問・練習用{MATERIAL_MECHANICS_EXAM_SPEC.totalPoints}点で構成し、正式時間と配点は未確認です。初期値50分、{MATERIAL_MECHANICS_EXAM_SPEC.passPoints}点ラインで練習します。</p></div>
+              <div className="english-panel-heading statistics-panel-heading"><div><span>FORMAT GUIDE</span><h2 id="statistics-guide-title">出題形式ガイド</h2></div><p>形式1・3は紙面構成だけを参照し、形式2はQ1〜3の範囲一致部だけを演習へ反映します。Q4は出典に使わず、曲げ応力・断面量は範囲ZIP追加ページ10〜13に基づきます。</p></div>
+              <div className="english-guide-tip statistics-format-notice"><span>SOURCE POLICY</span><p>範囲ZIP{MATERIAL_MECHANICS_RANGE_PAGES.length}ページが今回範囲の正本です。EIによるたわみ、曲率、カスティリアーノの定理は対象外です。A4模試は{MATERIAL_MECHANICS_EXAM_SPEC.bigQuestionCount}大問・練習用{MATERIAL_MECHANICS_EXAM_SPEC.totalPoints}点で構成し、正式時間と配点は未確認です。初期値50分、{MATERIAL_MECHANICS_EXAM_SPEC.passPoints}点ラインで練習します。</p></div>
               <div className="english-guide-grid statistics-guide-grid">
                 {MATERIAL_MECHANICS_EXAM_FORMATS.map((format, index) => (
                   <article key={format.id}>

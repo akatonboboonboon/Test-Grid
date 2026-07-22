@@ -70,7 +70,7 @@ export const ESSENTIAL_SUBJECTS: EssentialSubject[] = [
     accent: "#ffd65c",
     examDate: "2026-07-30",
     examDateLabel: "7/30",
-    description: "丸軸のねじり、中実・中空軸、コイルばね、はり反力・SFD・BMDの計算を始める前の公式集。",
+    description: "範囲ZIP13ページの丸軸ねじり・軸設計・コイルばね・はり反力・SFD・BMDに加え、曲げ応力、長方形・中空円断面のI・Z、単純支持・片持ちばりの標準荷重パターンを整理。EIによるたわみ、曲率、カスティリアーノの定理は対象外。",
     items: MATERIAL_ESSENTIALS,
   },
   {

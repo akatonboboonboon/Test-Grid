@@ -68,7 +68,7 @@ const SUBJECT_BLUEPRINTS: Array<Pick<StudySubject, "id" | "name" | "module" | "m
   { id: "network", name: "ネットワーク", module: "network", memo: "本試験は範囲内プロトコルの層＋20文字以上記述、層暗算は追試対策として収録" },
   { id: "subject-3", name: "機械力学", module: "generic", memo: "範囲ZIP15枚・過去問全体の公式カード、計算演習、実物過去問、A4想定試験を収録" },
   { id: "subject-4", name: "熱・流体力学", module: "generic", memo: "熱力学7枚・6単元の公式カード、計算演習、全範囲予想試験を収録" },
-  { id: "subject-5", name: "材料力学", module: "generic", memo: "範囲ZIP9枚・ねじり、軸設計、コイルばね、はりの公式カード・図付き演習・A4想定試験を収録" },
+  { id: "subject-5", name: "材料力学", module: "generic", memo: "範囲ZIP13ページ・ねじり、軸設計、コイルばね、はりの反力・SFD/BMD・曲げ応力・長方形/中空円断面I/Zを収録（EIたわみ・曲率・カスティリアーノは対象外）" },
   { id: "subject-6", name: "スマート制御", module: "generic", memo: "逆ラプラス・極・安定性・フィードバック・ブロック線図を収録" },
   { id: "subject-7", name: "確率統計", module: "generic", memo: "全範囲を毎回扱うA4・50分想定試験を12回収録" },
   { id: "subject-8", name: "応用数学", module: "generic", memo: "範囲22枚・9単元・線積分/面積分/グリーンを含むA4 50分80点の予想試験6回" },

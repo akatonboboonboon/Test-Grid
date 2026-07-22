@@ -2,7 +2,11 @@ export type MaterialMechanicsGeneratorTemplateId =
   | "material-solid-shaft-stress"
   | "material-hollow-shaft-stress"
   | "material-coil-spring-deflection"
-  | "material-simple-beam-udl";
+  | "material-simple-beam-udl"
+  | "material-simple-beam-point-rect"
+  | "material-simple-beam-udl-rect"
+  | "material-cantilever-tip-hollow"
+  | "material-cantilever-udl-hollow";
 
 export type MaterialMechanicsGeneratorRandom = { int: (minimum: number, maximum: number) => number };
 export type MaterialMechanicsGeneratedSpec = {
@@ -68,6 +72,42 @@ export const MATERIAL_MECHANICS_GENERATOR_TEMPLATES = [
     formula: "R_A=R_B=\\frac{wL}{2},\\quad M_{max}=\\frac{wL^2}{8}",
     sourceReferenceIds: ["mm-f-resultant", "mm-f-equilibrium", "mm-f-simple-udl", "mm-f-beam-diff"],
     sourceLabel: "材料力学範囲ZIP p.5〜8＋形式2範囲一致部",
+  },
+  {
+    id: "material-simple-beam-point-rect",
+    title: "集中荷重を受ける長方形断面単純支持ばり",
+    category: "はり・曲げ応力",
+    parameterRange: "L=3.0〜7.0 m、P=4〜20 kN、b=60〜180 mm、h=120〜260 mm",
+    formula: "\\displaystyle M_{max}=\\frac{Pab}{L},\\quad Z=\\frac{bh^2}{6},\\quad \\sigma_{max}=\\frac{M_{max}}{Z}",
+    sourceReferenceIds: ["mm-f-bending-stress", "mm-f-rectangle-bending", "mm-f-simple-point-general"],
+    sourceLabel: "材料力学範囲ZIP p.10・11",
+  },
+  {
+    id: "material-simple-beam-udl-rect",
+    title: "等分布荷重を受ける長方形断面単純支持ばり",
+    category: "はり・曲げ応力",
+    parameterRange: "L=2.0〜6.0 m、w=1.5〜8.0 kN/m、b=60〜180 mm、h=120〜260 mm",
+    formula: "\\displaystyle M_{max}=\\frac{wL^2}{8},\\quad Z=\\frac{bh^2}{6},\\quad \\sigma_{max}=\\frac{M_{max}}{Z}",
+    sourceReferenceIds: ["mm-f-bending-stress", "mm-f-rectangle-bending", "mm-f-simple-udl"],
+    sourceLabel: "材料力学範囲ZIP p.10・11",
+  },
+  {
+    id: "material-cantilever-tip-hollow",
+    title: "先端集中荷重を受ける中空円断面片持ちばり",
+    category: "片持ちばり・曲げ応力",
+    parameterRange: "L=1.0〜4.0 m、P=2〜12 kN、do=100〜200 mm、di=40〜90 mm（di<do）",
+    formula: "\\displaystyle M_{max}=PL,\\quad Z=\\frac{\\pi(d_o^4-d_i^4)}{32d_o},\\quad \\sigma_{max}=\\frac{M_{max}}{Z}",
+    sourceReferenceIds: ["mm-f-bending-stress", "mm-f-hollow-bending", "mm-f-cantilever-tip"],
+    sourceLabel: "材料力学範囲ZIP p.10・12",
+  },
+  {
+    id: "material-cantilever-udl-hollow",
+    title: "等分布荷重を受ける中空円断面片持ちばり",
+    category: "片持ちばり・曲げ応力",
+    parameterRange: "L=1.0〜4.0 m、w=1.0〜6.0 kN/m、do=100〜200 mm、di=40〜90 mm（di<do）",
+    formula: "\\displaystyle M_{max}=\\frac{wL^2}{2},\\quad Z=\\frac{\\pi(d_o^4-d_i^4)}{32d_o},\\quad \\sigma_{max}=\\frac{M_{max}}{Z}",
+    sourceReferenceIds: ["mm-f-bending-stress", "mm-f-hollow-bending", "mm-f-cantilever-udl-free"],
+    sourceLabel: "材料力学範囲ZIP p.10・13",
   },
 ] as const;
 
@@ -211,6 +251,186 @@ export function buildMaterialMechanicsGeneratedSpec(
       difficulty: 3,
       subpartCount: 4,
       sourceBasis: ["範囲ZIP p.4の密巻コイルばね導出", "範囲ZIP p.9の応力・たわみまとめ演習"],
+    };
+  }
+
+  if (templateId === "material-simple-beam-point-rect") {
+    const lengthDecimeters = random.int(30, 70);
+    const length = lengthDecimeters / 10;
+    const leftDistance = random.int(8, lengthDecimeters - 8) / 10;
+    const rightDistance = length - leftDistance;
+    const load = random.int(4, 20);
+    const width = random.int(6, 18) * 10;
+    const height = random.int(12, 26) * 10;
+    const reactionA = load * rightDistance / length;
+    const reactionB = load * leftDistance / length;
+    const maxMoment = load * leftDistance * rightDistance / length;
+    const inertia = width * height ** 3 / 12;
+    const sectionModulus = width * height ** 2 / 6;
+    const stress = maxMoment * 1e6 / sectionModulus;
+    return {
+      templateId,
+      category: "はり・曲げ応力",
+      title: "偏心集中荷重を受ける長方形断面単純支持ばり",
+      prompt: "左右の支点反力を求め、集中荷重点の最大曲げモーメントから最大曲げ応力を計算せよ。解答欄には最大曲げ応力を入力する。",
+      context: `支間L=${length} m、左支点からa=${leftDistance} mの位置に集中荷重P=${load} kN。断面は幅b=${width} mm、高さh=${height} mmの長方形。`,
+      answer: `${rounded(stress, 2)} MPa`,
+      numericAnswer: rounded(stress, 6),
+      tolerance: Math.max(0.3, stress * 0.005),
+      expectedUnit: "MPa",
+      acceptedUnitScales: { MPa: 1, "N/mm2": 1, GPa: 1000 },
+      formula: "\\begin{aligned}R_A&=\\frac{P(L-a)}{L}\\\\R_B&=\\frac{Pa}{L}\\\\M_{max}&=\\frac{Pa(L-a)}{L}\\\\I&=\\frac{bh^3}{12}\\\\Z&=\\frac{2I}{h}=\\frac{bh^2}{6}\\\\\\sigma_{max}&=\\frac{M_{max}}{Z}\\end{aligned}",
+      steps: [
+        `\\(L-a=${rounded(rightDistance, 2)}\\,\\mathrm{m}\\)、\\(R_A=\\frac{${load}(${rounded(rightDistance, 2)})}{${length}}=${rounded(reactionA, 3)}\\,\\mathrm{kN}\\)、\\(R_B=${rounded(reactionB, 3)}\\,\\mathrm{kN}\\)。`,
+        `荷重点で最大となり、\\(M_{max}=\\frac{${load}(${leftDistance})(${rounded(rightDistance, 2)})}{${length}}=${rounded(maxMoment, 4)}\\,\\mathrm{kN\\,m}\\)。`,
+        `\\(I=\\frac{${width}(${height})^3}{12}=${rounded(inertia, 1)}\\,\\mathrm{mm^4}\\)、\\(Z=\\frac{${width}(${height})^2}{6}=${rounded(sectionModulus, 1)}\\,\\mathrm{mm^3}\\)。`,
+        `\\(\\sigma_{max}=\\frac{${rounded(maxMoment * 1e6, 0)}}{${rounded(sectionModulus, 1)}}=${rounded(stress, 2)}\\,\\mathrm{N/mm^2}=${rounded(stress, 2)}\\,\\mathrm{MPa}\\)。`,
+      ],
+      reason: "一般位置の集中荷重について、つり合いから反力を求め、荷重点の最大曲げモーメントを長方形断面の断面係数へ接続する。",
+      explanation: `最大曲げ応力は${rounded(stress, 2)} MPa。aとL-aを取り違えず、曲げモーメントをkN·mからN·mmへ変換してからZで割る。`,
+      parameters: { lengthDecimeters, length, leftDistance, rightDistance, load, width, height, reactionA, reactionB, maxMoment, inertia, sectionModulus, stress },
+      sourceLabel: "材料力学範囲ZIP p.10・11",
+      sourcePages: [10, 11],
+      sourceReferenceIds: ["mm-f-bending-stress", "mm-f-rectangle-bending", "mm-f-simple-point-general"],
+      finiteValues: [lengthDecimeters, length, leftDistance, rightDistance, load, width, height, reactionA, reactionB, maxMoment, inertia, sectionModulus, stress],
+      denominators: [length, 12, 6, sectionModulus],
+      radicands: [],
+      difficulty: 3,
+      subpartCount: 4,
+      sourceBasis: ["範囲ZIP p.10の共通問題シート", "範囲ZIP p.11の一般位置集中荷重と長方形断面の曲げ応力"],
+    };
+  }
+
+  if (templateId === "material-simple-beam-udl-rect") {
+    const length = random.int(4, 12) / 2;
+    const intensity = random.int(3, 16) / 2;
+    const width = random.int(6, 18) * 10;
+    const height = random.int(12, 26) * 10;
+    const resultant = intensity * length;
+    const reaction = resultant / 2;
+    const maxMoment = intensity * length ** 2 / 8;
+    const inertia = width * height ** 3 / 12;
+    const sectionModulus = width * height ** 2 / 6;
+    const stress = maxMoment * 1e6 / sectionModulus;
+    return {
+      templateId,
+      category: "はり・曲げ応力",
+      title: "等分布荷重を受ける長方形断面単純支持ばり",
+      prompt: "等価集中荷重と左右の支点反力を求め、中央の最大曲げモーメントから最大曲げ応力を計算せよ。解答欄には最大曲げ応力を入力する。",
+      context: `支間L=${length} mの単純支持ばり全体にw=${intensity} kN/m。断面は幅b=${width} mm、高さh=${height} mmの長方形。`,
+      answer: `${rounded(stress, 2)} MPa`,
+      numericAnswer: rounded(stress, 6),
+      tolerance: Math.max(0.3, stress * 0.005),
+      expectedUnit: "MPa",
+      acceptedUnitScales: { MPa: 1, "N/mm2": 1, GPa: 1000 },
+      formula: "\\begin{aligned}W&=wL\\\\R_A=R_B&=\\frac{wL}{2}\\\\M_{max}&=\\frac{wL^2}{8}\\\\I&=\\frac{bh^3}{12}\\\\Z&=\\frac{bh^2}{6}\\\\\\sigma_{max}&=\\frac{M_{max}}{Z}\\end{aligned}",
+      steps: [
+        `\\(W=wL=${intensity}(${length})=${rounded(resultant, 3)}\\,\\mathrm{kN}\\)、\\(R_A=R_B=${rounded(reaction, 3)}\\,\\mathrm{kN}\\)。`,
+        `中央で最大となり、\\(M_{max}=\\frac{${intensity}(${length})^2}{8}=${rounded(maxMoment, 4)}\\,\\mathrm{kN\\,m}\\)。`,
+        `\\(I=\\frac{${width}(${height})^3}{12}=${rounded(inertia, 1)}\\,\\mathrm{mm^4}\\)、\\(Z=\\frac{${width}(${height})^2}{6}=${rounded(sectionModulus, 1)}\\,\\mathrm{mm^3}\\)。`,
+        `\\(\\sigma_{max}=\\frac{${rounded(maxMoment * 1e6, 0)}}{${rounded(sectionModulus, 1)}}=${rounded(stress, 2)}\\,\\mathrm{N/mm^2}=${rounded(stress, 2)}\\,\\mathrm{MPa}\\)。`,
+      ],
+      reason: "対称な等分布荷重を合力へ置き換え、単純支持ばりの中央最大モーメントと長方形断面の曲げ応力式を順に用いる。",
+      explanation: `最大曲げ応力は${rounded(stress, 2)} MPa。荷重単位はkN/mのままMをkN·mで求め、応力計算時にN·mmへ変換する。`,
+      parameters: { length, intensity, width, height, resultant, reaction, maxMoment, inertia, sectionModulus, stress },
+      sourceLabel: "材料力学範囲ZIP p.10・11",
+      sourcePages: [10, 11],
+      sourceReferenceIds: ["mm-f-bending-stress", "mm-f-rectangle-bending", "mm-f-simple-udl"],
+      finiteValues: [length, intensity, width, height, resultant, reaction, maxMoment, inertia, sectionModulus, stress],
+      denominators: [2, 8, 12, 6, sectionModulus],
+      radicands: [],
+      difficulty: 3,
+      subpartCount: 4,
+      sourceBasis: ["範囲ZIP p.10の共通問題シート", "範囲ZIP p.11の単純支持ばり等分布荷重と長方形断面の曲げ応力"],
+    };
+  }
+
+  if (templateId === "material-cantilever-tip-hollow") {
+    const length = random.int(2, 8) / 2;
+    const load = random.int(2, 12);
+    const outerDiameter = random.int(10, 20) * 10;
+    const innerDiameter = random.int(4, 9) * 10;
+    const diameterFourthDifference = outerDiameter ** 4 - innerDiameter ** 4;
+    const reaction = load;
+    const maxMoment = load * length;
+    const inertia = Math.PI * diameterFourthDifference / 64;
+    const sectionModulus = Math.PI * diameterFourthDifference / (32 * outerDiameter);
+    const stress = maxMoment * 1e6 / sectionModulus;
+    return {
+      templateId,
+      category: "片持ちばり・曲げ応力",
+      title: "先端集中荷重を受ける中空円断面片持ちばり",
+      prompt: "固定端反力と固定端の最大曲げモーメントを求め、中空円断面の断面二次モーメント・断面係数から最大曲げ応力を計算せよ。解答欄には最大曲げ応力を入力する。",
+      context: `長さL=${length} mの片持ちばりの自由端にP=${load} kN。断面は外径d_o=${outerDiameter} mm、内径d_i=${innerDiameter} mmの中空円。`,
+      answer: `${rounded(stress, 2)} MPa`,
+      numericAnswer: rounded(stress, 6),
+      tolerance: Math.max(0.3, stress * 0.005),
+      expectedUnit: "MPa",
+      acceptedUnitScales: { MPa: 1, "N/mm2": 1, GPa: 1000 },
+      formula: "\\begin{aligned}R&=P\\\\M_{max}&=PL\\\\I&=\\frac{\\pi(d_o^4-d_i^4)}{64}\\\\Z&=\\frac{2I}{d_o}=\\frac{\\pi(d_o^4-d_i^4)}{32d_o}\\\\\\sigma_{max}&=\\frac{M_{max}}{Z}\\end{aligned}",
+      steps: [
+        `径条件は\\(0<d_i=${innerDiameter}\\,\\mathrm{mm}<d_o=${outerDiameter}\\,\\mathrm{mm}\\)で、中空円断面が成立する。`,
+        `固定端で\\(R=P=${reaction}\\,\\mathrm{kN}\\)、\\(M_{max}=PL=${load}(${length})=${rounded(maxMoment, 4)}\\,\\mathrm{kN\\,m}\\)。`,
+        `\\(I=\\frac{\\pi[(${outerDiameter})^4-(${innerDiameter})^4]}{64}=${rounded(inertia, 1)}\\,\\mathrm{mm^4}\\)、\\(Z=\\frac{\\pi[(${outerDiameter})^4-(${innerDiameter})^4]}{32(${outerDiameter})}=${rounded(sectionModulus, 1)}\\,\\mathrm{mm^3}\\)。`,
+        `\\(\\sigma_{max}=\\frac{${rounded(maxMoment * 1e6, 0)}}{${rounded(sectionModulus, 1)}}=${rounded(stress, 2)}\\,\\mathrm{N/mm^2}=${rounded(stress, 2)}\\,\\mathrm{MPa}\\)。`,
+      ],
+      reason: "自由端集中荷重の固定端モーメントを求め、中空円の外径四乗から内径四乗を差し引いた断面量で曲げ応力を評価する。",
+      explanation: `最大曲げ応力は${rounded(stress, 2)} MPa。中空円断面では\\(d_i<d_o\\)を確認し、\\(d_o^4-d_i^4\\)を用いてIとZを求める。`,
+      parameters: { length, load, outerDiameter, innerDiameter, diameterFourthDifference, reaction, maxMoment, inertia, sectionModulus, stress },
+      sourceLabel: "材料力学範囲ZIP p.10・12",
+      sourcePages: [10, 12],
+      sourceReferenceIds: ["mm-f-bending-stress", "mm-f-hollow-bending", "mm-f-cantilever-tip"],
+      finiteValues: [length, load, outerDiameter, innerDiameter, diameterFourthDifference, reaction, maxMoment, inertia, sectionModulus, stress],
+      denominators: [64, 32 * outerDiameter, 2, sectionModulus],
+      radicands: [],
+      difficulty: 3,
+      subpartCount: 4,
+      sourceBasis: ["範囲ZIP p.10の共通問題シート", "範囲ZIP p.12の自由端集中荷重片持ちばりと中空円断面の曲げ応力"],
+    };
+  }
+
+  if (templateId === "material-cantilever-udl-hollow") {
+    const length = random.int(2, 8) / 2;
+    const intensity = random.int(2, 12) / 2;
+    const outerDiameter = random.int(10, 20) * 10;
+    const innerDiameter = random.int(4, 9) * 10;
+    const diameterFourthDifference = outerDiameter ** 4 - innerDiameter ** 4;
+    const resultant = intensity * length;
+    const reaction = resultant;
+    const maxMoment = intensity * length ** 2 / 2;
+    const inertia = Math.PI * diameterFourthDifference / 64;
+    const sectionModulus = Math.PI * diameterFourthDifference / (32 * outerDiameter);
+    const stress = maxMoment * 1e6 / sectionModulus;
+    return {
+      templateId,
+      category: "片持ちばり・曲げ応力",
+      title: "等分布荷重を受ける中空円断面片持ちばり",
+      prompt: "等分布荷重を合力へ置き換えて固定端反力と最大曲げモーメントを求め、中空円断面の断面二次モーメント・断面係数から最大曲げ応力を計算せよ。解答欄には最大曲げ応力を入力する。",
+      context: `長さL=${length} mの片持ちばり全体にw=${intensity} kN/m。断面は外径d_o=${outerDiameter} mm、内径d_i=${innerDiameter} mmの中空円。`,
+      answer: `${rounded(stress, 2)} MPa`,
+      numericAnswer: rounded(stress, 6),
+      tolerance: Math.max(0.3, stress * 0.005),
+      expectedUnit: "MPa",
+      acceptedUnitScales: { MPa: 1, "N/mm2": 1, GPa: 1000 },
+      formula: "\\begin{aligned}W&=wL\\\\R&=W\\\\M_{max}&=W\\frac{L}{2}=\\frac{wL^2}{2}\\\\I&=\\frac{\\pi(d_o^4-d_i^4)}{64}\\\\Z&=\\frac{2I}{d_o}=\\frac{\\pi(d_o^4-d_i^4)}{32d_o}\\\\\\sigma_{max}&=\\frac{M_{max}}{Z}\\end{aligned}",
+      steps: [
+        `径条件は\\(0<d_i=${innerDiameter}\\,\\mathrm{mm}<d_o=${outerDiameter}\\,\\mathrm{mm}\\)で、中空円断面が成立する。`,
+        `\\(W=wL=${intensity}(${length})=${rounded(resultant, 3)}\\,\\mathrm{kN}\\)が固定端から\\(L/2\\)に作用し、\\(R=${rounded(reaction, 3)}\\,\\mathrm{kN}\\)、\\(M_{max}=\\frac{${intensity}(${length})^2}{2}=${rounded(maxMoment, 4)}\\,\\mathrm{kN\\,m}\\)。`,
+        `\\(I=\\frac{\\pi[(${outerDiameter})^4-(${innerDiameter})^4]}{64}=${rounded(inertia, 1)}\\,\\mathrm{mm^4}\\)、\\(Z=\\frac{\\pi[(${outerDiameter})^4-(${innerDiameter})^4]}{32(${outerDiameter})}=${rounded(sectionModulus, 1)}\\,\\mathrm{mm^3}\\)。`,
+        `\\(\\sigma_{max}=\\frac{${rounded(maxMoment * 1e6, 0)}}{${rounded(sectionModulus, 1)}}=${rounded(stress, 2)}\\,\\mathrm{N/mm^2}=${rounded(stress, 2)}\\,\\mathrm{MPa}\\)。`,
+      ],
+      reason: "等分布荷重の合力wLを中央に作用させ、固定端最大モーメントを中空円断面の断面係数へ接続する。",
+      explanation: `最大曲げ応力は${rounded(stress, 2)} MPa。合力の作用位置L/2を確認し、中空円の\\(d_o^4-d_i^4\\)からIとZを求める。`,
+      parameters: { length, intensity, outerDiameter, innerDiameter, diameterFourthDifference, resultant, reaction, maxMoment, inertia, sectionModulus, stress },
+      sourceLabel: "材料力学範囲ZIP p.10・13",
+      sourcePages: [10, 13],
+      sourceReferenceIds: ["mm-f-bending-stress", "mm-f-hollow-bending", "mm-f-cantilever-udl-free"],
+      finiteValues: [length, intensity, outerDiameter, innerDiameter, diameterFourthDifference, resultant, reaction, maxMoment, inertia, sectionModulus, stress],
+      denominators: [2, 64, 32 * outerDiameter, sectionModulus],
+      radicands: [],
+      difficulty: 3,
+      subpartCount: 4,
+      sourceBasis: ["範囲ZIP p.10の共通問題シート", "範囲ZIP p.13の全長等分布荷重片持ちばりと中空円断面の曲げ応力"],
     };
   }
 

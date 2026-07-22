@@ -172,6 +172,47 @@ export const MATERIAL_ESSENTIALS: EssentialItem[] = [
     cue: "SFD・BMDを描く、区間ごとのV(x)・M(x)を求める。",
     pitfall: "集中荷重でVが跳び、集中モーメントでMが跳ぶ。符号規約を途中で変えない。",
   },
+  {
+    id: "material-bending-stress", kind: "formula", title: "曲げ応力の基本式",
+    value: "曲げ応力は中立軸で0、最外縁で最大。曲げには断面二次モーメントIと断面係数Zを使う。",
+    math: [{ tex: "\\sigma=\\frac{My}{I},\\qquad \\sigma_{max}=\\frac{M}{Z},\\qquad Z=\\frac{I}{c}" }],
+    cue: "曲げモーメントMと中立軸からの距離y、または最外縁距離cが与えられる。",
+    pitfall: "ねじり用の極断面二次モーメント \\(I_p\\)・極断面係数 \\(Z_p\\) と混同しない。",
+  },
+  {
+    id: "material-rectangle-bending-section", kind: "formula", title: "長方形断面の曲げI・Z",
+    value: "幅b、高さhの長方形。曲げ軸に直角な高さhが3乗・2乗で効く。",
+    math: [{ tex: "I=\\frac{bh^3}{12},\\qquad Z=\\frac{I}{h/2}=\\frac{bh^2}{6}" }],
+    cue: "長方形断面の最大曲げ応力を求める。",
+    pitfall: "bとhを入れ替えない。曲げ方向が変われば、3乗する寸法も変わる。",
+  },
+  {
+    id: "material-hollow-bending-section", kind: "formula", title: "中空円断面の曲げI・Z",
+    value: "外側の円から内側の穴を差し引き、最外縁距離 \\(d_o/2\\) でIを割る。",
+    math: [{ tex: "I=\\frac{\\pi(d_o^4-d_i^4)}{64},\\qquad Z=\\frac{\\pi(d_o^4-d_i^4)}{32d_o}" }],
+    cue: "外径 \\(d_o\\)、内径 \\(d_i\\) の中空円断面で曲げ応力を求める。",
+    pitfall: "曲げの分母は64と \\(32d_o\\)。ねじりの \\(I_p\\)・\\(Z_p\\) の係数を使わない。",
+  },
+  {
+    id: "material-simple-beam-patterns", kind: "formula", title: "単純支持ばりの標準荷重パターン",
+    value: "集中荷重ではSFDが荷重点で跳びBMDは折れ線、全長等分布荷重ではSFDが直線でBMDは放物線。",
+    math: [
+      { label: "集中荷重 P（L=a+b）", tex: "R_A=\\frac{Pb}{L},\\quad R_B=\\frac{Pa}{L},\\quad M_{max}=\\frac{Pab}{L}" },
+      { label: "全長等分布荷重 w", tex: "R_A=R_B=\\frac{wL}{2},\\quad M_{max}=\\frac{wL^2}{8}" },
+    ],
+    cue: "単純支持ばりの反力、SFD・BMD、最大曲げ応力へ進む前に使う。",
+    pitfall: "偏心集中荷重の反力は反対側の距離を掛ける。最大MはVの符号が変わる位置で確認する。",
+  },
+  {
+    id: "material-cantilever-patterns", kind: "formula", title: "片持ちばりの標準荷重パターン",
+    value: "自由端集中荷重ではSFD一定・BMD直線、全長等分布荷重ではSFD直線・BMD放物線。固定端で曲げモーメントの絶対値が最大。",
+    math: [
+      { label: "自由端集中荷重 P", tex: "R=P,\\qquad |M_0|=PL" },
+      { label: "全長等分布荷重 w", tex: "R=wL,\\qquad |M_0|=\\frac{wL^2}{2}" },
+    ],
+    cue: "固定端反力・固定端モーメントを求め、SFD・BMDと断面応力へつなぐ。",
+    pitfall: "固定端には鉛直反力だけでなく反力モーメントも生じる。符号規約と絶対値を区別する。",
+  },
 ];
 
 export const SMART_CONTROL_ESSENTIALS: EssentialItem[] = [

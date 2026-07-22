@@ -273,7 +273,7 @@ const RAPID_SOURCE_BASIS: Partial<Record<SubjectId, string>> = {
   "subject-2": "英語追加範囲 Ch.14・15・16・18、TOEIC Reading、Housing・Medical語彙（対象外欄・Ch.19は除外）",
   "subject-3": "機械力学範囲プリント4枚相当・過去問の連続計算",
   "subject-4": "熱力学範囲ZIPと形式1〜3の複合状態変化",
-  "subject-5": "材料力学範囲ZIPと形式2の範囲重複問題",
+  "subject-5": "材料力学範囲ZIP13ページ（ねじり・軸設計・コイルばね・はり反力/SFD/BMD・曲げ応力・長方形/中空円断面I/Z）と形式2 Q1〜3の範囲一致部（Q4は出典除外、EIたわみ・曲率・カスティリアーノは対象外）",
   "subject-6": "スマート制御範囲・演習・過去問の計算と図読解",
   "subject-7": "確率統計範囲ZIP・演習PDF1〜4・過去問形式",
   "subject-8": "応用数学範囲・追加範囲と提供テスト形式",

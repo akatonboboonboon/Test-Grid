@@ -13,12 +13,17 @@ export type MaterialMechanicsDiagramKind =
   | "load-resultants"
   | "sfd-bmd"
   | "overhang-sfd-bmd"
-  | "beam-section-stress";
+  | "beam-section-stress"
+  | "additional-simple-point-rect"
+  | "additional-simple-udl-rect"
+  | "additional-cantilever-tip-hollow"
+  | "additional-cantilever-udl-hollow";
 
 type Props = { kind: MaterialMechanicsDiagramKind | string; solution?: boolean; title?: string; className?: string };
 const KNOWN = new Set<MaterialMechanicsDiagramKind>([
   "solid-shaft", "hollow-shaft", "coil-spring", "support-types", "simply-supported-point", "simply-supported-udl",
   "overhang-beam", "overhang-udl", "cantilever-udl", "load-resultants", "sfd-bmd", "overhang-sfd-bmd", "beam-section-stress",
+  "additional-simple-point-rect", "additional-simple-udl-rect", "additional-cantilever-tip-hollow", "additional-cantilever-udl-hollow",
 ]);
 
 function Markers({ arrow, load }: { arrow: string; load: string }) {
@@ -178,6 +183,151 @@ function BeamSectionStress({ solution, arrow, load }: { solution: boolean; arrow
     </>}
   </svg>;
 }
+type AdditionalBeamProps = {
+  support: "simple" | "cantilever";
+  distributed: boolean;
+  section: "rectangle" | "hollow";
+  solution: boolean;
+  arrow: string;
+  load: string;
+};
+
+function AdditionalCrossSection({ section, arrow }: Pick<AdditionalBeamProps, "section" | "arrow">) {
+  if (section === "rectangle") return <g aria-label="Rectangular cross-section b by h">
+    <text x="610" y="48" textAnchor="middle" fontWeight="800">Cross-section</text>
+    <rect x="558" y="70" width="104" height="92" fill="white" stroke="currentColor" strokeWidth="3" />
+    <path d="M558 181H662" markerStart={`url(#${arrow})`} markerEnd={`url(#${arrow})`} stroke="currentColor" />
+    <text x="610" y="174" textAnchor="middle" fontWeight="800">b</text>
+    <path d="M681 70V162" markerStart={`url(#${arrow})`} markerEnd={`url(#${arrow})`} stroke="currentColor" />
+    <text x="694" y="120" fontWeight="800">h</text>
+  </g>;
+
+  return <g aria-label="Hollow circular cross-section with outer diameter do and inner diameter di">
+    <text x="610" y="48" textAnchor="middle" fontWeight="800">Hollow section</text>
+    <circle cx="610" cy="116" r="50" fill="white" stroke="currentColor" strokeWidth="3" />
+    <circle cx="610" cy="116" r="27" fill="white" stroke="currentColor" strokeWidth="3" />
+    <path d="M560 116H660" markerStart={`url(#${arrow})`} markerEnd={`url(#${arrow})`} stroke="currentColor" />
+    <text x="610" y="105" textAnchor="middle" fontWeight="800">d<tspan baselineShift="sub" fontSize="10">o</tspan></text>
+    <path d="M610 89V143" markerStart={`url(#${arrow})`} markerEnd={`url(#${arrow})`} stroke="currentColor" />
+    <text x="622" y="139" fontWeight="800">d<tspan baselineShift="sub" fontSize="10">i</tspan></text>
+  </g>;
+}
+
+function AdditionalSolutionPlots({ support, distributed }: Pick<AdditionalBeamProps, "support" | "distributed">) {
+  const simple = support === "simple";
+  const point = !distributed;
+  const loadX = simple && point ? 230 : 268;
+  let sfd: ReactNode;
+  let bmd: ReactNode;
+
+  if (simple && point) {
+    sfd = <>
+      <path d={`M80 350V310H${loadX}V377H455V350`} fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+      <text x="92" y="303" fontWeight="700">+Pb/L</text><text x="330" y="393" fontWeight="700">-Pa/L</text>
+    </>;
+    bmd = <>
+      <path d={`M80 475L${loadX} 420L455 475`} fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+      <text x={loadX} y="410" textAnchor="middle" fontWeight="700">M<tspan baselineShift="sub" fontSize="10">max</tspan> = Pab/L</text>
+    </>;
+  } else if (simple) {
+    sfd = <>
+      <path d="M80 350V316L455 384V350" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+      <text x="92" y="309" fontWeight="700">+wL/2</text><text x="345" y="400" fontWeight="700">-wL/2</text>
+    </>;
+    bmd = <>
+      <path d="M80 475Q268 365 455 475" fill="none" stroke="currentColor" strokeWidth="4" />
+      <text x="268" y="410" textAnchor="middle" fontWeight="700">M<tspan baselineShift="sub" fontSize="10">max</tspan> = wL^2/8</text>
+    </>;
+  } else if (point) {
+    sfd = <>
+      <path d="M80 350V384H455V350" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+      <text x="92" y="400" fontWeight="700">-P</text>
+    </>;
+    bmd = <>
+      <path d="M80 475V525L455 475" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+      <text x="92" y="541" fontWeight="700">M<tspan baselineShift="sub" fontSize="10">A</tspan> = -PL</text>
+    </>;
+  } else {
+    sfd = <>
+      <path d="M80 350V384L455 350" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+      <text x="92" y="400" fontWeight="700">-wL</text>
+    </>;
+    bmd = <>
+      <path d="M80 475V525Q268 475 455 475" fill="none" stroke="currentColor" strokeWidth="4" />
+      <text x="92" y="541" fontWeight="700">M<tspan baselineShift="sub" fontSize="10">A</tspan> = -wL^2/2</text>
+    </>;
+  }
+
+  return <g aria-label="Shear-force and bending-moment diagrams">
+    <text x="22" y="307" fontWeight="800">SFD</text>
+    <path d="M80 296V405M65 350H470" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    <text x="474" y="354">x</text>
+    {sfd}
+    <text x="22" y="428" fontWeight="800">BMD</text>
+    <path d="M80 414V535M65 475H470" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    <text x="474" y="479">x</text>
+    {bmd}
+    {simple && <path d={`M${loadX} 300V535`} stroke="currentColor" strokeDasharray="4 5" opacity=".25" />}
+    <text x="520" y="335" fontWeight="700">V: shear force</text>
+    <text x="520" y="360" fontWeight="700">M: bending moment</text>
+    {!simple && <text x="520" y="385" fontSize="13">Negative shown below axis</text>}
+  </g>;
+}
+
+function AdditionalBeamDiagram({ support, distributed, section, solution, arrow, load }: AdditionalBeamProps) {
+  const simple = support === "simple";
+  const pointX = simple ? 230 : 455;
+  const aria = `${simple ? "Simply supported" : "Cantilever"} beam with ${distributed ? "uniformly distributed load w" : "point load P"}, ${section === "rectangle" ? "rectangular" : "hollow circular"} cross-section, ${solution ? "solution" : "problem"} diagram`;
+
+  return <svg
+    viewBox={`0 0 720 ${solution ? 555 : 285}`}
+    role="img"
+    aria-label={aria}
+    preserveAspectRatio="xMidYMid meet"
+    style={{ display: "block", width: "100%", height: "auto", maxWidth: "100%" }}
+  >
+    <Markers arrow={arrow} load={load} />
+    {simple ? <>
+      <path d="M60 120H475" stroke="currentColor" strokeWidth="7" />
+      <Pin x={80} y={124} /><Roller x={455} y={124} />
+      <text x="80" y="166" textAnchor="middle" fontWeight="700">A</text>
+      <text x="455" y="166" textAnchor="middle" fontWeight="700">B</text>
+    </> : <>
+      <Fixed x={80} y={120} height={132} />
+      <path d="M80 120H455" stroke="currentColor" strokeWidth="7" />
+      <text x="80" y="202" textAnchor="middle" fontWeight="700">A</text>
+      <text x="455" y="146" textAnchor="middle" fontWeight="700">B</text>
+    </>}
+    {distributed ? <>
+      <rect x="80" y="44" width="375" height="68" fill={`url(#${load})`} stroke="currentColor" />
+      <text x="268" y="34" textAnchor="middle" fontWeight="800">w</text>
+    </> : <>
+      <path d={`M${pointX} 35V111`} markerEnd={`url(#${arrow})`} stroke="currentColor" strokeWidth="3" />
+      <text x={pointX + 14} y="58" fontWeight="800">P</text>
+    </>}
+    {simple && !distributed && <>
+      <Dim x1={80} x2={pointX} y={220} label="a" arrow={arrow} />
+      <Dim x1={pointX} x2={455} y={220} label="b" arrow={arrow} />
+    </>}
+    <Dim x1={80} x2={455} y={simple && !distributed ? 265 : 255} label={simple && !distributed ? "L = a + b" : "L"} arrow={arrow} />
+    <AdditionalCrossSection section={section} arrow={arrow} />
+    {solution && <>
+      {simple ? <>
+        <path d="M80 198V134" markerEnd={`url(#${arrow})`} stroke="currentColor" strokeWidth="2.5" />
+        <path d="M455 198V134" markerEnd={`url(#${arrow})`} stroke="currentColor" strokeWidth="2.5" />
+        <text x="92" y="194" fontWeight="700">R<tspan baselineShift="sub" fontSize="10">A</tspan>={distributed ? "wL/2" : "Pb/L"}</text>
+        <text x="350" y="194" fontWeight="700">R<tspan baselineShift="sub" fontSize="10">B</tspan>={distributed ? "wL/2" : "Pa/L"}</text>
+      </> : <>
+        <path d="M49 192V134" markerEnd={`url(#${arrow})`} stroke="currentColor" strokeWidth="2.5" />
+        <text x="12" y="210" fontWeight="700">R<tspan baselineShift="sub" fontSize="10">A</tspan>={distributed ? "wL" : "P"}</text>
+        <path d="M48 92A38 38 0 0 1 70 62" fill="none" stroke="currentColor" strokeWidth="2.5" markerEnd={`url(#${arrow})`} />
+        <text x="8" y="52" fontWeight="700">M<tspan baselineShift="sub" fontSize="10">A</tspan>={distributed ? "wL^2/2" : "PL"}</text>
+      </>}
+      <AdditionalSolutionPlots support={support} distributed={distributed} />
+    </>}
+  </svg>;
+}
+
 export default function MaterialMechanicsDiagram({ kind, solution = false, title, className }: Props) {
   const id = useId().replace(/:/g, "");
   const arrow = `material-arrow-${id}`;
@@ -196,6 +346,10 @@ export default function MaterialMechanicsDiagram({ kind, solution = false, title
   else if (kind === "load-resultants") content = <Resultants arrow={arrow} load={load} solution={solution} />;
   else if (kind === "overhang-sfd-bmd") content = <ShearMoment solution={solution} overhang />;
   else if (kind === "beam-section-stress") content = <BeamSectionStress solution={solution} arrow={arrow} load={load} />;
+  else if (kind === "additional-simple-point-rect") content = <AdditionalBeamDiagram support="simple" distributed={false} section="rectangle" solution={solution} arrow={arrow} load={load} />;
+  else if (kind === "additional-simple-udl-rect") content = <AdditionalBeamDiagram support="simple" distributed section="rectangle" solution={solution} arrow={arrow} load={load} />;
+  else if (kind === "additional-cantilever-tip-hollow") content = <AdditionalBeamDiagram support="cantilever" distributed={false} section="hollow" solution={solution} arrow={arrow} load={load} />;
+  else if (kind === "additional-cantilever-udl-hollow") content = <AdditionalBeamDiagram support="cantilever" distributed section="hollow" solution={solution} arrow={arrow} load={load} />;
   else content = <ShearMoment solution={solution} overhang={false} />;
   return <figure className={className} style={{ margin: "1rem 0", border: "2px solid currentColor", background: "#fff", color: "#132235", padding: ".75rem", overflow: "hidden" }}>{title && <figcaption style={{ fontWeight: 800, marginBottom: ".5rem" }}>{title}</figcaption>}{content}</figure>;
 }

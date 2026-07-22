@@ -28,6 +28,14 @@ test("all six material papers enforce multi-step difficulty instead of substitut
 
   const shaftGovernors = new Set();
   const springGovernors = new Set();
+  const beamDiagrams = [
+    "additional-simple-point-rect",
+    "additional-simple-udl-rect",
+    "additional-cantilever-tip-hollow",
+    "additional-cantilever-udl-hollow",
+    "additional-simple-point-rect",
+    "additional-cantilever-udl-hollow",
+  ];
   for (const exam of data.MATERIAL_MECHANICS_EXPECTED_EXAMS) {
     assert.equal(exam.defaultMinutes, 50, exam.id);
     assert.equal(exam.totalPoints, 100, exam.id);
@@ -84,17 +92,23 @@ test("all six material papers enforce multi-step difficulty instead of substitut
     const beam = section(exam, 5);
     assert.deepEqual(
       beam.questions.map((question) => question.genre),
-      ["等価荷重と支点反力", "SFD/BMDと最大曲げモーメント", "最大曲げ応力"],
+      ["反力", "SFD/BMDと最大曲げモーメント", "最大曲げ応力"],
       `${exam.id}: beam chain`,
     );
     assert.deepEqual(beam.questions[1].dependsOn, [beam.questions[0].id]);
     assert.deepEqual(beam.questions[2].dependsOn, [beam.questions[1].id]);
-    assert.equal(beam.questions[1].diagram, "sfd-bmd");
-    assert.equal(beam.questions[2].diagram, "beam-section-stress");
     assert.ok(
-      beam.questions[2].sourceRefs.some((ref) => ref.kind === "format-2-overlap" && ref.question === 5 && ref.sub === 4),
-      `${exam.id}: bending stress source overlap`,
+      beam.questions.every((question) => question.diagram === beamDiagrams[exam.number - 1]),
+      `${exam.id}: matching additional-range diagram family`,
     );
+    for (const question of beam.questions) {
+      assert.deepEqual(
+        question.sourceRefs.filter((ref) => ref.kind === "range-zip").map((ref) => ref.page),
+        [10, 11, 12, 13],
+        `${question.id}: common problem sheet plus worked notes`,
+      );
+      assert.ok(question.sourceRefs.every((ref) => ref.kind === "range-zip"), `${question.id}: no format-2 source`);
+    }
 
     for (const question of exam.questions) {
       assert.ok(question.diagram, `${question.id}: diagram`);
@@ -112,14 +126,26 @@ test("all six material papers enforce multi-step difficulty instead of substitut
   assert.deepEqual(springGovernors, new Set(["線材の許容せん断応力", "許容たわみ"]));
 });
 
-test("format references admit only the documented beam-stress overlap", async () => {
+test("additional beam chains use pages 10-13 while format-2 Q4 stays excluded", async () => {
   const data = await loadData();
+  const beamQuestions = data.MATERIAL_MECHANICS_EXPECTED_EXAMS.flatMap((exam) => section(exam, 5).questions);
+  assert.equal(beamQuestions.length, 18);
+  for (const question of beamQuestions) {
+    assert.deepEqual(
+      question.sourceRefs.filter((ref) => ref.kind === "range-zip").map((ref) => ref.page),
+      [10, 11, 12, 13],
+      `${question.id}: page 10 problem sheet and pages 11-13 worked notes`,
+    );
+    assert.ok(question.sourceRefs.every((ref) => ref.kind === "range-zip"));
+  }
+
   const refs = data.MATERIAL_MECHANICS_EXPECTED_EXAMS.flatMap((exam) => exam.questions.flatMap((question) => question.sourceRefs));
   const overlap = refs.filter((ref) => ref.kind === "format-2-overlap");
-  assert.ok(overlap.some((ref) => ref.question === 3), "reaction/SFD/BMD overlap");
-  assert.ok(overlap.some((ref) => ref.question === 5 && ref.sub === 4), "solid-circle bending-stress overlap");
   assert.ok(overlap.every((ref) => ref.question !== 4), "format-2 Q4 derivation stays excluded");
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.included.join(" "), /第5問\(1\)\(4\)/);
-  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /形式2第4問/);
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /形式2.*第4問/);
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /EI/);
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /Castigliano/);
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /曲率/);
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /Wahl/);
 });

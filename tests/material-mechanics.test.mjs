@@ -39,7 +39,7 @@ function assertSourceRefs(items) {
     for (const ref of item.sourceRefs) {
       assert.ok(ref.kind === "range-zip" || ref.kind === "format-2-overlap", `${item.id} source kind`);
       if (ref.kind === "range-zip") {
-        assert.ok(Number.isInteger(ref.page) && ref.page >= 1 && ref.page <= 9, `${item.id} range page`);
+        assert.ok(Number.isInteger(ref.page) && ref.page >= 1 && ref.page <= 13, `${item.id} range page`);
         assert.match(ref.filename, /\.(?:jpg|jpeg)$/i, `${item.id} range filename`);
       } else {
         assert.equal(ref.page, 1);
@@ -49,9 +49,9 @@ function assertSourceRefs(items) {
   }
 }
 
-test("material-mechanics range truth is nine pages across four documented topics", async () => {
+test("material-mechanics range truth is thirteen pages across four documented topics", async () => {
   const data = await loadModule(DATA_URL);
-  assert.deepEqual(data.MATERIAL_MECHANICS_RANGE_PAGES.map((page) => page.number), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.deepEqual(data.MATERIAL_MECHANICS_RANGE_PAGES.map((page) => page.number), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
   assert.deepEqual(
     data.MATERIAL_MECHANICS_TOPICS.map((topic) => topic.id),
     ["torsion", "shaft-design", "coil-spring", "beam-statics"],
@@ -65,15 +65,15 @@ test("material-mechanics range truth is nine pages across four documented topics
   assert.equal(data.MATERIAL_MECHANICS_EXAM_SPEC.passPoints, 60);
   assert.equal(data.MATERIAL_MECHANICS_EXAM_SPEC.paper, "A4 portrait");
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.included.join(" "), /第5問\(1\)\(4\)/);
-  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /形式2第4問/);
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /形式2.*第4問/);
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /Wahl/);
 });
 
 test("material-mechanics cards and practice are source-backed, solved, diagrammed, and valid TeX", async () => {
   const data = await loadModule(DATA_URL);
   const katex = await import(new URL("../app/vendor/katex/katex.mjs", import.meta.url));
-  assert.equal(data.MATERIAL_MECHANICS_FORMULAS.length, 18);
-  assert.ok(data.MATERIAL_MECHANICS_QUESTIONS.length >= 25);
+  assert.equal(data.MATERIAL_MECHANICS_FORMULAS.length, 24);
+  assert.ok(data.MATERIAL_MECHANICS_QUESTIONS.length >= 37);
   assert.equal(new Set(data.MATERIAL_MECHANICS_FORMULAS.map((item) => item.id)).size, data.MATERIAL_MECHANICS_FORMULAS.length);
   assert.equal(new Set(data.MATERIAL_MECHANICS_QUESTIONS.map((item) => item.id)).size, data.MATERIAL_MECHANICS_QUESTIONS.length);
   assertSourceRefs(data.MATERIAL_MECHANICS_FORMULAS);
@@ -129,12 +129,12 @@ test("six expected A4 exams are 100-point, 60-pass, 5-major, all-topic solved pa
   }
 });
 
-test("material-mechanics generator exposes four safe, source-backed, fully solved templates", async () => {
+test("material-mechanics generator exposes eight safe, source-backed, fully solved templates", async () => {
   const generator = await loadModule(GENERATOR_URL);
   const katex = await import(new URL("../app/vendor/katex/katex.mjs", import.meta.url));
   assert.deepEqual(
     generator.MATERIAL_MECHANICS_GENERATOR_TEMPLATES.map((item) => item.id),
-    ["material-solid-shaft-stress", "material-hollow-shaft-stress", "material-coil-spring-deflection", "material-simple-beam-udl"],
+    ["material-solid-shaft-stress", "material-hollow-shaft-stress", "material-coil-spring-deflection", "material-simple-beam-udl", "material-simple-beam-point-rect", "material-simple-beam-udl-rect", "material-cantilever-tip-hollow", "material-cantilever-udl-hollow"],
   );
   const random = { int: (minimum, maximum) => Math.floor((minimum + maximum) / 2) };
   for (const template of generator.MATERIAL_MECHANICS_GENERATOR_TEMPLATES) {
@@ -187,7 +187,7 @@ test("material-mechanics UI provides searchable cards, timed drill, persistence,
   assert.match(css, /210mm/);
   assert.match(css, /297mm/);
 
-  for (const kind of ["solid-shaft", "hollow-shaft", "coil-spring", "support-types", "simply-supported-point", "simply-supported-udl", "overhang-beam", "overhang-udl", "cantilever-udl", "load-resultants", "sfd-bmd", "overhang-sfd-bmd", "beam-section-stress"]) {
+  for (const kind of ["solid-shaft", "hollow-shaft", "coil-spring", "support-types", "simply-supported-point", "simply-supported-udl", "overhang-beam", "overhang-udl", "cantilever-udl", "load-resultants", "sfd-bmd", "overhang-sfd-bmd", "beam-section-stress", "additional-simple-point-rect", "additional-simple-udl-rect", "additional-cantilever-tip-hollow", "additional-cantilever-udl-hollow"]) {
     assert.match(diagrams, new RegExp(`"${kind}"`), `${kind} diagram`);
   }
   assert.match(diagrams, /useId/);

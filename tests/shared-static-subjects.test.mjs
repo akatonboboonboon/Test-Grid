@@ -85,6 +85,6 @@ test("reports real home progress and migrates saved placeholder memos", async ()
 
   assert.match(data, /wasOldMaterialMechanicsPlaceholder/);
   assert.match(data, /wasOldDigitalCircuitsPlaceholder/);
-  assert.match(data, /範囲ZIP9枚/);
+  assert.match(data, /範囲ZIP13ページ/);
   assert.match(data, /追加範囲PDF7ページ/);
 });

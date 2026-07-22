@@ -359,7 +359,7 @@ function MaterialMechanicsExpectedExamLab({ firstExam }: { firstExam: ExpectedEx
           <div><span>SCORE</span><strong>100</strong><small>点換算</small></div>
           <div><span>PASS</span><strong>60</strong><small>練習用</small></div>
         </div>
-        <aside className={styles.scopeWarning}><strong>範囲境界</strong><p>範囲ZIP9枚を正本とし、形式2は第1〜3問相当の支点・反力・SFD・BMDだけを採用。形式2の曲げ応力・断面二次モーメントと、形式1・3の旧範囲内容は出題しません。</p></aside>
+        <aside className={styles.scopeWarning}><strong>範囲境界</strong><p>範囲ZIP13ページを正本とし、ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを採用。形式2はQ1〜3の範囲一致部だけを照合し、Q4は追加曲げ範囲の出典に使いません。EIによるたわみ、曲率、カスティリアーノの定理と、形式1・3の旧範囲内容は出題しません。</p></aside>
 
         {savedExam && (
           <aside className={styles.savedCard} aria-label="保存された想定試験">
