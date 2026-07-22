@@ -1,7 +1,7 @@
 {
     "source":  {
                    "kind":  "stable-test-fixture",
-                   "note":  "Seven thermodynamics range images plus the reviewed format-3 overlap contract."
+                   "note":  "Nine thermodynamics range images plus the reviewed format-3 overlap contract."
                },
     "pages":  [
                   {
@@ -24,6 +24,12 @@
                   },
                   {
                       "pageIndex":  7
+                  },
+                  {
+                      "pageIndex":  8
+                  },
+                  {
+                      "pageIndex":  9
                   }
               ],
     "recommendedTopicTags":  [
@@ -44,6 +50,9 @@
                                  },
                                  {
                                      "id":  "carnot"
+                                 },
+                                 {
+                                     "id":  "refrigeration"
                                  }
                              ],
     "format3":  {

@@ -5,7 +5,8 @@ export type ExpectedSourceFamily =
   | "exercise-pdf1"
   | "exercise-pdf2"
   | "exercise-pdf3"
-  | "exercise-pdf4";
+  | "exercise-pdf4"
+  | "additional-range";
 
 export type ExpectedExamDefinition = {
   id: string;
@@ -62,6 +63,7 @@ const REQUIRED_SOURCE_FAMILIES: ExpectedSourceFamily[] = [
   "exercise-pdf2",
   "exercise-pdf3",
   "exercise-pdf4",
+  "additional-range",
 ];
 
 const REQUIRED_GENRES = [
@@ -73,6 +75,7 @@ const REQUIRED_GENRES = [
   "スピアマン順位相関",
   "ケンドール順位相関",
   "平方和の恒等式",
+  "チェビシェフ",
 ];
 
 export const STATISTICS_EXPECTED_EXAMS: ExpectedExamDefinition[] = Array.from(
@@ -291,6 +294,81 @@ function buildProbabilityScenario(variant: number): ProbabilityScenario {
   };
 }
 
+
+function buildAdditionalNormalQuestion(variant: number, fallback: ExpectedQuestionInput): ExpectedQuestionInput {
+  const mode = (variant - 1) % 3;
+  if (mode === 0) {
+    return {
+      topic: "continuous",
+      genre: "正規分布表",
+      difficulty: 2,
+      format: "number",
+      prompt: "標準正規分布表を用いて \\(P(1.20<Z<1.36)\\) を求めよ。",
+      context: "\\(\\Phi(1.20)=0.8849,\\ \\Phi(1.36)=0.9131\\) を用いてよい。",
+      answer: "0.0282（2.82%）",
+      numericAnswer: 0.0282,
+      tolerance: 0.00005,
+      formula: "P(a<Z<b)=\\Phi(b)-\\Phi(a)",
+      steps: ["右端までの累積確率から左端までの累積確率を引く。", "\\(0.9131-0.8849=0.0282\\)。"],
+      explanation: "下側累積表の2値の差が指定区間の確率になる。",
+      sourcePages: [2],
+    };
+  }
+  if (mode === 1) {
+    return {
+      topic: "continuous",
+      genre: "正規分布表",
+      difficulty: 2,
+      format: "number",
+      prompt: "\\(X\\sim N(2,5^2)\\) のとき \\(P(-4<X<8.8)\\) を求めよ。",
+      context: "\\(\\Phi(1.20)=0.8849,\\ \\Phi(1.36)=0.9131\\) を用いてよい。",
+      answer: "0.7980（79.8%）",
+      numericAnswer: 0.798,
+      tolerance: 0.00005,
+      formula: "Z=\\frac{X-2}{5}",
+      steps: ["両端を標準化すると \\(-1.20\\) と \\(1.36\\)。", "\\(\\Phi(-1.20)=1-0.8849=0.1151\\)。", "\\(0.9131-0.1151=0.7980\\)。"],
+      explanation: "負側の累積確率を対称性で直してから差を取る。正答は0.7980である。",
+      sourcePages: [2],
+    };
+  }
+  return fallback;
+}
+
+function buildAdditionalChebyshevQuestion(variant: number): ExpectedQuestionInput {
+  if (variant % 2 === 1) {
+    return {
+      topic: "continuous",
+      genre: "チェビシェフ",
+      difficulty: 2,
+      format: "number",
+      prompt: "平均1、分散1/3のとき、\\(P(0\\le X\\le2)\\) の保証下限を求めよ。",
+      context: "分布形は仮定しない。平均から幅1の対称区間である。",
+      answer: "\\(\\frac23\\approx0.667\\)",
+      numericAnswer: 2 / 3,
+      tolerance: 0.001,
+      formula: "P(|X-\\mu|\\le a)\\ge1-\\frac{\\sigma^2}{a^2}",
+      steps: ["\\(\\mu=1,\\ \\sigma^2=1/3,\\ a=1\\)。", "下限は \\(1-\\frac{1/3}{1^2}=\\frac23\\)。"],
+      explanation: "平均と分散だけから保証できる下限であり、正確な確率ではない。",
+      sourcePages: [2],
+    };
+  }
+  return {
+    topic: "continuous",
+    genre: "チェビシェフ",
+    difficulty: 2,
+    format: "number",
+    prompt: "需要が5000個以上9000個以下となる確率の保証下限を求めよ。",
+    context: "月間需要の平均は7000個、標準偏差は1000個であり、分布形は仮定しない。",
+    answer: "\\(\\frac34=0.75\\)",
+    numericAnswer: 0.75,
+    tolerance: 0.0001,
+    formula: "P(|X-\\mu|\\le k\\sigma)\\ge1-\\frac1{k^2}",
+    steps: ["区間の半幅2000は標準偏差1000の2倍なので \\(k=2\\)。", "下限は \\(1-1/2^2=3/4=0.75\\)。"],
+    explanation: "0.75は分布形によらず保証できる最低値であり、正確な確率ではない。",
+    sourcePages: [3],
+  };
+}
+
 export function buildExpectedPaper(definition: ExpectedExamDefinition): ExpectedExamPaper {
   const v = definition.variant;
 
@@ -393,8 +471,6 @@ export function buildExpectedPaper(definition: ExpectedExamDefinition): Expected
   const normalLower = normalMean - normal.z * normalSd;
   const normalUpper = normalMean + normal.z * normalSd;
   const normalProbability = 2 * normal.phi - 1;
-  const chebyshevK = 2 + (v % 3);
-  const chebyshevProbability = 1 - 1 / chebyshevK ** 2;
   const distributionContext = `\\(X\\sim N(${normalMean},${normalSd}^2)\\) とし、標準正規分布表から \\(\\Phi(${formatDecimal(normal.z, 2)})=${formatDecimal(normal.phi, 4)}\\) を用いてよい。別問では分布形を仮定せずチェビシェフの不等式を用いる。`;
 
   const rankPatterns = [
@@ -502,8 +578,8 @@ export function buildExpectedPaper(definition: ExpectedExamDefinition): Expected
       title: "正規分布・チェビシェフ",
       context: distributionContext,
       questions: [
-        makeQuestion(definition, 9, 1, 4, 2, "exercise-pdf4", { linkedCalculation: true }, { topic: "continuous", genre: "正規分布表", difficulty: 2, format: "number", prompt: `\\(P(${formatDecimal(normalLower, 2)}\\le X\\le ${formatDecimal(normalUpper, 2)})\\) を求めよ。`, context: distributionContext, answer: probabilityAnswer(normalProbability, 4), numericAnswer: normalProbability, tolerance: 0.0001, formula: "P(-z\\le Z\\le z)=2\\Phi(z)-1", steps: [`両端を標準化すると \\(-${formatDecimal(normal.z, 2)}\\) と \\(${formatDecimal(normal.z, 2)}\\)。`, `対称性より \\(2\\Phi(${formatDecimal(normal.z, 2)})-1=${formatDecimal(normalProbability, 4)}\\)。`], explanation: "平均を中心とする左右対称区間なので、上側累積確率から中央確率へ変換する。" }),
-        makeQuestion(definition, 9, 2, 3, 2, "exercise-pdf4", { linkedCalculation: true }, { topic: "continuous", genre: "チェビシェフ", difficulty: 2, format: "number", prompt: `分布形を仮定しないとき、平均から${chebyshevK}標準偏差以内に入る確率の下限を求めよ。`, context: distributionContext, answer: probabilityAnswer(chebyshevProbability), numericAnswer: chebyshevProbability, tolerance: 0.0001, formula: "P(|X-\\mu|<k\\sigma)\\ge1-\\frac1{k^2}", steps: [`\\(k=${chebyshevK}\\) を代入する。`, `下限は \\(1-\\frac1{${chebyshevK}^2}=${formatDecimal(chebyshevProbability, 5)}\\)。`], explanation: "正規分布表は使わない。チェビシェフの不等式は分布形を問わず保証される下限である。" }),
+        makeQuestion(definition, 9, 1, 4, 2, v % 3 === 0 ? "exercise-pdf4" : "additional-range", { linkedCalculation: true }, buildAdditionalNormalQuestion(v, { topic: "continuous", genre: "正規分布表", difficulty: 2, format: "number", prompt: `\\(P(${formatDecimal(normalLower, 2)}\\le X\\le ${formatDecimal(normalUpper, 2)})\\) を求めよ。`, context: distributionContext, answer: probabilityAnswer(normalProbability, 4), numericAnswer: normalProbability, tolerance: 0.0001, formula: "P(-z\\le Z\\le z)=2\\Phi(z)-1", steps: [`両端を標準化すると \\(-${formatDecimal(normal.z, 2)}\\) と \\(${formatDecimal(normal.z, 2)}\\)。`, `対称性より \\(2\\Phi(${formatDecimal(normal.z, 2)})-1=${formatDecimal(normalProbability, 4)}\\)。`], explanation: "平均を中心とする左右対称区間なので、上側累積確率から中央確率へ変換する。" })),
+        makeQuestion(definition, 9, 2, 3, 2, "additional-range", { linkedCalculation: true }, buildAdditionalChebyshevQuestion(v)),
       ],
     },
     {

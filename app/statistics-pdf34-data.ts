@@ -237,6 +237,7 @@ export const STATISTICS_PDF34_QUESTIONS: StatisticsQuestion[] = [
     ],
     explanation: "分布形が分からなくても、平均と分散だけから区間内確率の最低保証を得られる。",
     source: "course-range",
+    sourcePages: [2],
   },
   {
     id: "stats-ex4-chebyshev-demand",
@@ -255,12 +256,13 @@ export const STATISTICS_PDF34_QUESTIONS: StatisticsQuestion[] = [
     ],
     explanation: "保証される下限が \\(0.75\\) なので、この確率は少なくとも \\(0.7\\) 以上であると判定できる。\\(0.75\\) は正確な確率ではなく下限である。",
     source: "course-range",
+    sourcePages: [3],
   },
 ];
 
 export const STATISTICS_PDF34_FORMULAS: StatisticsFormulaCard[] = [
   {
-    id: "stats-ex4-chebyshev-inequality",
+    id: "stats-chebyshev",
     topic: "continuous",
     title: "チェビシェフの不等式",
     prompt: "平均から kσ 以上離れる確率の上限は？",
@@ -268,6 +270,7 @@ export const STATISTICS_PDF34_FORMULAS: StatisticsFormulaCard[] = [
     explanation: "分布の形を仮定せず、平均と分散だけから平均より遠い値が出る確率を上から抑える。",
     cue: "外側は k の二乗分の1以下",
     example: "\\(k=2\\) なら、平均から \\(2\\sigma\\) 以上離れる確率は \\(\\frac{1}{4}\\) 以下。",
+    sourcePages: [2, 3],
   },
   {
     id: "stats-ex4-chebyshev-symmetric-interval",
@@ -278,5 +281,6 @@ export const STATISTICS_PDF34_FORMULAS: StatisticsFormulaCard[] = [
     explanation: "対称区間の半幅を標準偏差で割って k を作れば、区間内に入る確率の最低保証を計算できる。",
     cue: "内側は 1 − 分散÷幅の二乗",
     example: "\\(a=2\\sigma\\) なら、区間内確率は少なくとも \\(1-\\frac{1}{4}=\\frac{3}{4}\\)。",
+    sourcePages: [2, 3],
   },
 ];

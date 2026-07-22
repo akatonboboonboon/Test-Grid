@@ -6,10 +6,10 @@ import CardFaceList from "./card-face-list";
 import { DisplayMath, RichMathText } from "./statistics-math";
 import { ENGLISH_QUESTIONS } from "./english-data";
 import { MECHANICAL_DYNAMICS_QUESTIONS } from "./mechanical-dynamics-data";
-import { THERMODYNAMICS_QUESTIONS } from "./thermodynamics-data";
+import { THERMODYNAMICS_FORMULAS, THERMODYNAMICS_QUESTIONS } from "./thermodynamics-data";
 import { SMART_CONTROL_QUESTIONS } from "./smart-control-data";
 import { TEXTBOOK_RESPONSE_QUESTIONS } from "./smart-control-textbook-data";
-import { STATISTICS_QUESTIONS } from "./statistics-data";
+import { STATISTICS_FORMULAS, STATISTICS_QUESTIONS } from "./statistics-data";
 import { APPLIED_MATH_QUESTIONS } from "./applied-math-data";
 import { DIGITAL_CIRCUIT_ALL_QUESTIONS } from "./digital-circuits-extra-data";
 import { MATERIAL_MECHANICS_FORMULAS, MATERIAL_MECHANICS_QUESTIONS } from "./material-mechanics-data";
@@ -143,27 +143,49 @@ const MATERIAL_FORMULA_SEARCH_IDS = new Set(
   MATERIAL_MECHANICS_FORMULAS.map((card) => `rapid-card-${card.id}`),
 );
 
-function materialFormulaCardsToSearchCards(): RapidQuestion[] {
-  return MATERIAL_MECHANICS_FORMULAS.map((card) => ({
+type FormulaSearchSeed = {
+  id: string;
+  title: string;
+  prompt: string;
+  formula: string;
+  explanation: string;
+  cue: string;
+};
+
+function formulaCardsToSearchCards(
+  subjectId: SubjectId,
+  cards: readonly FormulaSearchSeed[],
+  sourceBasis: string,
+): RapidQuestion[] {
+  const meta = rapidSubjectMeta(subjectId);
+  return cards.map((card) => ({
     id: `rapid-card-${card.id}`,
-    subjectId: "subject-5",
+    subjectId,
     topicLabel: `${card.title} / 暗記・公式`,
     prompt: `${card.title}：${card.prompt}`,
     answer: card.formula,
     acceptedOptions: [card.formula],
     options: [card.formula],
     explanation: `${card.explanation} 覚え方：${card.cue}`,
-    studyHref: "/subjects/subject-5?mode=cards",
+    studyHref: meta.cardHref,
     mathOptions: true,
     difficulty: 3,
     recommendedSeconds: 45,
     steps: [
-      "表面のタイトルと問いから、対象となる荷重・断面・記号を整理する。",
+      "表面のタイトルと問いから、対象となる条件・記号を整理する。",
       `手掛かり「${card.cue}」から公式を再現する。`,
       "裏面の公式と解説を照合し、適用条件まで確認する。",
     ],
-    sourceBasis: "材料力学範囲ZIP13ページ / 暗記・公式カード",
+    sourceBasis,
   }));
+}
+
+function materialFormulaCardsToSearchCards(): RapidQuestion[] {
+  return formulaCardsToSearchCards(
+    "subject-5",
+    MATERIAL_MECHANICS_FORMULAS,
+    "材料力学範囲ZIP13ページ / 暗記・公式カード",
+  );
 }
 
 
@@ -187,10 +209,12 @@ function loadAllCards() {
     ...reviewQuestionsToCards("subject-2", ENGLISH_QUESTIONS.filter((question) => question.unit !== "exam-sample" && question.unit !== "ch19")),
     ...reviewQuestionsToCards("subject-3", MECHANICAL_DYNAMICS_QUESTIONS),
     ...reviewQuestionsToCards("subject-4", THERMODYNAMICS_QUESTIONS),
+    ...formulaCardsToSearchCards("subject-4", THERMODYNAMICS_FORMULAS, "熱力学範囲ZIP9ページ / 暗記・公式カード"),
     ...reviewQuestionsToCards("subject-5", MATERIAL_MECHANICS_QUESTIONS),
     ...materialFormulaCardsToSearchCards(),
     ...reviewQuestionsToCards("subject-6", [...SMART_CONTROL_QUESTIONS, ...TEXTBOOK_RESPONSE_QUESTIONS]),
     ...reviewQuestionsToCards("subject-7", STATISTICS_QUESTIONS),
+    ...formulaCardsToSearchCards("subject-7", STATISTICS_FORMULAS, "確率統計範囲ZIP＋追加範囲5ページ / 暗記・公式カード"),
     ...reviewQuestionsToCards("subject-8", APPLIED_MATH_QUESTIONS),
     ...reviewQuestionsToCards("subject-9", DIGITAL_CIRCUIT_ALL_QUESTIONS),
   );

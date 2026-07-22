@@ -144,15 +144,15 @@ export const GENERATED_PRACTICE_SUBJECTS = [
     id: "subject-3",
     name: "機械力学",
     shortName: "機械力学",
-    description: "振動・減衰・ばね・振り子の数値を変えた計算問題を生成します。",
+    description: "振動・減衰・複合ばねに加え、実物過去問の大問6相当となるレバー・ばね・ダンパ系を生成します。",
     sourceLabel: "機械力学範囲ZIP＋過去問",
   },
   {
     id: "subject-4",
     name: "熱・流体力学",
     shortName: "熱・流体",
-    description: "断熱変化・熱効率・理想気体の、範囲内公式だけを使う計算問題を生成します。",
-    sourceLabel: "熱力学範囲ZIP＋範囲内形式3",
+    description: "断熱変化・熱効率・理想気体・逆カルノー冷凍機を、範囲内公式だけで生成します。",
+    sourceLabel: "熱力学範囲ZIP＋追加範囲2ページ＋範囲内形式3",
   },
   {
     id: "subject-5",
@@ -172,8 +172,8 @@ export const GENERATED_PRACTICE_SUBJECTS = [
     id: "subject-7",
     name: "確率統計",
     shortName: "確率統計",
-    description: "記述統計・標準化・条件付き確率・場合の数を、範囲内公式だけで生成します。",
-    sourceLabel: "確率統計範囲ZIP＋範囲演習PDF",
+    description: "記述統計・標準化・条件付き確率・場合の数・チェビシェフの不等式を、範囲内公式だけで生成します。",
+    sourceLabel: "確率統計範囲ZIP＋追加範囲5ページ＋範囲演習PDF",
   },
   {
     id: "subject-8",
@@ -284,10 +284,13 @@ export const GENERATED_PRACTICE_SOURCE_REFERENCES = {
   "mechanical-damping-ratio": ["md-f-critical", "md-f-zeta", "md-f-wd", "md-f-damped-initial"],
   "mechanical-pendulum-length": ["md-f-simple-pendulum", "md-f-frequency"],
   "mechanical-log-decrement": ["md-f-logdec-n", "md-f-zeta-exact", "md-f-wd", "md-f-wn"],
+  "mechanical-lever-spring-damper": ["md-f-rotational", "md-f-lever", "md-f-zeta", "md-f-critical"],
+  "mechanical-laplace-step-response": ["md-f-transfer", "md-f-coverup", "md-f-first-order", "md-f-step-response"],
   "thermo-ideal-gas": ["th-q-poly-mass", "th-poly-law", "th-poly-pressure", "th-q-poly-temperature"],
   "thermo-adiabatic-temperature": ["th-ad-pv", "th-ad-tp", "th-ad-works", "th-q-poly-mass"],
   "thermo-otto-efficiency": ["th-otto-processes", "th-otto-compression", "th-otto-temperature", "th-otto-efficiency"],
   "thermo-carnot-efficiency": ["th-carnot-ratio", "th-carnot-efficiency", "th-carnot-entropy"],
+  "thermo-reversed-carnot": ["th-refrigeration-balance", "th-refrigeration-cop", "th-heat-pump-cop", "th-reversed-carnot-cop"],
   "material-solid-shaft-stress": ["mm-f-power", "mm-f-solid", "mm-f-tau-max", "mm-f-twist"],
   "material-hollow-shaft-stress": ["mm-f-power", "mm-f-hollow-ratio", "mm-f-tau-max"],
   "material-coil-spring-deflection": ["mm-f-spring-rate", "mm-f-spring-stress", "mm-f-spring-deflection"],
@@ -304,6 +307,7 @@ export const GENERATED_PRACTICE_SOURCE_REFERENCES = {
   "statistics-z-score": ["stats-standardization"],
   "statistics-bayes": ["stats-bayes"],
   "statistics-combination": ["stats-combination"],
+  "statistics-chebyshev": ["stats-chebyshev"],
   "applied-vector-norm": ["am-vector-norm"],
   "applied-orthogonal-unknown": ["am-orthogonal", "am-vector-norm"],
   "applied-directional-derivative": ["am-gradient", "am-directional"],
@@ -736,10 +740,10 @@ function mechanicalNatural(seedKey: string, rng: SeededRandom) {
   const period = 1 / frequency;
   return numericQuestion(seedKey, {
     subjectId: "subject-3", templateId: "mechanical-natural-frequency", category: "等価剛性・自由振動", title: "片持ちはり支持質量の固有振動",
-    prompt: String.raw`はりを等価ばねへ置換し、(k)、(omega_n)、(f_n)、(T_n)を順に求めよ。解答欄には(omega_n)を入力する。`,
-    context: String.raw`先端に質量 (m=${mass},mathrm{kg}) を持つ長さ (l=${length},mathrm m) の片持ちはり。曲げ剛性は (EI=${flexuralRigidity},mathrm{N,m^2})。はりの質量は無視する。`,
-    answerValue: omega, digits: 4, tolerance: 0.03, unit: "rad/s", requireUnit: true,
-    acceptedUnitScales: { "rad/s": 1, "rad s^-1": 1 },
+    prompt: String.raw`はりを等価ばねへ置換し、\(k\)、\(\omega_n\)、\(f_n\)、\(T_n\)を順に求めよ。解答欄には最後に求める\(T_n\)を入力する。`,
+    context: String.raw`先端に質量 \(m=${mass}\,\mathrm{kg}\) を持つ長さ \(l=${length}\,\mathrm m\) の片持ちはり。曲げ剛性は \(EI=${flexuralRigidity}\,\mathrm{N\,m^2}\)。はりの質量は無視する。`,
+    answerValue: period, digits: 5, tolerance: 0.001, unit: "s", requireUnit: true,
+    acceptedUnitScales: { s: 1, ms: 0.001 },
     formula: "\\begin{aligned}k&=\\frac{3EI}{l^3}\\\\\\omega_n&=\\sqrt{\\frac{k}{m}}\\\\f_n&=\\frac{\\omega_n}{2\\pi}\\\\T_n&=\\frac{1}{f_n}\\end{aligned}",
     steps: [
       `\\(k=\\frac{3(${flexuralRigidity})}{${length}^3}\\approx${formatNumber(stiffness, 4)}\\,\\mathrm{N/m}\\)`,
@@ -748,7 +752,7 @@ function mechanicalNatural(seedKey: string, rng: SeededRandom) {
       `\\(T_n=\\frac{1}{${formatNumber(frequency, 5)}}\\approx${formatNumber(period, 5)}\\,\\mathrm s\\)`,
     ],
     reason: "範囲プリント4枚と同じく、構造物の静たわみから等価剛性を作り、振動系へ置換する必要があります。",
-    explanation: `最終値は${formatNumber(omega, 4)} rad/s。kを直接与えず、はりの剛性から作るモデル化を含む本番水準の連続計算です。`,
+    explanation: `途中値はωn=${formatNumber(omega, 4)} rad/sで、最後に求める周期はTn=${formatNumber(period, 5)} sです。kを直接与えず、はりの剛性から周期まで通す本番水準の連続計算です。`,
     source: rangeSource("機械力学範囲・片持ちはり等価剛性と不減衰振動", [1, 2, 4]),
     parameters: { mass, flexuralRigidity, length, stiffness, omega, frequency, period },
     safety: baseSafety({ finiteValues: [mass, flexuralRigidity, length, stiffness, omega, frequency, period], denominators: [length ** 3, mass, 2 * 3.14, frequency], radicands: [stiffness / mass] }),
@@ -769,10 +773,10 @@ function mechanicalSeries(seedKey: string, rng: SeededRandom) {
   const period = 2 * 3.14 / omega;
   return numericQuestion(seedKey, {
     subjectId: "subject-3", templateId: "mechanical-series-springs", category: "複合ばね・自由振動", title: "直列・並列複合ばねの固有振動",
-    prompt: String.raw`接続図から並列部、直列合成、固有角振動数、周期を順に求めよ。解答欄には(omega_n)を入力する。`,
-    context: String.raw`ばね (k_1=${k1},mathrm{N/m}) と、並列接続した (k_2=${k2},mathrm{N/m},,k_3=${k3},mathrm{N/m}) が直列で、質量 (m=${mass},mathrm{kg}) を支持する。`,
-    answerValue: omega, digits: 4, tolerance: 0.03, unit: "rad/s", requireUnit: true,
-    acceptedUnitScales: { "rad/s": 1, "rad s^-1": 1 },
+    prompt: String.raw`接続図から並列部\(k_p\)、直列合成\(k_{eq}\)、固有角振動数\(\omega_n\)、周期\(T_n\)を順に求めよ。解答欄には最後に求める\(T_n\)を入力する。`,
+    context: String.raw`ばね \(k_1=${k1}\,\mathrm{N/m}\) と、並列接続した \(k_2=${k2}\,\mathrm{N/m}\)、\(k_3=${k3}\,\mathrm{N/m}\) が直列で、質量 \(m=${mass}\,\mathrm{kg}\) を支持する。`,
+    answerValue: period, digits: 5, tolerance: 0.001, unit: "s", requireUnit: true,
+    acceptedUnitScales: { s: 1, ms: 0.001 },
     formula: "\\begin{aligned}k_p&=k_2+k_3\\\\k_{eq}&=\\frac{k_1k_p}{k_1+k_p}\\\\\\omega_n&=\\sqrt{\\frac{k_{eq}}{m}}\\\\T_n&=\\frac{2\\pi}{\\omega_n}\\end{aligned}",
     steps: [
       `\\(k_p=${k2}+${k3}=${parallel}\\,\\mathrm{N/m}\\)`,
@@ -781,11 +785,11 @@ function mechanicalSeries(seedKey: string, rng: SeededRandom) {
       `\\(T_n=\\frac{2\\times3.14}{${formatNumber(omega, 5)}}\\approx${formatNumber(period, 5)}\\,\\mathrm s\\)`,
     ],
     reason: "図の内側から接続を簡単化しないと、並列和と直列積和を取り違えるためです。",
-    explanation: `等価剛性${formatNumber(equivalent, 4)} N/mを経て、固有角振動数は${formatNumber(omega, 4)} rad/sです。`,
+    explanation: `等価剛性${formatNumber(equivalent, 4)} N/m、固有角振動数${formatNumber(omega, 4)} rad/sを経て、最後の周期は${formatNumber(period, 5)} sです。`,
     source: rangeSource("機械力学範囲・複合ばね", [3, 4, 5]),
     parameters: { k1, k2, k3, mass, parallel, equivalent, omega, period },
     safety: baseSafety({ finiteValues: [k1, k2, k3, mass, parallel, equivalent, omega, period], denominators: [denominator, mass, omega], radicands: [equivalent / mass] }),
-    visual: { type: "mechanical-dynamics", kind: "spring-network" }, difficulty: 3, subpartCount: 4,
+    visual: { type: "mechanical-dynamics", kind: "series-parallel-chain" }, difficulty: 3, subpartCount: 4,
     sourceBasis: ["範囲ZIP p.5の直列・並列・複合ばね", "範囲ZIP p.1〜3の固有振動"],
   });
 }
@@ -804,9 +808,9 @@ function mechanicalDamping(seedKey: string, rng: SeededRandom) {
   const c2 = (v0 + zeta * naturalOmega * x0) / dampedOmega;
   return numericQuestion(seedKey, {
     subjectId: "subject-3", templateId: "mechanical-damping-ratio", category: "粘性減衰・初期値応答", title: "減衰分類から不足減衰解の係数まで",
-    prompt: String.raw`(c_c,zeta,omega_n,omega_d)を求めて応答を分類し、初期条件から不足減衰解の係数 (C_2) まで計算せよ。解答欄には(zeta)を入力する。`,
-    context: String.raw`(m=${mass},mathrm{kg},,k=${stiffness},mathrm{N/m},,c=${formatNumber(damping, 3)},mathrm{N,s/m})、(x(0)=${formatNumber(x0 * 1000, 1)},mathrm{mm},,dot x(0)=${v0},mathrm{m/s})。`,
-    answerValue: zeta, digits: 4, tolerance: 0.001,
+    prompt: String.raw`\(c_c,\zeta,\omega_n,\omega_d\)を求めて応答を分類し、初期条件から不足減衰解の係数\(C_2\)まで計算せよ。解答欄には最後に求める\(C_2\)を入力する。`,
+    context: String.raw`\(m=${mass}\,\mathrm{kg}\)、\(k=${stiffness}\,\mathrm{N/m}\)、\(c=${formatNumber(damping, 3)}\,\mathrm{N\,s/m}\)、\(x(0)=${formatNumber(x0 * 1000, 1)}\,\mathrm{mm}\)、\(\dot{x}(0)=${v0}\,\mathrm{m/s}\)。`,
+    answerValue: c2, digits: 7, tolerance: 0.00002, unit: "m", requireUnit: true, acceptedUnitScales: { m: 1, mm: 0.001 },
     formula: "\\begin{aligned}c_c&=2\\sqrt{mk}\\\\\\zeta&=\\frac{c}{c_c}\\\\\\omega_d&=\\sqrt{\\frac{k}{m}}\\sqrt{1-\\zeta^2}\\\\C_2&=\\frac{v_0+\\zeta\\omega_nx_0}{\\omega_d}\\end{aligned}",
     steps: [
       `\\(c_c=2\\sqrt{${mass}(${stiffness})}=${formatNumber(critical, 4)}\\,\\mathrm{N\\,s/m}\\)`,
@@ -815,7 +819,7 @@ function mechanicalDamping(seedKey: string, rng: SeededRandom) {
       `\\(x_0=${formatNumber(x0, 5)}\\,\\mathrm m\\)として \\(C_2\\approx${formatNumber(c2, 7)}\\,\\mathrm m\\)`,
     ],
     reason: "本番では減衰比だけで終わらず、応答分類と初期値を入れた解の係数まで連続して問われます。",
-    explanation: `減衰比は${formatNumber(zeta, 4)}で不足減衰。続くωdとC2も同じ途中値を使うため、丸めは最後に行います。`,
+    explanation: `減衰比は${formatNumber(zeta, 4)}で不足減衰。途中のωdを保持して、最後にC2=${formatNumber(c2, 7)} mまで求めます。丸めは最後に行います。`,
     source: rangeSource("機械力学範囲・粘性減衰と初期条件", [6, 7, 10, 13, 14]),
     parameters: { mass, stiffness, damping, critical, zeta, naturalOmega, dampedOmega, x0, v0, c2 },
     safety: baseSafety({ finiteValues: [mass, stiffness, damping, critical, zeta, naturalOmega, dampedOmega, x0, v0, c2], denominators: [critical, mass, dampedOmega], radicands: [mass * stiffness, 1 - zeta ** 2] }),
@@ -834,7 +838,7 @@ function mechanicalPendulum(seedKey: string, rng: SeededRandom) {
   const omega = 2 * pi / period;
   return numericQuestion(seedKey, {
     subjectId: "subject-3", templateId: "mechanical-pendulum-length", category: "単振り子・測定値処理", title: "複数周期の測定から振り子長さを逆算",
-    prompt: String.raw`測定値から1周期を求め、(omega_n)と振り子長さ (l) を逆算せよ。解答欄には (l) を入力する。`,
+    prompt: String.raw`測定値から1周期を求め、\(\omega_n\)と振り子長さ\(l\)を逆算せよ。解答欄には最後に求める\(l\)を入力する。`,
     context: `${cycles}周期に要した時間は${formatNumber(totalTime, 2)} s。g=9.80 m/s²、π=3.14とする。`,
     answerValue: length, digits: 4, tolerance: 0.002, unit: "m", requireUnit: true, acceptedUnitScales: { m: 1, mm: 0.001 },
     formula: "\\begin{aligned}T&=\\frac{t_n}{n}\\\\\\omega_n&=\\frac{2\\pi}{T}\\\\l&=\\frac{gT^2}{4\\pi^2}\\end{aligned}",
@@ -867,7 +871,7 @@ function mechanicalDecrement(seedKey: string, rng: SeededRandom) {
   const stiffness = mass * naturalOmega ** 2;
   return numericQuestion(seedKey, {
     subjectId: "subject-3", templateId: "mechanical-log-decrement", category: "波形読解・系同定", title: "減衰波形から減衰比・ばね定数を同定",
-    prompt: String.raw`波形から(delta,zeta,omega_d,omega_n)を順に求め、ばね定数 (k) を同定せよ。解答欄には (k) を入力する。`,
+    prompt: String.raw`波形から\(\delta,\zeta,\omega_d,\omega_n\)を順に求め、ばね定数\(k\)を同定せよ。解答欄には最後に求める\(k\)を入力する。`,
     context: `${cycles}周期後の同符号ピークは初期振幅の${remaining * 100}%、減衰周期Td=${dampedPeriod} s、質量m=${mass} kg。π=3.14。`,
     answerValue: stiffness, digits: 3, tolerance: Math.max(0.2, stiffness * 0.005), unit: "N/m", requireUnit: true, acceptedUnitScales: { "N/m": 1, "kN/m": 1000 },
     formula: "\\begin{aligned}\\delta&=\\frac{1}{n}\\ln\\!\\left(\\frac{x_i}{x_{i+n}}\\right)\\\\\\zeta&=\\frac{\\delta}{\\sqrt{4\\pi^2+\\delta^2}}\\\\\\omega_d&=\\frac{2\\pi}{T_d}\\\\\\omega_n&=\\frac{\\omega_d}{\\sqrt{1-\\zeta^2}}\\\\k&=m\\omega_n^2\\end{aligned}",
@@ -885,6 +889,97 @@ function mechanicalDecrement(seedKey: string, rng: SeededRandom) {
     safety: baseSafety({ finiteValues: [cycles, remaining, dampedPeriod, mass, logArgument, decrement, zeta, dampedOmega, naturalOmega, stiffness], denominators: [cycles, remaining, dampedPeriod, Math.sqrt(4 * 3.14 ** 2 + decrement ** 2), Math.sqrt(1 - zeta ** 2)], radicands: [4 * 3.14 ** 2 + decrement ** 2, 1 - zeta ** 2], logArguments: [logArgument] }),
     visual: { type: "mechanical-dynamics", kind: "amplitude-decay" }, difficulty: 3, subpartCount: 5,
     sourceBasis: ["範囲ZIP p.11〜14の波形読解", "対数減衰率からばね定数までの演習"],
+  });
+}
+function mechanicalLeverSpringDamper(seedKey: string, rng: SeededRandom) {
+  const mass = rng.pick([2, 2.5, 3, 4]);
+  const stiffness = rng.pick([400, 500, 600, 800]);
+  const damping = rng.pick([120, 140, 160, 180]);
+  const massArm = rng.pick([0.25, 0.3, 0.4, 0.5]);
+  const springArm = rng.pick([0.6, 0.7, 0.8, 1]);
+  const rotationalInertia = mass * massArm ** 2;
+  const rotationalDamping = damping * massArm ** 2;
+  const rotationalStiffness = stiffness * springArm ** 2;
+  const naturalOmega = Math.sqrt(rotationalStiffness / rotationalInertia);
+  const dampingRatio = rotationalDamping / (2 * Math.sqrt(rotationalInertia * rotationalStiffness));
+  const criticalMassArm = 2 * springArm * Math.sqrt(mass * stiffness) / damping;
+  const responseType = dampingRatio < 1 ? "不足減衰" : dampingRatio > 1 ? "過減衰" : "臨界減衰";
+  return numericQuestion(seedKey, {
+    subjectId: "subject-3",
+    templateId: "mechanical-lever-spring-damper",
+    category: "回転1自由度系・過去問大問6",
+    title: "レバー・ばね・ダンパ系の運動方程式から臨界条件まで",
+    prompt: String.raw`回転慣性\(J\)、回転減衰\(C_\theta\)、回転剛性\(K_\theta\)を求め、運動方程式を立てる。続けて固有角振動数\(\omega_n\)と減衰比\(\zeta\)を計算して応答を分類し、\(\zeta=1\)となる質点・ダンパの臨界作用腕\(r_c\)を求めよ。解答欄には最後に求める\(r_c\)を入力する。`,
+    context: String.raw`図の質量なしレバーは左端ピン支持。質点\(m=${mass.toFixed(2)}\,\mathrm{kg}\)とダンパ\(c=${damping.toFixed(1)}\,\mathrm{N\,s/m}\)の作用腕は\(r=${massArm.toFixed(3)}\,\mathrm m\)、ばね\(k=${stiffness.toFixed(0)}\,\mathrm{N/m}\)の作用腕は\(l=${springArm.toFixed(3)}\,\mathrm m\)。微小角\(\theta\)とし、作用腕は正とする。`,
+    answerValue: criticalMassArm,
+    digits: 4,
+    tolerance: 0.002,
+    unit: "m",
+    requireUnit: true,
+    acceptedUnitScales: { m: 1, cm: 0.01, mm: 0.001 },
+    formula: "\\begin{aligned}J&=mr^2\\\\C_\\theta&=cr^2\\\\K_\\theta&=kl^2\\\\mr^2\\ddot\\theta+cr^2\\dot\\theta+kl^2\\theta&=0\\\\\\omega_n&=\\sqrt{\\frac{K_\\theta}{J}}=\\frac{l}{r}\\sqrt{\\frac{k}{m}}\\\\\\zeta&=\\frac{C_\\theta}{2\\sqrt{JK_\\theta}}=\\frac{cr}{2l\\sqrt{mk}}\\\\r_c&=\\frac{2l\\sqrt{mk}}{c}\\end{aligned}",
+    steps: [
+      `\\(J=${mass.toFixed(2)}(${massArm.toFixed(3)})^2=${formatNumber(rotationalInertia, 6)}\\,\\mathrm{kg\\,m^2}\\)` ,
+      `\\(C_\\theta=${damping.toFixed(1)}(${massArm.toFixed(3)})^2=${formatNumber(rotationalDamping, 6)}\\,\\mathrm{N\\,m\\,s/rad}\\)` ,
+      `\\(K_\\theta=${stiffness.toFixed(0)}(${springArm.toFixed(3)})^2=${formatNumber(rotationalStiffness, 6)}\\,\\mathrm{N\\,m/rad}\\)` ,
+      `\\(${formatNumber(rotationalInertia, 6)}\\ddot\\theta+${formatNumber(rotationalDamping, 6)}\\dot\\theta+${formatNumber(rotationalStiffness, 6)}\\theta=0\\)` ,
+      `\\(\\omega_n=\\sqrt{\\frac{${formatNumber(rotationalStiffness, 6)}}{${formatNumber(rotationalInertia, 6)}}}\\approx${formatNumber(naturalOmega, 6)}\\,\\mathrm{rad/s}\\)` ,
+      `\\(\\zeta=\\frac{${formatNumber(rotationalDamping, 6)}}{2\\sqrt{${formatNumber(rotationalInertia, 6)}(${formatNumber(rotationalStiffness, 6)})}}\\approx${formatNumber(dampingRatio, 6)}\\) より${responseType}` ,
+      `\\(r_c=\\frac{2(${springArm.toFixed(3)})\\sqrt{${mass.toFixed(2)}(${stiffness.toFixed(0)})}}{${damping.toFixed(1)}}\\approx${formatNumber(criticalMassArm, 6)}\\,\\mathrm m\\)` ,
+    ],
+    reason: "実物過去問の大問6と同じく、並進要素を作用腕の二乗で回転係数へ換算し、同じ運動方程式から固有振動と臨界減衰まで連続して解きます。",
+    explanation: `回転係数を作ってから計算すると、ωn=${formatNumber(naturalOmega, 4)} rad/s、ζ=${formatNumber(dampingRatio, 4)}（${responseType}）、臨界作用腕は${formatNumber(criticalMassArm, 4)} mです。rとlを入れ替えないことが要点です。`,
+    source: rangeSource("機械力学過去問.pdf 大問6＋範囲ZIP p.15", [15]),
+    parameters: { mass, stiffness, damping, massArm, springArm, rotationalInertia, rotationalDamping, rotationalStiffness, naturalOmega, dampingRatio, criticalMassArm, responseType },
+    safety: baseSafety({
+      finiteValues: [mass, stiffness, damping, massArm, springArm, rotationalInertia, rotationalDamping, rotationalStiffness, naturalOmega, dampingRatio, criticalMassArm],
+      denominators: [massArm, rotationalInertia, 2 * Math.sqrt(rotationalInertia * rotationalStiffness), 2 * springArm * Math.sqrt(mass * stiffness), damping],
+      radicands: [rotationalStiffness / rotationalInertia, rotationalInertia * rotationalStiffness, mass * stiffness],
+      notes: ["作用腕・質量・ばね定数・減衰係数は正", "実物過去問大問6と範囲ZIP p.15の式だけを使用"],
+    }),
+    visual: { type: "mechanical-dynamics", kind: "pinned-beam" },
+    difficulty: 3,
+    subpartCount: 7,
+    sourceBasis: ["実物過去問 大問6（レバー・ばね・ダンパ系）", "範囲ZIP p.15の回転1自由度系・作用腕二乗換算"],
+  });
+}
+function mechanicalLaplaceStepResponse(seedKey: string, rng: SeededRandom) {
+  const poleA = rng.pick([1, 2, 3, 4]);
+  const poleB = poleA + rng.pick([1, 2, 3]);
+  const evaluationTime = rng.pick([0.5, 0.8, 1, 1.2, 1.5, 2]);
+  const gain = poleA * poleB;
+  const coefficientA = -poleB / (poleB - poleA);
+  const coefficientB = poleA / (poleB - poleA);
+  const response = 1 + coefficientA * Math.exp(-poleA * evaluationTime) + coefficientB * Math.exp(-poleB * evaluationTime);
+  return numericQuestion(seedKey, {
+    subjectId: "subject-3",
+    templateId: "mechanical-laplace-step-response",
+    category: "ラプラス変換・3極部分分数",
+    title: "単位ステップ入力から時刻指定応答まで",
+    prompt: String.raw`単位ステップ入力から\(Y(s)\)を作り、3項へ部分分数分解する。逆ラプラス変換で\(y(t)\)を求め、最後に\(y(t_0)\)を計算せよ。解答欄には\(y(t_0)\)を入力する。`,
+    context: String.raw`伝達関数は\(G(s)=\frac{${gain}}{(s+${poleA})(s+${poleB})}\)、入力は\(U(s)=\frac{1}{s}\)、評価時刻は\(t_0=${evaluationTime}\,\mathrm s\)。初期値は0とする。`,
+    answerValue: response,
+    digits: 6,
+    tolerance: 0.001,
+    formula: `\\begin{aligned}Y(s)&=G(s)U(s)=\\frac{${gain}}{s(s+${poleA})(s+${poleB})}\\\\&=\\frac{1}{s}-\\frac{${poleB}}{${poleB - poleA}}\\frac{1}{s+${poleA}}+\\frac{${poleA}}{${poleB - poleA}}\\frac{1}{s+${poleB}}\\\\y(t)&=1-\\frac{${poleB}}{${poleB - poleA}}e^{-${poleA}t}+\\frac{${poleA}}{${poleB - poleA}}e^{-${poleB}t}\\end{aligned}`,
+    steps: [
+      `\\(Y(s)=\\frac{${gain}}{s(s+${poleA})(s+${poleB})}\\) とし、極は \\(0,-${poleA},-${poleB}\\) と整理する。`,
+      `\\(Y(s)=\\frac{1}{s}${coefficientA < 0 ? "" : "+"}${formatNumber(coefficientA, 6)}\\frac{1}{s+${poleA}}+${formatNumber(coefficientB, 6)}\\frac{1}{s+${poleB}}\\) と部分分数分解する。`,
+      `\\(y(t)=1${coefficientA < 0 ? "" : "+"}${formatNumber(coefficientA, 6)}e^{-${poleA}t}+${formatNumber(coefficientB, 6)}e^{-${poleB}t}\\) と逆変換する。`,
+      `\\(y(${evaluationTime})=1${coefficientA < 0 ? "" : "+"}${formatNumber(coefficientA, 6)}e^{-${poleA}(${evaluationTime})}+${formatNumber(coefficientB, 6)}e^{-${poleB}(${evaluationTime})}\\approx${formatNumber(response, 8)}\\) を得る。`,
+    ],
+    reason: "入力の1/sを掛けて3極へ分解し、逆変換後に時刻を代入するまでを一続きで問うため、単発の変換公式だけでは解けません。",
+    explanation: `定常項1と2つの指数過渡項を合わせると、最後の応答はy(${evaluationTime})=${formatNumber(response, 6)}です。入力の1/sと各係数の符号を確認します。`,
+    source: rangeSource("機械力学範囲ZIP p.8〜9・単位ステップ応答", [8, 9]),
+    parameters: { poleA, poleB, evaluationTime, gain, coefficientA, coefficientB, response },
+    safety: baseSafety({
+      finiteValues: [poleA, poleB, evaluationTime, gain, coefficientA, coefficientB, response],
+      denominators: [poleB - poleA],
+      notes: ["2つの実極は相異なり、いずれも安定側", "範囲ZIP p.8〜9の部分分数と逆変換だけを使用"],
+    }),
+    difficulty: 3,
+    subpartCount: 4,
+    sourceBasis: ["範囲ZIP p.8の伝達関数と単位ステップ", "範囲ZIP p.8〜9の3項部分分数・逆ラプラス変換"],
   });
 }
 function thermoIdealGas(seedKey: string, rng: SeededRandom) {
@@ -1021,6 +1116,56 @@ function thermoCarnot(seedKey: string, rng: SeededRandom) {
     safety: baseSafety({ finiteValues: [lowC, highC, low, high, heatIn, efficiency, heatOut, work, hotEntropy, coldEntropy], denominators: [high, low] }),
     visual: { type: "thermodynamics", kind: "carnot-ts" }, difficulty: 3, subpartCount: 4,
     sourceBasis: ["範囲ZIPのカルノー熱量比・効率", "形式3の今回範囲に含まれるカルノー問題"],
+  });
+}
+
+function thermoReversedCarnot(seedKey: string, rng: SeededRandom) {
+  const highC = 47;
+  const lowC = 7;
+  const high = highC + 273;
+  const low = lowC + 273;
+  const refrigerationKcalPerHour = rng.pick([600, 900, 1200, 1500, 1800, 2400]);
+  const kcalToKJ = 4.19;
+  const refrigerationCapacity = refrigerationKcalPerHour * kcalToKJ / 3600;
+  const copR = low / (high - low);
+  const copHP = high / (high - low);
+  const requiredPower = refrigerationCapacity / copR;
+  const rejectedHeatRate = refrigerationCapacity + requiredPower;
+  return numericQuestion(seedKey, {
+    subjectId: "subject-4",
+    templateId: "thermo-reversed-carnot",
+    category: "逆カルノー冷凍機・ヒートポンプ",
+    title: "47 ℃／7 ℃逆カルノーのCOPと必要動力",
+    prompt: String.raw`両熱源温度をKへ直し、冷凍機の成績係数 \(\mathrm{COP}_R\)、ヒートポンプの成績係数 \(\mathrm{COP}_{HP}\)、冷凍能力 \(\dot Q_L\)、必要動力 \(\dot W\) を順に求めよ。解答欄には必要動力をkWで入力すること。`,
+    context: `高温側47 ℃、低温側7 ℃で作動する逆カルノー冷凍機が、低温室から毎時${refrigerationKcalPerHour} kcalの熱を取り除く。1 kcal=4.19 kJとする。`,
+    answerValue: requiredPower,
+    digits: 4,
+    tolerance: 0.002,
+    unit: "kW",
+    requireUnit: true,
+    acceptedUnitScales: { kW: 1, W: 0.001 },
+    formula: "\\begin{aligned}T_H&=t_H+273,\\quad T_L=t_L+273\\\\\\mathrm{COP}_R&=\\frac{\\dot Q_L}{\\dot W}=\\frac{T_L}{T_H-T_L}\\\\\\mathrm{COP}_{HP}&=\\frac{\\dot Q_H}{\\dot W}=\\frac{T_H}{T_H-T_L}=\\mathrm{COP}_R+1\\\\\\dot Q_L&=q_L\\frac{4.19}{3600}\\\\\\dot W&=\\frac{\\dot Q_L}{\\mathrm{COP}_R},\\quad\\dot Q_H=\\dot Q_L+\\dot W\\end{aligned}",
+    steps: [
+      `\\(T_H=${highC}+273=${high}\\,\\mathrm K\\)、\\(T_L=${lowC}+273=${low}\\,\\mathrm K\\)`,
+      `\\(\\mathrm{COP}_R=\\frac{${low}}{${high}-${low}}=${formatNumber(copR, 3)}\\)、\\(\\mathrm{COP}_{HP}=\\frac{${high}}{${high}-${low}}=${formatNumber(copHP, 3)}\\)`,
+      `\\(\\dot Q_L=${refrigerationKcalPerHour}\\frac{4.19}{3600}\\approx${formatNumber(refrigerationCapacity, 4)}\\,\\mathrm{kW}\\)`,
+      `\\(\\dot W=\\frac{${formatNumber(refrigerationCapacity, 4)}}{${formatNumber(copR, 3)}}\\approx${formatNumber(requiredPower, 4)}\\,\\mathrm{kW}\\)、\\(\\dot Q_H\\approx${formatNumber(rejectedHeatRate, 4)}\\,\\mathrm{kW}\\)`,
+    ],
+    reason: "追加範囲p.9と同じく、摂氏から絶対温度への換算、逆カルノーCOP、kcal/hからkWへの換算、熱収支を一続きで使う問題です。",
+    explanation: `必要動力は${formatNumber(requiredPower, 4)} kWです。冷凍機は低温側から熱をくみ上げるため、\\(\\mathrm{COP}_R=\\frac{\\dot Q_L}{\\dot W}\\) を使い、ヒートポンプのCOPとは1だけ違います。`,
+    source: rangeSource("熱力学追加範囲 p.9・逆カルノー冷凍機（PXL_20260722_114536629.MP.jpg）", [9]),
+    parameters: { highC, lowC, high, low, refrigerationKcalPerHour, kcalToKJ, refrigerationCapacity, copR, copHP, requiredPower, rejectedHeatRate },
+    safety: baseSafety({
+      finiteValues: [highC, lowC, high, low, refrigerationKcalPerHour, kcalToKJ, refrigerationCapacity, copR, copHP, requiredPower, rejectedHeatRate],
+      denominators: [3600, high - low, copR],
+      notes: ["絶対温度は正", "T_H>T_L", "kcal/hとkWの換算係数は正", "COP_R>0"],
+    }),
+    difficulty: 3,
+    subpartCount: 4,
+    sourceBasis: [
+      "熱力学追加範囲 p.9（PXL_20260722_114536629.MP.jpg）",
+      "同ページ：47 ℃／7 ℃、1200 kcal/hの逆カルノー冷凍機例題",
+    ],
   });
 }
 
@@ -1314,6 +1459,52 @@ function statsCombination(seedKey: string, rng: SeededRandom) {
     sourceBasis: ["確率統計演習・場合分け", "過去問型の複合組合せ"],
   });
 }
+function statsChebyshev(seedKey: string, rng: SeededRandom) {
+  const mean = rng.pick([40, 50, 60, 70, 80, 7000]);
+  const standardDeviation = mean === 7000 ? 1000 : rng.pick([2, 4, 5, 6, 8, 10]);
+  const k = mean === 7000 ? 2 : rng.pick([1.5, 2, 2.5, 3, 4]);
+  const radius = k * standardDeviation;
+  const intervalLower = mean - radius;
+  const intervalUpper = mean + radius;
+  const outsideUpperBound = 1 / k ** 2;
+  const insideLowerBound = 1 - outsideUpperBound;
+  const insideLowerBoundPercent = insideLowerBound * 100;
+  return numericQuestion(seedKey, {
+    subjectId: "subject-7",
+    templateId: "statistics-chebyshev",
+    category: "チェビシェフの不等式",
+    title: "平均・標準偏差から中心区間の確率下限",
+    prompt: String.raw`平均 \(\mu\)、標準偏差 \(\sigma\) をもつ分布について、\(k\sigma\) 以内の中心区間を求め、チェビシェフの不等式からその区間に入る確率の下限を百分率で答えよ。解答欄には確率の下限を入力すること。`,
+    context: String.raw`\(\mu=${mean}\)、\(\sigma=${standardDeviation}\)、\(k=${k}\;(k>1)\) とする。分布の形は仮定しない。`,
+    answerValue: insideLowerBoundPercent,
+    digits: 3,
+    tolerance: 0.05,
+    unit: "%",
+    formula: "\\begin{aligned}P(|X-\\mu|\\ge k\\sigma)&\\le\\frac{1}{k^2}\\\\P(\\mu-k\\sigma\\le X\\le\\mu+k\\sigma)&\\ge1-\\frac{1}{k^2}\\end{aligned}",
+    steps: [
+      `\\(k\\sigma=${k}(${standardDeviation})=${formatNumber(radius, 3)}\\)`,
+      `中心区間は \\(\\mu-k\\sigma\\le X\\le\\mu+k\\sigma\\)、すなわち \\(${formatNumber(intervalLower, 3)}\\le X\\le${formatNumber(intervalUpper, 3)}\\)。`,
+      `区間外の確率は \\(P(|X-\\mu|\\ge k\\sigma)\\le\\frac{1}{${k}^2}=${formatNumber(outsideUpperBound, 5)}\\)。`,
+      `したがって区間内は \\(P(${formatNumber(intervalLower, 3)}\\le X\\le${formatNumber(intervalUpper, 3)})\\ge1-${formatNumber(outsideUpperBound, 5)}=${formatNumber(insideLowerBoundPercent, 3)}\\%\\)。`,
+    ],
+    reason: "分布形を仮定せず、平均から標準偏差のk倍以内に入る確率を下から保証する追加範囲の問題です。",
+    explanation: `中心区間は${formatNumber(intervalLower, 3)}以上${formatNumber(intervalUpper, 3)}以下、入る確率は少なくとも${formatNumber(insideLowerBoundPercent, 3)}%です。求めるのは正確な確率ではなく、チェビシェフの不等式による下限です。`,
+    source: rangeSource("確率統計追加範囲 p.2〜3・チェビシェフの不等式（PXL_20260722_114650437.MP.jpg／PXL_20260722_114652791.MP.jpg）", [2, 3]),
+    parameters: { mean, standardDeviation, k, radius, intervalLower, intervalUpper, outsideUpperBound, insideLowerBound, insideLowerBoundPercent },
+    safety: baseSafety({
+      finiteValues: [mean, standardDeviation, k, radius, intervalLower, intervalUpper, outsideUpperBound, insideLowerBound, insideLowerBoundPercent],
+      denominators: [k, k ** 2],
+      notes: ["標準偏差は正", "k>1", "確率下限は0より大きく1未満"],
+    }),
+    difficulty: 3,
+    subpartCount: 4,
+    sourceBasis: [
+      "確率統計追加範囲 p.2（PXL_20260722_114650437.MP.jpg）",
+      "確率統計追加範囲 p.3（PXL_20260722_114652791.MP.jpg）",
+    ],
+  });
+}
+
 function appliedNorm(seedKey: string, rng: SeededRandom) {
   const ax = rng.int(1, 4);
   const ay = rng.pick([-3, -2, -1, 1, 2, 3]);
@@ -1657,10 +1848,13 @@ const TEMPLATES: PracticeTemplate[] = [
   { id: "mechanical-damping-ratio", subjectId: "subject-3", kind: "calculation", title: "減衰分類・初期値応答", build: mechanicalDamping },
   { id: "mechanical-pendulum-length", subjectId: "subject-3", kind: "calculation", title: "測定値から単振り子同定", build: mechanicalPendulum },
   { id: "mechanical-log-decrement", subjectId: "subject-3", kind: "calculation", title: "減衰波形から系同定", build: mechanicalDecrement },
+  { id: "mechanical-lever-spring-damper", subjectId: "subject-3", kind: "calculation", title: "過去問大問6・レバー回転系", build: mechanicalLeverSpringDamper },
+  { id: "mechanical-laplace-step-response", subjectId: "subject-3", kind: "calculation", title: "3極部分分数・時刻指定応答", build: mechanicalLaplaceStepResponse },
   { id: "thermo-ideal-gas", subjectId: "subject-4", kind: "calculation", title: "ポリトロープ状態・仕事", build: thermoIdealGas },
   { id: "thermo-adiabatic-temperature", subjectId: "subject-4", kind: "calculation", title: "断熱状態・仕事", build: thermoAdiabatic },
   { id: "thermo-otto-efficiency", subjectId: "subject-4", kind: "calculation", title: "オットー4状態・効率", build: thermoOtto },
   { id: "thermo-carnot-efficiency", subjectId: "subject-4", kind: "calculation", title: "カルノー仕事・エントロピー", build: thermoCarnot },
+  { id: "thermo-reversed-carnot", subjectId: "subject-4", kind: "calculation", title: "逆カルノーCOP・冷凍能力・必要動力", build: thermoReversedCarnot },
   { id: "material-solid-shaft-stress", subjectId: "subject-5", kind: "calculation", title: "中実丸軸の最大せん断応力", build: (seedKey, rng) => materialGenerated("material-solid-shaft-stress", seedKey, rng) },
   { id: "material-hollow-shaft-stress", subjectId: "subject-5", kind: "calculation", title: "中空丸軸の最大せん断応力", build: (seedKey, rng) => materialGenerated("material-hollow-shaft-stress", seedKey, rng) },
   { id: "material-coil-spring-deflection", subjectId: "subject-5", kind: "calculation", title: "密巻コイルばねのたわみ", build: (seedKey, rng) => materialGenerated("material-coil-spring-deflection", seedKey, rng) },
@@ -1677,6 +1871,7 @@ const TEMPLATES: PracticeTemplate[] = [
   { id: "statistics-z-score", subjectId: "subject-7", kind: "calculation", title: "z得点", build: statsZScore },
   { id: "statistics-bayes", subjectId: "subject-7", kind: "calculation", title: "ベイズ", build: statsBayes },
   { id: "statistics-combination", subjectId: "subject-7", kind: "calculation", title: "組合せ", build: statsCombination },
+  { id: "statistics-chebyshev", subjectId: "subject-7", kind: "calculation", title: "チェビシェフの確率下限", build: statsChebyshev },
   { id: "applied-vector-norm", subjectId: "subject-8", kind: "calculation", title: "ベクトルの大きさ", build: appliedNorm },
   { id: "applied-orthogonal-unknown", subjectId: "subject-8", kind: "calculation", title: "直交条件", build: appliedOrthogonal },
   { id: "applied-directional-derivative", subjectId: "subject-8", kind: "calculation", title: "方向微分", build: appliedGradient },

@@ -12,15 +12,14 @@ import {
   MECHANICAL_DYNAMICS_EXAM_SPEC,
   MECHANICAL_DYNAMICS_EXPECTED_EXAMS,
   MECHANICAL_DYNAMICS_FORMULAS,
-  MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS,
-  MECHANICAL_DYNAMICS_QUESTIONS,
+  MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS,
   MECHANICAL_DYNAMICS_RANGE_PAGES,
   MECHANICAL_DYNAMICS_SOURCE_POLICY,
   MECHANICAL_DYNAMICS_TOPICS,
 } from "../../mechanical-dynamics-data";
 
 type MechanicalDynamicsTopicId = (typeof MECHANICAL_DYNAMICS_TOPICS)[number]["id"];
-type MechanicalDynamicsQuestion = (typeof MECHANICAL_DYNAMICS_QUESTIONS)[number];
+type MechanicalDynamicsQuestion = (typeof MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS)[number];
 
 type Mode = "scope" | "cards" | "practice" | "test" | "expected" | "guide";
 type CardState = "learning" | "mastered";
@@ -50,7 +49,7 @@ const PROGRESS_KEY = "test-grid:subject-3:progress:v1";
 const TEST_SESSION_KEY = "test-grid:subject-3:mock-test:v1";
 const ALL_TOPIC_IDS = MECHANICAL_DYNAMICS_TOPICS.map((topic) => topic.id);
 const KNOWN_TOPIC_IDS = new Set<MechanicalDynamicsTopicId>(ALL_TOPIC_IDS);
-const KNOWN_QUESTION_IDS = new Set([...MECHANICAL_DYNAMICS_QUESTIONS, ...MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS].map((question) => question.id));
+const KNOWN_QUESTION_IDS = new Set(MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.map((question) => question.id));
 
 function randomize<T>(items: readonly T[]) {
   const copy = [...items];
@@ -417,7 +416,7 @@ export default function MechanicalDynamicsSubjectPage() {
 
   const [practiceTopics, setPracticeTopics] = useState<MechanicalDynamicsTopicId[]>([...ALL_TOPIC_IDS]);
   const [practiceSourceFilter, setPracticeSourceFilter] = useState<SourceFilter>("all");
-  const [practiceDeck, setPracticeDeck] = useState([...MECHANICAL_DYNAMICS_QUESTIONS]);
+  const [practiceDeck, setPracticeDeck] = useState([...MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS]);
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceTypedAnswer, setPracticeTypedAnswer] = useState("");
   const [practiceSelectedChoice, setPracticeSelectedChoice] = useState("");
@@ -504,7 +503,7 @@ export default function MechanicalDynamicsSubjectPage() {
 
   const currentPracticeQuestion = practiceDeck[practiceIndex];
   const availableTestQuestions = useMemo(
-    () => MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic) && matchesSource(question, testSourceFilter)),
+    () => MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic) && matchesSource(question, testSourceFilter)),
     [testSourceFilter, testTopics],
   );
   const currentTestQuestion = testQuestions[testIndex];
@@ -569,7 +568,7 @@ export default function MechanicalDynamicsSubjectPage() {
 
   function changePracticeTopics(nextTopics: MechanicalDynamicsTopicId[]) {
     setPracticeTopics(nextTopics);
-    setPracticeDeck(randomize(MECHANICAL_DYNAMICS_QUESTIONS.filter((question) => nextTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
+    setPracticeDeck(randomize(MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.filter((question) => nextTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -578,7 +577,7 @@ export default function MechanicalDynamicsSubjectPage() {
 
   function changePracticeSource(source: SourceFilter) {
     setPracticeSourceFilter(source);
-    setPracticeDeck(randomize(MECHANICAL_DYNAMICS_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, source))));
+    setPracticeDeck(randomize(MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, source))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -586,7 +585,7 @@ export default function MechanicalDynamicsSubjectPage() {
   }
 
   function shufflePractice() {
-    setPracticeDeck(randomize(MECHANICAL_DYNAMICS_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
+    setPracticeDeck(randomize(MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -705,7 +704,7 @@ export default function MechanicalDynamicsSubjectPage() {
   function resumeSavedTest() {
     if (!savedTestSession) return;
     const questions = savedTestSession.questionIds.flatMap((id) => {
-      const found = MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS.find((question) => question.id === id) ?? MECHANICAL_DYNAMICS_QUESTIONS.find((question) => question.id === id);
+      const found = MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.find((question) => question.id === id);
       return found ? [found] : [];
     });
     if (!questions.length) {
@@ -713,7 +712,7 @@ export default function MechanicalDynamicsSubjectPage() {
       return;
     }
     const results = savedTestSession.results.flatMap((savedResult) => {
-      const question = MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId) ?? MECHANICAL_DYNAMICS_QUESTIONS.find((item) => item.id === savedResult.questionId);
+      const question = MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId);
       return question ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
     });
     setTestTopics(savedTestSession.selectedTopics);
@@ -747,7 +746,7 @@ export default function MechanicalDynamicsSubjectPage() {
           <span><strong>TEST//GRID</strong><small>MECHANICAL DYNAMICS</small></span>
         </Link>
         <div className="header-actions statistics-header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {MECHANICAL_DYNAMICS_QUESTIONS.length} QUESTIONS</span>
+          <span className="card-count-label"><i aria-hidden="true" /> {MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-3">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-3">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-3">時間制限 即答練習</Link>
@@ -778,7 +777,7 @@ export default function MechanicalDynamicsSubjectPage() {
         <section className="english-summary statistics-summary" aria-label="収録教材">
           <div><span>TOPICS</span><strong>{MECHANICAL_DYNAMICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{MECHANICAL_DYNAMICS_FORMULAS.length}</strong><small>枚</small></div>
-          <div><span>QUESTIONS</span><strong>{MECHANICAL_DYNAMICS_QUESTIONS.length}</strong><small>問</small></div>
+          <div><span>QUESTIONS</span><strong>{MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.length}</strong><small>問</small></div>
           <p>範囲ZIPと機械力学過去問PDFの両方を出題範囲として収録。実物過去問1回と想定試験{MECHANICAL_DYNAMICS_EXPECTED_EXAMS.length}回を、100点満点・60点ラインで練習できます。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
@@ -805,7 +804,7 @@ export default function MechanicalDynamicsSubjectPage() {
               <div className="english-guide-grid statistics-topic-grid">
                 {MECHANICAL_DYNAMICS_TOPICS.map((topic) => {
                   const formulaCount = MECHANICAL_DYNAMICS_FORMULAS.filter((card) => card.topic === topic.id).length;
-                  const questionCount = MECHANICAL_DYNAMICS_QUESTIONS.filter((question) => question.topic === topic.id).length;
+                  const questionCount = MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS.filter((question) => question.topic === topic.id).length;
                   return (
                     <article key={topic.id} className="statistics-topic-card" style={{ borderTopColor: topic.color }}>
                       <span>{topic.number} / RANGE</span>

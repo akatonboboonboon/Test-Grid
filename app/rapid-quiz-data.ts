@@ -4,7 +4,7 @@ import { ENGLISH_EXAM_LEVEL_QUESTIONS } from "./english-expected-exams-data";
 import { APPLIED_MATH_EXAM_LEVEL_QUESTIONS, APPLIED_MATH_FORMULAS, APPLIED_MATH_QUESTIONS } from "./applied-math-data";
 import { DIGITAL_CIRCUIT_ALL_FORMULAS, DIGITAL_CIRCUIT_ALL_QUESTIONS, DIGITAL_CIRCUIT_EXAM_LEVEL_QUESTIONS, type DigitalCircuitAnyDiagramKind } from "./digital-circuits-extra-data";
 import { MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS, MATERIAL_MECHANICS_FORMULAS, MATERIAL_MECHANICS_QUESTIONS, type MaterialMechanicsDiagramKind } from "./material-mechanics-data";
-import { MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS, MECHANICAL_DYNAMICS_FORMULAS, MECHANICAL_DYNAMICS_QUESTIONS, type MechanicalDynamicsDiagramKind } from "./mechanical-dynamics-data";
+import { MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS, type MechanicalDynamicsDiagramKind } from "./mechanical-dynamics-data";
 import { ALL_LAYERS, DEFAULT_CARDS, cardLayers, type Layer, type ProtocolCard } from "./protocols";
 import { SMART_CONTROL_CARDS, SMART_CONTROL_EXAM_LEVEL_QUESTIONS, SMART_CONTROL_QUESTIONS } from "./smart-control-data";
 import { TEXTBOOK_RESPONSE_CARDS, TEXTBOOK_RESPONSE_EXAM_LEVEL_QUESTIONS } from "./smart-control-textbook-data";
@@ -272,10 +272,10 @@ function isActiveEnglishRapidQuestion(question: ExamLevelRapidSource) {
 const RAPID_SOURCE_BASIS: Partial<Record<SubjectId, string>> = {
   "subject-2": "英語追加範囲 Ch.14・15・16・18、TOEIC Reading、Housing・Medical語彙（対象外欄・Ch.19は除外）",
   "subject-3": "機械力学範囲プリント4枚相当・過去問の連続計算",
-  "subject-4": "熱力学範囲ZIPと形式1〜3の複合状態変化",
+  "subject-4": "熱力学範囲ZIP9ページ（追加p.8〜9の冷凍サイクル・逆カルノーCOPを含む）と形式1〜3の複合状態変化",
   "subject-5": "材料力学範囲ZIP13ページ（ねじり・軸設計・コイルばね・はり反力/SFD/BMD・曲げ応力・長方形/中空円断面I/Z）と形式2 Q1〜3の範囲一致部（Q4は出典除外、EIたわみ・曲率・カスティリアーノは対象外）",
   "subject-6": "スマート制御範囲・演習・過去問の計算と図読解",
-  "subject-7": "確率統計範囲ZIP・演習PDF1〜4・過去問形式",
+  "subject-7": "確率統計範囲ZIP・追加範囲5ページ（チェビシェフの不等式を含む）・演習PDF1〜4・過去問形式",
   "subject-8": "応用数学範囲・追加範囲と提供テスト形式",
   "subject-9": "デジタル回路範囲ZIP・演習・過去問の設計問題",
 };
@@ -287,13 +287,35 @@ function rapidNumber(value: number) {
   return Number(value.toPrecision(4)).toString();
 }
 
-function numericRapidOptions(question: ExamLevelRapidSource) {
+function mechanicalRapidDistractors(question: ExamLevelRapidSource, numeric: number) {
+  const clue = [question.genre, question.prompt, question.formula, question.expectedUnit].filter(Boolean).join(" ");
+  if (/周期|T_n|T_d|\bsecond|^s$/iu.test(clue)) {
+    // 2πの掛け忘れ・割り忘れと、ms→sの換算忘れ。
+    return [numeric * 2 * Math.PI, numeric / (2 * Math.PI), numeric * 1000];
+  }
+  if (/減衰|zeta|\\zeta|C_2|対数/iu.test(clue)) {
+    // ωdとωnの取り違え、近似式と厳密式の取り違えを模した値。
+    return [numeric * Math.sqrt(1 - 0.1 ** 2), numeric / Math.sqrt(1 - 0.1 ** 2), numeric * Math.PI];
+  }
+  if (/レバー|回転|作用腕|r_c|theta|\\theta/iu.test(clue)) {
+    // 作用腕の二乗を一度しか掛けない／逆に扱う典型誤答。
+    return [numeric * Math.SQRT2, numeric / Math.SQRT2, numeric * Math.PI];
+  }
+  if (/ばね|剛性|直列|並列|k_\{?eq/iu.test(clue)) {
+    // 直列・並列の取り違えが固有値の平方根へ波及した典型誤答。
+    return [numeric * Math.SQRT2, numeric / Math.SQRT2, numeric * 2 * Math.PI];
+  }
+  return [numeric * Math.PI, numeric / Math.PI, numeric * Math.SQRT2];
+}
+function numericRapidOptions(question: ExamLevelRapidSource, subjectId: SubjectId) {
   const value = question.numericAnswer;
   if (!Number.isFinite(value)) return question.options;
   const numeric = value as number;
   const variants = numeric === 0
-    ? [1, -1, 2]
-    : [numeric / 2, numeric * 2, -numeric];
+    ? [0.05, -0.05, 0.1]
+    : subjectId === "subject-3"
+      ? mechanicalRapidDistractors(question, numeric)
+      : [numeric / 2, numeric * 2, -numeric];
   const suffix = question.expectedUnit?.trim() ?? "";
   const usesPi = /\\pi|π/.test(question.answer);
   return unique([
@@ -323,7 +345,7 @@ function examLevelSeed(subjectId: SubjectId, question: ExamLevelRapidSource, vis
   const formulaNote = question.formula ? `使用式：\\(${question.formula}\\)` : "";
   const explanation = [...steps, formulaNote, question.explanation ?? ""].filter(Boolean).join(" ");
   const topicLabel = question.group ?? question.genre ?? question.topicId ?? question.topic ?? question.unit ?? "本番水準";
-  const options = question.options?.length ? question.options : numericRapidOptions(question);
+  const options = question.options?.length ? question.options : numericRapidOptions(question, subjectId);
   const optionValues = options?.length ? options : [question.answer];
   const answerShape = Number.isFinite(question.numericAnswer)
     ? `number:${question.expectedUnit?.trim() || "unitless"}`
@@ -488,8 +510,8 @@ export function filterNetworkRapidPoolByLayers(
 
 const MECHANICAL_RAPID = examLevelPool(
   "subject-3",
-  [...MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, ...MECHANICAL_DYNAMICS_QUESTIONS, ...MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS],
-  (question) => (question.difficulty ?? 1) >= 2,
+  MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS,
+  (question) => question.difficulty === 3,
   mechanicalVisual,
 );
 const THERMODYNAMICS_RAPID = examLevelPool(
@@ -561,14 +583,11 @@ const COMPREHENSIVE_POOLS: Record<SubjectId, RapidQuestion[]> = {
     (question) => isEnglishPoolItemInScope(question) && ACTIVE_ENGLISH_UNITS.has(question.unit ?? ""),
   ),
   network: networkCardsToRapid(DEFAULT_CARDS),
-  "subject-3": combineRapidPools(
-    examLevelPool(
-      "subject-3",
-      [...MECHANICAL_DYNAMICS_ACTUAL_PRACTICE_QUESTIONS, ...MECHANICAL_DYNAMICS_QUESTIONS, ...MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS],
-      () => true,
-      mechanicalVisual,
-    ),
-    formulaCardPool("subject-3", MECHANICAL_DYNAMICS_FORMULAS, mechanicalVisual),
+  "subject-3": examLevelPool(
+    "subject-3",
+    MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS,
+    (question) => question.difficulty === 3,
+    mechanicalVisual,
   ),
   "subject-4": combineRapidPools(
     examLevelPool("subject-4", [...THERMODYNAMICS_QUESTIONS, ...THERMODYNAMICS_EXAM_LEVEL_QUESTIONS], () => true, thermodynamicsVisual),

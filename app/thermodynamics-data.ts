@@ -4,9 +4,10 @@ export type ThermodynamicsTopicId =
   | "second-law"
   | "entropy"
   | "otto"
-  | "carnot";
+  | "carnot"
+  | "refrigeration";
 
-export type ThermodynamicsRangePageNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type ThermodynamicsRangePageNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export const THERMODYNAMICS_FORMAT3_OVERLAP_ALLOWLIST = [
   {
@@ -60,7 +61,16 @@ export type ThermodynamicsRangePage = {
   orientation?: "portrait-source" | "landscape-sideways-source";
 };
 
-export type ThermodynamicsDiagramKind = "pv" | "ts" | "hs" | "piston" | "otto-pv" | "carnot-pv" | "carnot-ts";
+export type ThermodynamicsDiagramKind =
+  | "pv"
+  | "ts"
+  | "hs"
+  | "piston"
+  | "otto-pv"
+  | "carnot-pv"
+  | "carnot-ts"
+  | "refrigeration-cycle"
+  | "reversed-carnot-ts";
 
 export type ThermodynamicsFormulaCard = {
   id: string;
@@ -140,7 +150,6 @@ export type ThermodynamicsExpectedExam = {
 export const THERMODYNAMICS_EXCLUDED_TOPICS = [
   "蒸気表・飽和蒸気・湿り蒸気",
   "ランキンサイクル",
-  "逆カルノー冷凍機・熱ポンプの成績係数",
   "形式1・形式2にだけ現れる固有内容",
 ] as const;
 
@@ -199,6 +208,21 @@ export const THERMODYNAMICS_RANGE_PAGES: ThermodynamicsRangePage[] = [
     uncertainty: "最初の例題の温度は薄いため、500℃/100℃の明瞭な例を優先する。",
     orientation: "landscape-sideways-source",
   },
+  {
+    number: 8,
+    filename: "PXL_20260722_114531438.MP.jpg",
+    topics: ["carnot", "refrigeration"],
+    summary: "860 K/380 Kのカルノー熱機関と500℃/100℃の熱量比・効率、蒸気圧縮冷凍サイクルの構成機器、熱収支、冷凍機・ヒートポンプの成績係数、T-S/P-h線図。",
+    uncertainty: "860 K/380 K例の赤字は作動流体側の受放熱方向で符号を書いているため、サイトでは熱源のエントロピーを高温側負・低温側正として明示する。",
+    orientation: "landscape-sideways-source",
+  },
+  {
+    number: 9,
+    filename: "PXL_20260722_114536629.MP.jpg",
+    topics: ["refrigeration"],
+    summary: "逆カルノー冷凍機・ヒートポンプのT-S線図、冷凍・暖房成績係数と両者の関係、47℃/7℃・冷凍能力1200 kcal/hから必要動力を求める例。",
+    orientation: "landscape-sideways-source",
+  },
 ];
 
 export const THERMODYNAMICS_TOPICS: ThermodynamicsTopic[] = [
@@ -253,8 +277,17 @@ export const THERMODYNAMICS_TOPICS: ThermodynamicsTopic[] = [
     title: "カルノーサイクル",
     shortTitle: "カルノー",
     description: "4過程、P-V/T-S線図、熱量比、仕事、最大効率、エントロピーを扱う。",
-    pages: [6, 7],
+    pages: [6, 7, 8],
     color: "#e776b7",
+  },
+  {
+    id: "refrigeration",
+    number: "07",
+    title: "冷凍サイクル・逆カルノー",
+    shortTitle: "冷凍・逆カルノー",
+    description: "圧縮機・凝縮器・膨張弁・蒸発器、熱収支、冷凍機とヒートポンプの成績係数、逆カルノー冷凍機を扱う。",
+    pages: [8, 9],
+    color: "#5dd9ff",
   },
 ];
 
@@ -545,7 +578,7 @@ const FORMULA_DEFINITIONS: FormulaDefinition[] = [
     formula: "\\eta_c=1-\\frac{Q_2}{Q_1}=1-\\frac{T_2}{T_1}",
     explanation: "温度は必ずKで代入する。摂氏温度の比をそのまま使ってはいけない。",
     cue: "1−低温K÷高温K",
-    sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+    sourceRefs: [rangeRef(6), rangeRef(7), rangeRef(8), FORMAT3_CARNOT_REF],
   },
   {
     id: "th-carnot-entropy",
@@ -556,6 +589,66 @@ const FORMULA_DEFINITIONS: FormulaDefinition[] = [
     explanation: "可逆サイクルでは両熱源の変化が打ち消し合い、全体のエントロピー生成はゼロ。",
     cue: "高温側は負、低温側は正、合計0",
   },
+  {
+    id: "th-refrigeration-components",
+    topic: "refrigeration",
+    title: "蒸気圧縮冷凍サイクルの4機器",
+    prompt: "冷媒が通る4機器を、圧縮機から順に示すと？",
+    formula: "\\text{圧縮機}\\to\\text{凝縮器}\\to\\text{膨張弁}\\to\\text{蒸発器}",
+    explanation: "圧縮機へ仕事Wを入れ、凝縮器で高温側へQ1を放出し、膨張弁で減圧し、蒸発器で低温側からQ2を吸収する。",
+    cue: "圧縮→凝縮→膨張→蒸発",
+    sourceRefs: [rangeRef(8)],
+  },
+  {
+    id: "th-refrigeration-balance",
+    topic: "refrigeration",
+    title: "冷凍サイクルの熱収支",
+    prompt: "低温側から吸収する熱Q2、投入仕事W、高温側へ放出する熱Q1の関係は？",
+    formula: "Q_1=Q_2+W",
+    explanation: "一周期で作動流体のエネルギーは元へ戻るため、凝縮器の放熱量は蒸発器の吸熱量と圧縮機仕事の和になる。",
+    cue: "捨てる熱＝冷やした熱＋投入仕事",
+    sourceRefs: [rangeRef(8), rangeRef(9)],
+  },
+  {
+    id: "th-refrigeration-cop",
+    topic: "refrigeration",
+    title: "冷凍機の成績係数",
+    prompt: "冷凍目的で、投入仕事に対する冷凍効果を表す成績係数は？",
+    formula: "\\varepsilon_r=\\frac{Q_2}{W}",
+    explanation: "冷凍機で欲しい効果は低温側から取り去る熱量Q2なので、これを投入仕事Wで割る。効率ではないため1を超えてよい。",
+    cue: "冷凍COP＝低温側吸熱÷仕事",
+    sourceRefs: [rangeRef(8), rangeRef(9)],
+  },
+  {
+    id: "th-heat-pump-cop",
+    topic: "refrigeration",
+    title: "ヒートポンプの成績係数",
+    prompt: "暖房目的の成績係数と、冷凍機の成績係数との関係は？",
+    formula: "\\varepsilon_h=\\frac{Q_1}{W}=\\varepsilon_r+1",
+    explanation: "暖房で欲しい効果は高温側へ渡すQ1。Q1=Q2+WをWで割ると、暖房COPは冷凍COPより必ず1大きい。",
+    cue: "暖房COP＝冷凍COP＋1",
+    sourceRefs: [rangeRef(8), rangeRef(9)],
+  },
+  {
+    id: "th-reversed-carnot-cop",
+    topic: "refrigeration",
+    title: "逆カルノーの成績係数",
+    prompt: "高温T1、低温T2の逆カルノー冷凍機・ヒートポンプの成績係数は？",
+    formula: "\\begin{aligned}\\varepsilon_r&=\\frac{Q_2}{Q_1-Q_2}=\\frac{T_2}{T_1-T_2}\\\\ \\varepsilon_h&=\\frac{Q_1}{Q_1-Q_2}=\\frac{T_1}{T_1-T_2}\\end{aligned}",
+    explanation: "可逆カルノーでは熱量比が絶対温度比に等しい。温度差が小さいほど同じ仕事で大きな冷凍・暖房効果を得られる。",
+    cue: "分母は高温K−低温K",
+    sourceRefs: [rangeRef(9)],
+  },
+  {
+    id: "th-refrigeration-capacity",
+    topic: "refrigeration",
+    title: "冷凍能力の単位換算",
+    prompt: "冷凍能力q kcal/hをkWへ直す式は？",
+    formula: "\\dot Q_2=\\frac{4.19q}{3600}\\,\\mathrm{kW}",
+    explanation: "資料の換算値1 kcal=4.19 kJを用い、1時間=3600秒で割るとkJ/s、すなわちkWになる。",
+    cue: "kcal/h×4.19÷3600",
+    sourceRefs: [rangeRef(9)],
+  },
 ];
 
 function formulaDiagram(card: FormulaDefinition): ThermodynamicsDiagramKind | undefined {
@@ -564,6 +657,8 @@ function formulaDiagram(card: FormulaDefinition): ThermodynamicsDiagramKind | un
   if (["th-carnot-processes", "th-carnot-qin", "th-carnot-qout", "th-carnot-ratio", "th-carnot-efficiency"].includes(card.id)) return "carnot-pv";
   if (card.id === "th-otto-cylinder") return "piston";
   if (card.id === "th-carnot-entropy") return "carnot-ts";
+  if (["th-refrigeration-components", "th-refrigeration-balance", "th-refrigeration-cop", "th-heat-pump-cop", "th-refrigeration-capacity"].includes(card.id)) return "refrigeration-cycle";
+  if (card.id === "th-reversed-carnot-cop") return "reversed-carnot-ts";
   return undefined;
 }
 
@@ -587,7 +682,11 @@ function question(input: QuestionInput): ThermodynamicsQuestion {
         ? "otto-pv"
         : input.id.startsWith("th-q-carnot-")
           ? input.id === "th-q-carnot-entropy" ? "carnot-ts" : "carnot-pv"
-          : undefined;
+          : input.id.startsWith("th-q-reversed-carnot-")
+            ? "reversed-carnot-ts"
+            : input.id.startsWith("th-q-refrigeration-")
+              ? "refrigeration-cycle"
+              : undefined;
   return {
     ...input,
     diagram: input.diagram ?? inferredDiagram,
@@ -618,6 +717,19 @@ const FORMAT3_OTTO_T2 = (25 + 273) * FORMAT3_COMPRESSION ** 0.3;
 const PRACTICE_CARNOT_RATIO = (100 + 273) / (500 + 273);
 const PRACTICE_CARNOT_EFF = 1 - PRACTICE_CARNOT_RATIO;
 const PRACTICE_CARNOT_Q1 = 10 / PRACTICE_CARNOT_RATIO;
+const ADDITIONAL_CARNOT_HOT_K = 860;
+const ADDITIONAL_CARNOT_COLD_K = 380;
+const ADDITIONAL_CARNOT_Q1 = 20;
+const ADDITIONAL_CARNOT_RATIO = ADDITIONAL_CARNOT_COLD_K / ADDITIONAL_CARNOT_HOT_K;
+const ADDITIONAL_CARNOT_Q2 = ADDITIONAL_CARNOT_Q1 * ADDITIONAL_CARNOT_RATIO;
+const ADDITIONAL_CARNOT_WORK = ADDITIONAL_CARNOT_Q1 - ADDITIONAL_CARNOT_Q2;
+const ADDITIONAL_CARNOT_ENTROPY = ADDITIONAL_CARNOT_Q1 / ADDITIONAL_CARNOT_HOT_K;
+const ADDITIONAL_REVERSED_HOT_K = 47 + 273;
+const ADDITIONAL_REVERSED_COLD_K = 7 + 273;
+const ADDITIONAL_REVERSED_COP_R = ADDITIONAL_REVERSED_COLD_K / (ADDITIONAL_REVERSED_HOT_K - ADDITIONAL_REVERSED_COLD_K);
+const ADDITIONAL_REVERSED_COP_H = ADDITIONAL_REVERSED_HOT_K / (ADDITIONAL_REVERSED_HOT_K - ADDITIONAL_REVERSED_COLD_K);
+const ADDITIONAL_COOLING_KW = (1200 * 4.19) / 3600;
+const ADDITIONAL_REQUIRED_POWER_KW = ADDITIONAL_COOLING_KW / ADDITIONAL_REVERSED_COP_R;
 
 export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
   question({
@@ -1081,7 +1193,7 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
       inline("\\eta_c=1-\\frac{373}{773}\\approx" + numberText(PRACTICE_CARNOT_EFF, 4) + "=" + numberText(PRACTICE_CARNOT_EFF * 100, 2) + "\\%"),
     ],
     explanation: "摂氏温度の比ではなく、273を加えた絶対温度の比を使う。",
-    sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+    sourceRefs: [rangeRef(6), rangeRef(7), rangeRef(8), FORMAT3_CARNOT_REF],
   }),
   question({
     id: "th-q-carnot-ratio",
@@ -1096,7 +1208,7 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     formula: "\\frac{Q_2}{Q_1}=\\frac{T_2}{T_1}",
     steps: [inline("\\frac{Q_2}{Q_1}=\\frac{373}{773}"), inline("\\frac{Q_2}{Q_1}\\approx" + numberText(PRACTICE_CARNOT_RATIO, 4))],
     explanation: "可逆カルノーでは熱量比が絶対温度比に等しい。",
-    sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+    sourceRefs: [rangeRef(6), rangeRef(7), rangeRef(8), FORMAT3_CARNOT_REF],
   }),
   question({
     id: "th-q-carnot-work",
@@ -1117,7 +1229,7 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
       inline("W=Q_1-Q_2\\approx" + numberText(PRACTICE_CARNOT_Q1 - 10, 2) + "\\,\\mathrm{kJ}"),
     ],
     explanation: "放熱量から先に受熱量を熱量比で戻し、その差を仕事にする。",
-    sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+    sourceRefs: [rangeRef(6), rangeRef(7), rangeRef(8), FORMAT3_CARNOT_REF],
   }),
   question({
     id: "th-q-carnot-entropy",
@@ -1138,6 +1250,213 @@ export const THERMODYNAMICS_QUESTIONS: ThermodynamicsQuestion[] = [
     ],
     explanation: "可逆カルノーでは高温側の減少と低温側の増加が等しく、全体はゼロ。",
   }),
+  question({
+    id: "th-q-carnot-additional-work",
+    topic: "carnot",
+    genre: "追加範囲・熱量と仕事",
+    difficulty: 2,
+    format: "number",
+    prompt: "高温熱源860 K、低温熱源380 Kの可逆カルノー熱機関が高温側から20 kJを受け取る。正味仕事Wを求めよ。",
+    answer: numberText(ADDITIONAL_CARNOT_WORK, 2) + " kJ",
+    numericAnswer: ADDITIONAL_CARNOT_WORK,
+    expectedUnit: "kJ",
+    acceptedUnits: { J: 0.001, kJ: 1 },
+    requiresUnit: true,
+    tolerance: 0.05,
+    formula: "\\begin{aligned}\\frac{Q_2}{Q_1}&=\\frac{T_2}{T_1}\\\\ W&=Q_1-Q_2\\end{aligned}",
+    steps: [
+      inline("Q_2=20\\times\\frac{380}{860}\\approx" + numberText(ADDITIONAL_CARNOT_Q2, 2) + "\\,\\mathrm{kJ}"),
+      inline("W=20-" + numberText(ADDITIONAL_CARNOT_Q2, 2) + "\\approx" + numberText(ADDITIONAL_CARNOT_WORK, 2) + "\\,\\mathrm{kJ}"),
+    ],
+    explanation: "資料の20 kJは発生仕事ではなく高温側からの受熱量Q1。絶対温度比からQ2を求め、その差を仕事とする。",
+    diagram: "carnot-pv",
+    sourceRefs: [rangeRef(8)],
+  }),
+  question({
+    id: "th-q-carnot-additional-entropy",
+    topic: "carnot",
+    genre: "追加範囲・熱源エントロピー",
+    difficulty: 3,
+    format: "text",
+    prompt: "高温熱源860 K、低温熱源380 Kの可逆カルノー熱機関が高温側からQ1=20 kJを受け取る。高温熱源・低温熱源・両熱源全体のエントロピー変化を示せ。",
+    answer: "高温側-" + numberText(ADDITIONAL_CARNOT_ENTROPY, 5) + " kJ/K、低温側+" + numberText(ADDITIONAL_CARNOT_ENTROPY, 5) + " kJ/K、合計0。",
+    keywords: ["-0.02326", "+0.02326", "0"],
+    minKeywords: 3,
+    formula: "\\begin{aligned}\\Delta S_{\\mathrm{fluid,hot}}&=+\\frac{Q_1}{T_1},&\\Delta S_{\\mathrm{fluid,cold}}&=-\\frac{Q_2}{T_2}\\\\ \\Delta S_{\\mathrm{reservoir,hot}}&=-\\frac{Q_1}{T_1},&\\Delta S_{\\mathrm{reservoir,cold}}&=+\\frac{Q_2}{T_2}\\end{aligned}",
+    steps: [
+      "原ノートの赤字は作動流体を基準にし、高温等温過程で" + inline("\\Delta S_{\\mathrm{fluid,hot}}=+\\frac{20}{860}\\approx+" + numberText(ADDITIONAL_CARNOT_ENTROPY, 5) + "\\,\\mathrm{kJ\\,K^{-1}}") + "、低温等温過程で" + inline("\\Delta S_{\\mathrm{fluid,cold}}=-\\frac{" + numberText(ADDITIONAL_CARNOT_Q2, 2) + "}{380}\\approx-" + numberText(ADDITIONAL_CARNOT_ENTROPY, 5) + "\\,\\mathrm{kJ\\,K^{-1}}") + "となる。",
+      "設問の熱源を基準にすると熱の受け渡しが逆なので、" + inline("\\Delta S_{\\mathrm{reservoir,hot}}=-\\frac{20}{860}\\approx-" + numberText(ADDITIONAL_CARNOT_ENTROPY, 5) + "\\,\\mathrm{kJ\\,K^{-1}}") + "、" + inline("\\Delta S_{\\mathrm{reservoir,cold}}=+\\frac{" + numberText(ADDITIONAL_CARNOT_Q2, 2) + "}{380}\\approx+" + numberText(ADDITIONAL_CARNOT_ENTROPY, 5) + "\\,\\mathrm{kJ\\,K^{-1}}") + "となる。",
+      inline("\\Delta S_{\\mathrm{fluid,total}}=0,\\qquad\\Delta S_{\\mathrm{reservoir,total}}=0"),
+    ],
+    explanation: "同じ熱移動でも、作動流体と熱源では符号が逆になる。原ノートは作動流体について高温側過程を正、低温側過程を負としている。一方、この設問は熱源の変化を尋ねるため高温熱源が負、低温熱源が正となる。可逆サイクルではどちらの視点でも二つの変化の大きさが一致し、合計は0になる。",
+    diagram: "carnot-ts",
+    sourceRefs: [rangeRef(8)],
+  }),
+  question({
+    id: "th-q-refrigeration-components",
+    topic: "refrigeration",
+    genre: "冷凍装置・構成機器",
+    difficulty: 1,
+    format: "choice",
+    prompt: "図の蒸気圧縮冷凍サイクルで、冷媒が通る4機器の正しい順序を選べ。",
+    answer: "圧縮機→凝縮器→膨張弁→蒸発器",
+    options: [
+      "圧縮機→凝縮器→膨張弁→蒸発器",
+      "圧縮機→蒸発器→膨張弁→凝縮器",
+      "蒸発器→凝縮器→圧縮機→膨張弁",
+      "凝縮器→圧縮機→蒸発器→膨張弁",
+    ],
+    formula: "\\text{圧縮機}\\to\\text{凝縮器}\\to\\text{膨張弁}\\to\\text{蒸発器}",
+    steps: ["圧縮機で冷媒へ仕事Wを加える。", "凝縮器でQ1を放出し、膨張弁で減圧し、蒸発器でQ2を吸収する。"],
+    explanation: "各機器の役割と熱・仕事の矢印を一緒に覚えると、単なる名称暗記ではなく装置図から復元できる。",
+    diagram: "refrigeration-cycle",
+    sourceRefs: [rangeRef(8)],
+  }),
+  question({
+    id: "th-q-refrigeration-diagram",
+    topic: "refrigeration",
+    genre: "冷凍装置・熱と仕事",
+    difficulty: 2,
+    format: "diagram",
+    prompt: "装置図の圧縮機・凝縮器・膨張弁・蒸発器を特定し、W、Q1、Q2の向きを書き込め。",
+    answer: "圧縮機へWを入力、凝縮器から高温側へQ1を放出、蒸発器は低温側からQ2を吸収する。膨張弁で減圧する。",
+    keywords: ["圧縮機", "凝縮器", "膨張弁", "蒸発器", "W", "Q1", "Q2"],
+    minKeywords: 6,
+    formula: "Q_1=Q_2+W",
+    steps: ["4機器を冷媒の流れ順に配置する。", "圧縮機だけに仕事入力W、凝縮器に放熱Q1、蒸発器に吸熱Q2の矢印を付ける。"],
+    explanation: "冷凍機は外部仕事によって低温側から高温側へ熱をくみ上げるため、熱と仕事の向きを誤らないことが重要。",
+    diagram: "refrigeration-cycle",
+    sourceRefs: [rangeRef(8)],
+  }),
+  question({
+    id: "th-q-refrigeration-balance",
+    topic: "refrigeration",
+    genre: "冷凍サイクル・熱収支",
+    difficulty: 1,
+    format: "number",
+    prompt: "冷凍機が低温側から12 kJを吸収し、一周期に3 kJの仕事を受ける。高温側への放熱量Q1を求めよ。",
+    answer: "15 kJ",
+    numericAnswer: 15,
+    expectedUnit: "kJ",
+    acceptedUnits: { J: 0.001, kJ: 1 },
+    requiresUnit: true,
+    tolerance: 0.02,
+    formula: "Q_1=Q_2+W",
+    steps: [inline("Q_1=12+3"), inline("Q_1=15\\,\\mathrm{kJ}")],
+    explanation: "一周期のエネルギー収支では、高温側への放熱は低温側からの吸熱と圧縮機仕事の和になる。",
+    diagram: "refrigeration-cycle",
+    sourceRefs: [rangeRef(8)],
+  }),
+  question({
+    id: "th-q-refrigeration-cop",
+    topic: "refrigeration",
+    genre: "冷凍機COP",
+    difficulty: 2,
+    format: "number",
+    prompt: "低温側から14 kJを吸収するために2 kJの仕事を要する冷凍機の成績係数εrを求めよ。",
+    answer: "7",
+    numericAnswer: 7,
+    tolerance: 0.01,
+    formula: "\\varepsilon_r=\\frac{Q_2}{W}",
+    steps: [inline("\\varepsilon_r=\\frac{14}{2}"), inline("\\varepsilon_r=7")],
+    explanation: "冷凍目的で有用なのは低温側から取り去るQ2。成績係数は無次元で、効率とは違い1を超えてよい。",
+    diagram: "refrigeration-cycle",
+    sourceRefs: [rangeRef(8), rangeRef(9)],
+  }),
+  question({
+    id: "th-q-heat-pump-cop",
+    topic: "refrigeration",
+    genre: "ヒートポンプCOP",
+    difficulty: 2,
+    format: "number",
+    prompt: "低温側からQ2=14 kJを吸収するためにW=2 kJの仕事を要する装置を、暖房用ヒートポンプとして用いる。暖房成績係数εhを求めよ。",
+    answer: "8",
+    numericAnswer: 8,
+    tolerance: 0.01,
+    formula: "\\varepsilon_h=\\varepsilon_r+1",
+    steps: [inline("Q_1=Q_2+W=14+2=16\\,\\mathrm{kJ}"), inline("\\varepsilon_h=\\frac{Q_1}{W}=\\frac{16}{2}=8"), inline("\\varepsilon_h=\\varepsilon_r+1=7+1=8")],
+    explanation: "Q1=Q2+WをWで割るため、暖房成績係数は冷凍成績係数より1大きい。",
+    diagram: "refrigeration-cycle",
+    sourceRefs: [rangeRef(8), rangeRef(9)],
+  }),
+  question({
+    id: "th-q-reversed-carnot-diagram",
+    topic: "refrigeration",
+    genre: "逆カルノーT-S線図",
+    difficulty: 2,
+    format: "diagram",
+    prompt: "逆カルノーサイクルをT-S線図に描き、進行方向、Q1、Q2、二つの等エントロピー過程を示せ。",
+    answer: "低温T2でQ2を吸収し、等エントロピー圧縮、高温T1でQ1を放出、等エントロピー膨張を行う反時計回りの長方形。",
+    keywords: ["T1", "T2", "Q1", "Q2", "等エントロピー", "反時計"],
+    minKeywords: 5,
+    formula: "\\frac{Q_2}{Q_1}=\\frac{T_2}{T_1}",
+    steps: ["等温過程を水平線、可逆断熱過程を鉛直線で描く。", "熱機関と逆向きの反時計回りに矢印を付ける。"],
+    explanation: "逆カルノーはカルノー熱機関を逆向きに運転し、仕事を受けて低温側から高温側へ熱を移す。",
+    diagram: "reversed-carnot-ts",
+    sourceRefs: [rangeRef(9)],
+  }),
+  question({
+    id: "th-q-reversed-carnot-cop",
+    topic: "refrigeration",
+    genre: "追加範囲・逆カルノーCOP",
+    difficulty: 2,
+    format: "text",
+    prompt: "高温側47℃、低温側7℃の逆カルノーサイクルについて、冷凍成績係数εrと暖房成績係数εhを求めよ。",
+    answer: "εr=" + numberText(ADDITIONAL_REVERSED_COP_R, 3) + "、εh=" + numberText(ADDITIONAL_REVERSED_COP_H, 3),
+    keywords: ["7", "8"],
+    minKeywords: 2,
+    formula: "\\begin{aligned}\\varepsilon_r&=\\frac{T_2}{T_1-T_2}\\\\ \\varepsilon_h&=\\frac{T_1}{T_1-T_2}\\end{aligned}",
+    steps: [
+      inline("T_1=47+273=320\\,\\mathrm K,\\quad T_2=7+273=280\\,\\mathrm K"),
+      inline("\\varepsilon_r=\\frac{280}{320-280}=7"),
+      inline("\\varepsilon_h=\\frac{320}{320-280}=8"),
+    ],
+    explanation: "温度はKへ直すが、温度差40 Kは40℃差と同じ。結果はεh=εr+1でも照合できる。",
+    diagram: "reversed-carnot-ts",
+    sourceRefs: [rangeRef(9)],
+  }),
+  question({
+    id: "th-q-refrigeration-capacity",
+    topic: "refrigeration",
+    genre: "追加範囲・冷凍能力換算",
+    difficulty: 2,
+    format: "number",
+    prompt: "冷凍能力1200 kcal/hを、資料指定の1 kcal=4.19 kJでkWへ換算せよ。",
+    answer: numberText(ADDITIONAL_COOLING_KW, 3) + " kW",
+    numericAnswer: ADDITIONAL_COOLING_KW,
+    expectedUnit: "kW",
+    acceptedUnits: { W: 0.001, kW: 1 },
+    requiresUnit: true,
+    tolerance: 0.005,
+    formula: "\\dot Q_2=\\frac{1200\\times4.19}{3600}",
+    steps: [inline("1200\\times4.19=5028\\,\\mathrm{kJ\\,h^{-1}}"), inline("\\dot Q_2=\\frac{5028}{3600}\\approx" + numberText(ADDITIONAL_COOLING_KW, 3) + "\\,\\mathrm{kW}")],
+    explanation: "kJ/hを3600で割るとkJ/sとなり、1 kJ/s=1 kWを使える。",
+    diagram: "refrigeration-cycle",
+    sourceRefs: [rangeRef(9)],
+  }),
+  question({
+    id: "th-q-reversed-carnot-power",
+    topic: "refrigeration",
+    genre: "追加範囲・必要動力",
+    difficulty: 3,
+    format: "number",
+    context: "高温側47℃、低温側7℃の逆カルノー冷凍機。冷凍能力は1200 kcal/hとする。",
+    prompt: "温度条件から冷凍成績係数を求め、冷凍能力1200 kcal/hをkWへ換算したうえで、必要動力を求めよ。",
+    answer: numberText(ADDITIONAL_REQUIRED_POWER_KW, 3) + " kW",
+    numericAnswer: ADDITIONAL_REQUIRED_POWER_KW,
+    expectedUnit: "kW",
+    acceptedUnits: { W: 0.001, kW: 1 },
+    requiresUnit: true,
+    tolerance: 0.005,
+    formula: "\\dot W=\\frac{\\dot Q_2}{\\varepsilon_r}",
+    steps: [
+      inline("\\dot Q_2=\\frac{1200\\times4.19}{3600}\\approx" + numberText(ADDITIONAL_COOLING_KW, 3) + "\\,\\mathrm{kW}"),
+      inline("\\dot W=\\frac{" + numberText(ADDITIONAL_COOLING_KW, 3) + "}{7}\\approx" + numberText(ADDITIONAL_REQUIRED_POWER_KW, 3) + "\\,\\mathrm{kW}"),
+    ],
+    explanation: "冷凍COPの定義を必要動力について解く。資料の丸めでは約0.200 kWとなる。",
+    diagram: "reversed-carnot-ts",
+    sourceRefs: [rangeRef(9)],
+  }),
 ];
 
 type ExamVariant = {
@@ -1146,15 +1465,16 @@ type ExamVariant = {
   entropy: readonly [number, number, number];
   otto: readonly [number, number, number, number, number];
   carnot: readonly [number, number, number];
+  refrigeration: readonly [number, number, number];
 };
 
 const EXAM_VARIANTS: ExamVariant[] = [
-  { poly: [100, 2, 1.2], adiabatic: [100, 300, 4, 1.4, 1], entropy: [120, 600, 300], otto: [64, 64, 8, 1.3, 25], carnot: [500, 100, 10] },
-  { poly: [110, 2.5, 1.25], adiabatic: [95, 295, 3, 1.4, 0.8], entropy: [150, 650, 325], otto: [70, 70, 10, 1.32, 20], carnot: [450, 50, 12] },
-  { poly: [90, 3, 1.3], adiabatic: [105, 310, 5, 1.4, 1.2], entropy: [180, 720, 360], otto: [72, 80, 10, 1.35, 30], carnot: [550, 150, 15] },
-  { poly: [130, 1.8, 1.35], adiabatic: [120, 290, 2.5, 1.4, 0.6], entropy: [96, 480, 320], otto: [60, 72, 9, 1.3, 15], carnot: [400, 80, 9] },
-  { poly: [115, 2.2, 1.28], adiabatic: [98, 305, 3.5, 1.4, 1.1], entropy: [140, 700, 350], otto: [68, 76, 9.5, 1.33, 28], carnot: [600, 120, 18] },
-  { poly: [105, 2.8, 1.32], adiabatic: [108, 298, 4.5, 1.4, 0.9], entropy: [160, 640, 320], otto: [66, 74, 8.5, 1.34, 22], carnot: [520, 90, 14] },
+  { poly: [100, 2, 1.2], adiabatic: [100, 300, 4, 1.4, 1], entropy: [120, 600, 300], otto: [64, 64, 8, 1.3, 25], carnot: [500, 100, 10], refrigeration: [47, 7, 1200] },
+  { poly: [110, 2.5, 1.25], adiabatic: [95, 295, 3, 1.4, 0.8], entropy: [150, 650, 325], otto: [70, 70, 10, 1.32, 20], carnot: [450, 50, 12], refrigeration: [42, 2, 1000] },
+  { poly: [90, 3, 1.3], adiabatic: [105, 310, 5, 1.4, 1.2], entropy: [180, 720, 360], otto: [72, 80, 10, 1.35, 30], carnot: [550, 150, 15], refrigeration: [50, 10, 1500] },
+  { poly: [130, 1.8, 1.35], adiabatic: [120, 290, 2.5, 1.4, 0.6], entropy: [96, 480, 320], otto: [60, 72, 9, 1.3, 15], carnot: [400, 80, 9], refrigeration: [37, -3, 900] },
+  { poly: [115, 2.2, 1.28], adiabatic: [98, 305, 3.5, 1.4, 1.1], entropy: [140, 700, 350], otto: [68, 76, 9.5, 1.33, 28], carnot: [600, 120, 18], refrigeration: [45, 5, 1800] },
+  { poly: [105, 2.8, 1.32], adiabatic: [108, 298, 4.5, 1.4, 0.9], entropy: [160, 640, 320], otto: [66, 74, 8.5, 1.34, 22], carnot: [520, 90, 14], refrigeration: [55, 15, 1400] },
 ];
 
 function examQuestion(
@@ -1180,6 +1500,7 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
   const [entropyQ, entropyHot, entropyCold] = variant.entropy;
   const [ottoDiameterMm, ottoStrokeMm, ottoClearanceMm, ottoKappa, ottoIntakeC] = variant.otto;
   const [carnotHotC, carnotColdC, carnotQOut] = variant.carnot;
+  const [refrigerationHotC, refrigerationColdC, refrigerationKcalPerHour] = variant.refrigeration;
   const polyT1C = 25 + 2 * (index - 1);
   const polyT1K = polyT1C + 273;
   const polyP2 = polyP1 * polyRatio ** polyN;
@@ -1206,8 +1527,15 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
   const carnotEta = 1 - carnotRatio;
   const carnotQIn = carnotQOut / carnotRatio;
   const carnotW = carnotQIn - carnotQOut;
-  const carnotHotDelta = -carnotQIn / highK;
-  const carnotColdDelta = carnotQOut / lowK;
+
+
+  const refrigerationHighK = refrigerationHotC + 273;
+  const refrigerationLowK = refrigerationColdC + 273;
+  const refrigerationCopR = refrigerationLowK / (refrigerationHighK - refrigerationLowK);
+  const refrigerationCopH = refrigerationHighK / (refrigerationHighK - refrigerationLowK);
+  const refrigerationCoolingKw = (refrigerationKcalPerHour * 4.19) / 3600;
+  const refrigerationPowerKw = refrigerationCoolingKw / refrigerationCopR;
+  const refrigerationHeatingKw = refrigerationCoolingKw + refrigerationPowerKw;
 
   const sections: ThermodynamicsExamSection[] = [
     {
@@ -1411,11 +1739,11 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
     },
     {
       number: 5,
-      title: "カルノーサイクル",
+      title: "カルノー熱機関・冷凍サイクル",
       topic: "carnot",
-      topicIds: ["carnot"],
+      topicIds: ["carnot", "refrigeration"],
       points: 24,
-      context: "高温熱源" + carnotHotC + "℃、低温熱源" + carnotColdC + "℃の間で作動し、低温側へ" + carnotQOut + " kJを放熱する可逆カルノー熱機関。",
+      context: "高温熱源" + carnotHotC + "℃、低温熱源" + carnotColdC + "℃の間で作動し、低温側へ" + carnotQOut + " kJを放熱する可逆カルノー熱機関を考える。さらに、高温側" + refrigerationHotC + "℃、低温側" + refrigerationColdC + "℃、冷凍能力" + refrigerationKcalPerHour + " kcal/hの逆カルノー冷凍機を考える。資料指定の1 kcal=4.19 kJを用いる。",
       questions: [
         examQuestion(id, 5, 1, 4, {
           topic: "carnot", genre: "P-V線図", difficulty: 1, format: "diagram",
@@ -1425,17 +1753,17 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           formula: "1\\to2:T=T_1,\\ 2\\to3:Q=0,\\ 3\\to4:T=T_2,\\ 4\\to1:Q=0",
           steps: ["高温等温線を上、低温等温線を下に置く。", "二本の断熱曲線で結び時計回りに矢印を付ける。"],
           explanation: "時計回りの閉曲線で、囲む面積が一周期の正味仕事。",
-          diagram: "carnot-pv", sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+          diagram: "carnot-pv", sourceRefs: [rangeRef(6), rangeRef(7), rangeRef(8), FORMAT3_CARNOT_REF],
         }),
         examQuestion(id, 5, 2, 5, {
-          topic: "carnot", genre: "T-S線図", difficulty: 1, format: "diagram",
-          prompt: "T-S線図に同じサイクルを描き、Q1とQ2に対応する面積を示せ。",
-          answer: "T1上の1→2がQ1、2→3が等エントロピー、T2上の3→4がQ2、4→1が等エントロピー。",
-          keywords: ["T1", "T2", "Q1", "Q2", "等エントロピー"], minKeywords: 4,
-          formula: "Q=T\\Delta S",
-          steps: ["等温過程を水平線、可逆断熱過程を鉛直線で描く。", "各等温線の下の長方形面積を熱量として示す。"],
-          explanation: "可逆断熱ではΔS=0なので、T-S線図上では鉛直線。",
-          diagram: "carnot-ts", sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+          topic: "refrigeration", genre: "冷凍装置図・熱収支", difficulty: 2, format: "diagram",
+          prompt: "蒸気圧縮冷凍サイクルの圧縮機・凝縮器・膨張弁・蒸発器を冷媒の流れ順に配置し、W、Q1、Q2の向きを示せ。",
+          answer: "圧縮機→凝縮器→膨張弁→蒸発器。圧縮機へWを入力、凝縮器からQ1を放出、蒸発器でQ2を吸収する。",
+          keywords: ["圧縮機", "凝縮器", "膨張弁", "蒸発器", "W", "Q1", "Q2"], minKeywords: 6,
+          formula: "Q_1=Q_2+W",
+          steps: ["4機器を圧縮・凝縮・膨張・蒸発の順に結ぶ。", "仕事入力と二つの熱移動の向きを付け、熱収支を照合する。"],
+          explanation: "装置名だけでなく、低温側から高温側へ熱をくみ上げるための仕事と熱の流れを図で対応させる。",
+          diagram: "refrigeration-cycle", sourceRefs: [rangeRef(8)],
         }),
         examQuestion(id, 5, 3, 5, {
           topic: "carnot", genre: "理論効率", difficulty: 2, format: "number",
@@ -1445,7 +1773,7 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           steps: [inline("T_1=" + highK + "\\,\\mathrm{K},\\ T_2=" + lowK + "\\,\\mathrm{K}"), inline("\\eta_c=1-\\frac{" + lowK + "}{" + highK + "}\\approx" + numberText(carnotEta * 100, 2) + "\\%")],
           explanation: "摂氏温度へ273を加え、必ず絶対温度比を使う。",
           diagram: "carnot-pv",
-          sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+          sourceRefs: [rangeRef(6), rangeRef(7), rangeRef(8), FORMAT3_CARNOT_REF],
         }),
         examQuestion(id, 5, 4, 5, {
           topic: "carnot", genre: "受熱量・仕事・前問結果", difficulty: 3, format: "text",
@@ -1456,18 +1784,24 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
           steps: [inline("Q_1=" + carnotQOut + "\\times\\frac{" + highK + "}{" + lowK + "}\\approx" + numberText(carnotQIn, 2) + "\\,\\mathrm{kJ}"), inline("W=Q_1-Q_2\\approx" + numberText(carnotW, 2) + "\\,\\mathrm{kJ}"), inline("W=\\eta_cQ_1\\approx" + numberText(carnotEta, 5) + "\\times" + numberText(carnotQIn, 2) + "\\approx" + numberText(carnotW, 2) + "\\,\\mathrm{kJ}") + "となり一致する。"],
           explanation: "熱量比から受熱量を戻し、受熱量と放熱量の差を正味仕事とする。",
           diagram: "carnot-pv",
-          sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+          sourceRefs: [rangeRef(6), rangeRef(7), rangeRef(8), FORMAT3_CARNOT_REF],
         }),
         examQuestion(id, 5, 5, 5, {
-          topic: "carnot", genre: "熱源エントロピー", difficulty: 3, format: "text",
-          prompt: "高温・低温熱源のエントロピー変化と合計を求めよ。",
-          answer: "高温側" + numberText(carnotHotDelta, 5) + " kJ/K、低温側+" + numberText(carnotColdDelta, 5) + " kJ/K、合計0。",
-          keywords: [numberText(carnotHotDelta, 5), numberText(carnotColdDelta, 5), "0"], minKeywords: 3,
-          formula: "\\begin{aligned}\\Delta S_{\\mathrm{hot}}&=-\\frac{Q_1}{T_1}\\\\ \\Delta S_{\\mathrm{cold}}&=\\frac{Q_2}{T_2}\\end{aligned}",
-          steps: [inline("\\Delta S_{\\mathrm{hot}}=-\\frac{" + numberText(carnotQIn, 2) + "}{" + highK + "}\\approx" + numberText(carnotHotDelta, 5) + "\\,\\mathrm{kJ\\,K^{-1}}"), inline("\\Delta S_{\\mathrm{cold}}=\\frac{" + carnotQOut + "}{" + lowK + "}\\approx" + numberText(carnotColdDelta, 5) + "\\,\\mathrm{kJ\\,K^{-1}}"), inline("\\Delta S_{\\mathrm{total}}=0")],
-          explanation: "可逆カルノーでは両熱源の変化の大きさが等しく符号が反対なので合計ゼロ。",
-          diagram: "carnot-ts",
-          sourceRefs: [rangeRef(6), rangeRef(7), FORMAT3_CARNOT_REF],
+          topic: "refrigeration", genre: "逆カルノーCOP・必要動力", difficulty: 3, format: "text",
+          prompt: "逆カルノー冷凍機のT-S線図を完成し、εr、εh、冷凍能力kW、必要動力kW、高温側放熱能力kWを求めよ。",
+          answer: "εr≈" + numberText(refrigerationCopR, 3) + "、εh≈" + numberText(refrigerationCopH, 3) + "、Qdot2≈" + numberText(refrigerationCoolingKw, 3) + " kW、Wdot≈" + numberText(refrigerationPowerKw, 3) + " kW、Qdot1≈" + numberText(refrigerationHeatingKw, 3) + " kW",
+          keywords: [numberText(refrigerationCopR, 3), numberText(refrigerationCopH, 3), numberText(refrigerationCoolingKw, 3), numberText(refrigerationPowerKw, 3), numberText(refrigerationHeatingKw, 3)], minKeywords: 4,
+          formula: "\\begin{aligned}\\varepsilon_r&=\\frac{T_2}{T_1-T_2}\\\\ \\varepsilon_h&=\\frac{T_1}{T_1-T_2}\\\\ \\dot Q_2&=\\frac{4.19q}{3600}\\\\ \\dot W&=\\frac{\\dot Q_2}{\\varepsilon_r}\\end{aligned}",
+          steps: [
+            inline("T_1=" + refrigerationHighK + "\\,\\mathrm K,\\quad T_2=" + refrigerationLowK + "\\,\\mathrm K"),
+            inline("\\varepsilon_r=\\frac{" + refrigerationLowK + "}{" + refrigerationHighK + "-" + refrigerationLowK + "}\\approx" + numberText(refrigerationCopR, 3) + ",\\quad\\varepsilon_h\\approx" + numberText(refrigerationCopH, 3)),
+            inline("\\dot Q_2=\\frac{" + refrigerationKcalPerHour + "\\times4.19}{3600}\\approx" + numberText(refrigerationCoolingKw, 3) + "\\,\\mathrm{kW}"),
+            inline("\\dot W=\\frac{" + numberText(refrigerationCoolingKw, 3) + "}{" + numberText(refrigerationCopR, 3) + "}\\approx" + numberText(refrigerationPowerKw, 3) + "\\,\\mathrm{kW}"),
+            inline("\\dot Q_1=\\dot Q_2+\\dot W\\approx" + numberText(refrigerationHeatingKw, 3) + "\\,\\mathrm{kW}"),
+          ],
+          explanation: "絶対温度で逆カルノーCOPを求め、kcal/hをkWへ換算してからCOPの定義で必要動力を出す複合計算。",
+          diagram: "reversed-carnot-ts",
+          sourceRefs: [rangeRef(9)],
         }),
       ],
     },
@@ -1495,7 +1829,7 @@ function buildThermodynamicsExam(index: number): ThermodynamicsExpectedExam {
     scoreLabel: "練習用100点換算",
     passPercent: 60,
     paper: "A4 portrait",
-    sourcePolicy: "範囲ZIPの7画像と形式3の許可済み問3・問4だけを使用",
+    sourcePolicy: "範囲ZIPの9画像と形式3の許可済み問3・問4だけを使用",
     officialConditionsNote: "公式の試験時間・満点・配点は資料から確認できない。範囲ZIPと提供形式に合わせ、単位換算・図読解・前問結果を使う複合計算で構成。50分と100点換算は変更可能な練習設定。",
     sections,
     questions,
@@ -1546,7 +1880,7 @@ export const THERMODYNAMICS_EXAM_FORMATS = [
   {
     id: "observed-diagrams",
     title: "線図と計算の組合せ",
-    description: "後半ではP-V線図やT-S線図を描き、効率・仕事・エントロピーを計算する。",
+    description: "後半ではP-V・T-S線図に加え、冷凍装置図と逆カルノーT-S線図を描き、効率・仕事・成績係数・必要動力を計算する。",
     strategy: "軸、状態番号、矢印、過程名、熱と仕事を先に書いてから計算へ進む。",
   },
 ] as const;
@@ -1565,5 +1899,5 @@ export const THERMODYNAMICS_EXAM_SPEC = {
   officialTotalPoints: null,
   officialPointAllocation: null,
   officialConditionsNote: "公式の試験時間・満点・配点は資料から確認できない。50分・100点換算・60%は変更可能な練習設定であり、公式条件ではない。",
-  sourcePolicy: "内容は範囲ZIPの7画像のみ。形式3はallowlistの問3オットー・問4カルノーだけを追加参照する。",
+  sourcePolicy: "内容は範囲ZIPの9画像のみ。形式3はallowlistの問3オットー・問4カルノーだけを追加参照する。",
 } as const;

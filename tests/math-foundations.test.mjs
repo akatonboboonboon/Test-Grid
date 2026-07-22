@@ -22,10 +22,12 @@ test("statistics and applied-math foundations cover both exam formulas and prere
   const source = await readFile(SOURCE_URL, "utf8");
   const module = await import(dataUrl(compile(source)));
 
-  assert.equal(module.STATISTICS_MATH_FOUNDATIONS.length, 28);
+  assert.equal(module.STATISTICS_MATH_FOUNDATIONS.length, 32);
   assert.equal(module.APPLIED_MATH_FOUNDATIONS.length, 25);
   assert.ok(module.STATISTICS_MATH_FOUNDATIONS.some((entry) => entry.title.includes("分散")));
   assert.ok(module.STATISTICS_MATH_FOUNDATIONS.some((entry) => entry.title.includes("期待値")));
+  assert.ok(module.STATISTICS_MATH_FOUNDATIONS.some((entry) => entry.id === "foundation-stats-general-standardize"));
+  assert.ok(module.STATISTICS_MATH_FOUNDATIONS.some((entry) => entry.id === "foundation-stats-special-variances"));
   assert.ok(module.STATISTICS_MATH_FOUNDATIONS.some((entry) => entry.scope === "prerequisite"));
   assert.ok(module.APPLIED_MATH_FOUNDATIONS.some((entry) => entry.formula.includes("nabla")));
 });

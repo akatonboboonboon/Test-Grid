@@ -5,8 +5,8 @@ import ts from "typescript";
 
 const DATA_URL = new URL("../app/thermodynamics-data.ts", import.meta.url);
 const ANALYSIS_URL = new URL("./fixtures/thermodynamics-range-analysis.json", import.meta.url);
-const TOPICS = ["adiabatic", "polytropic", "second-law", "entropy", "otto", "carnot"];
-const FORBIDDEN = [/蒸気表/, /飽和(?:水|蒸気|状態)/, /湿り蒸気/, /乾き度/, /ランキン/, /逆カルノー(?:サイクル|冷凍|冷蔵|熱ポンプ)/, /\bCOP\b/i, /成績係数/];
+const TOPICS = ["adiabatic", "polytropic", "second-law", "entropy", "otto", "carnot", "refrigeration"];
+const FORBIDDEN = [/蒸気表/, /飽和(?:水|蒸気|状態)/, /湿り蒸気/, /乾き度/, /ランキン/];
 
 function compile(source) {
   return ts.transpileModule(source, {
@@ -38,7 +38,7 @@ function checkSources(items, allowlist, label) {
     assert.ok(Array.isArray(item.sourceRefs) && item.sourceRefs.length, label + ":" + item.id + " sourceRefs");
     for (const ref of item.sourceRefs) {
       if (ref.kind === "range-zip") {
-        assert.ok(Number.isInteger(ref.page) && ref.page >= 1 && ref.page <= 7, label + ":" + item.id + " page");
+        assert.ok(Number.isInteger(ref.page) && ref.page >= 1 && ref.page <= 9, label + ":" + item.id + " page");
         assert.match(ref.filename, /^PXL_.*\.jpg$/i, label + ":" + item.id + " filename");
       } else {
         assert.equal(ref.kind, "format3-overlap");
@@ -94,10 +94,10 @@ function checkFormula(tex, katex, label) {
   return markup;
 }
 
-test("analysis contract fixes seven pages, six topics, and format3 Q3/Q4 only", async () => {
+test("analysis contract fixes nine pages, seven topics, and format3 Q3/Q4 only", async () => {
   const analysis = JSON.parse(await readFile(ANALYSIS_URL, "utf8"));
-  assert.equal(analysis.pages.length, 7);
-  assert.deepEqual(analysis.pages.map((page) => page.pageIndex), [1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(analysis.pages.length, 9);
+  assert.deepEqual(analysis.pages.map((page) => page.pageIndex), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   assert.deepEqual(analysis.recommendedTopicTags.map((topic) => topic.id), TOPICS);
   assert.deepEqual(analysis.format3.includedQuestionNumbers, [3, 4]);
   assert.deepEqual(analysis.format3.excludedQuestionNumbers, [1, 2, 5]);
@@ -106,11 +106,11 @@ test("analysis contract fixes seven pages, six topics, and format3 Q3/Q4 only", 
 test("formula deck and practice pool meet coverage, source, scope, and TeX contracts", async () => {
   const data = await loadData();
   const katex = await import(new URL("../app/vendor/katex/katex.mjs", import.meta.url));
-  assert.equal(data.THERMODYNAMICS_RANGE_PAGES.length, 7);
+  assert.equal(data.THERMODYNAMICS_RANGE_PAGES.length, 9);
   assert.deepEqual(data.THERMODYNAMICS_TOPICS.map((item) => item.id), TOPICS);
   assert.deepEqual(data.THERMODYNAMICS_FORMAT3_OVERLAP_ALLOWLIST.map((item) => item.question), [3, 4]);
-  assert.ok(data.THERMODYNAMICS_FORMULAS.length >= 24);
-  assert.ok(data.THERMODYNAMICS_QUESTIONS.length >= 30);
+  assert.ok(data.THERMODYNAMICS_FORMULAS.length >= 30);
+  assert.ok(data.THERMODYNAMICS_QUESTIONS.length >= 41);
   assert.equal(new Set(data.THERMODYNAMICS_FORMULAS.map((item) => item.id)).size, data.THERMODYNAMICS_FORMULAS.length);
   assert.equal(new Set(data.THERMODYNAMICS_QUESTIONS.map((item) => item.id)).size, data.THERMODYNAMICS_QUESTIONS.length);
   checkSources(data.THERMODYNAMICS_FORMULAS, data.THERMODYNAMICS_FORMAT3_OVERLAP_ALLOWLIST, "formula");
@@ -142,7 +142,9 @@ test("formula deck and practice pool meet coverage, source, scope, and TeX contr
   assert.ok(inlineMarkup.some((markup) => /<mfrac>/.test(markup)), "inline fractions render as mfrac");
   checkNoForbidden(data.THERMODYNAMICS_FORMULAS, "formula");
   checkNoForbidden(data.THERMODYNAMICS_QUESTIONS, "question");
-  assert.doesNotMatch(JSON.stringify(data.THERMODYNAMICS_QUESTIONS), /860 K|380 K|0\.0233/);
+  assert.match(JSON.stringify(data.THERMODYNAMICS_QUESTIONS), /860 K/);
+  assert.match(JSON.stringify(data.THERMODYNAMICS_QUESTIONS), /380 K/);
+  assert.match(JSON.stringify(data.THERMODYNAMICS_QUESTIONS), /0\.02326/);
   const cards = new Map(data.THERMODYNAMICS_FORMULAS.map((card) => [card.id, card]));
   const questions = new Map(data.THERMODYNAMICS_QUESTIONS.map((question) => [question.id, question]));
   assert.equal(cards.get("th-ad-pv").diagram, "pv");
@@ -192,9 +194,9 @@ test("six expected exams are 5-major, 22-subquestion, full-range practice papers
     for (const field of ["4.2", "4.3", "4.4"]) assert.equal(diagramByField.get(field), "piston", exam.id + " " + field);
     assert.equal(diagramByField.get("4.5"), "otto-pv", exam.id + " Otto efficiency");
     assert.equal(diagramByField.get("5.1"), "carnot-pv", exam.id + " Carnot P-V");
-    assert.equal(diagramByField.get("5.2"), "carnot-ts", exam.id + " Carnot T-S");
+    assert.equal(diagramByField.get("5.2"), "refrigeration-cycle", exam.id + " refrigeration apparatus");
     for (const field of ["5.3", "5.4"]) assert.equal(diagramByField.get(field), "carnot-pv", exam.id + " " + field);
-    assert.equal(diagramByField.get("5.5"), "carnot-ts", exam.id + " Carnot entropy");
+    assert.equal(diagramByField.get("5.5"), "reversed-carnot-ts", exam.id + " reversed Carnot T-S");
   }
 });
 

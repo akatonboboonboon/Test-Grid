@@ -2,6 +2,7 @@ import { useId, type ReactNode } from "react";
 
 export type MechanicalDynamicsDiagramKind =
   | "spring-network"
+  | "series-parallel-chain"
   | "pinned-beam"
   | "simple-pendulum"
   | "single-spring-mass"
@@ -20,6 +21,7 @@ type DiagramProps = {
 
 const KNOWN_KINDS = new Set<MechanicalDynamicsDiagramKind>([
   "spring-network",
+  "series-parallel-chain",
   "pinned-beam",
   "simple-pendulum",
   "single-spring-mass",
@@ -99,6 +101,23 @@ function SpringNetwork({ arrowId }: { arrowId: string }) {
   );
 }
 
+function SeriesParallelChain({ arrowId }: { arrowId: string }) {
+  return (
+    <svg viewBox="0 0 360 250" role="img" aria-label="ばねk1と並列ばねk2・k3を直列接続した質点系">
+      <ArrowMarker id={arrowId} />
+      <Ceiling />
+      <Spring x={180} y={21} height={66} />
+      <text x="198" y="58" fontWeight="700">k₁</text>
+      <path d="M118 88 H242" stroke="currentColor" strokeWidth="3" />
+      <Spring x={140} y={88} height={72} /><Spring x={220} y={88} height={72} />
+      <text x="111" y="129" fontWeight="700">k₂</text><text x="238" y="129" fontWeight="700">k₃</text>
+      <rect x="125" y="160" width="110" height="50" fill="none" stroke="currentColor" strokeWidth="3" />
+      <text x="180" y="191" textAnchor="middle" fontSize="19" fontWeight="700">m</text>
+      <path d="M274 162 v46" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="2" />
+      <text x="286" y="190" fontWeight="700">x</text>
+    </svg>
+  );
+}
 function CantileverMass({ arrowId }: { arrowId: string }) {
   return (
     <svg viewBox="0 0 380 230" role="img" aria-label="片持ちはり先端に質量を取り付けた振動系">
@@ -194,6 +213,7 @@ export default function MechanicalDynamicsDiagram({ kind, solution = false, titl
   const safeKind = kind as MechanicalDynamicsDiagramKind;
   let diagram: ReactNode;
   if (safeKind === "spring-network") diagram = <SpringNetwork arrowId={arrowId} />;
+  else if (safeKind === "series-parallel-chain") diagram = <SeriesParallelChain arrowId={arrowId} />;
   else if (safeKind === "cantilever-mass") diagram = <CantileverMass arrowId={arrowId} />;
   else if (safeKind === "spring-rigid-rod") diagram = <SpringRigidRod arrowId={arrowId} />;
   else if (safeKind === "pinned-beam") diagram = <PinnedBeam arrowId={arrowId} />;

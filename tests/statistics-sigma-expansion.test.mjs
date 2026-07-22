@@ -17,14 +17,16 @@ function toDataUrl(javascript) {
 }
 
 async function loadStatisticsData() {
-  const [mainSource, pdf12Source, pdf34Source] = await Promise.all([
+  const [mainSource, pdf12Source, pdf34Source, additionalSource] = await Promise.all([
     readFile(new URL("../app/statistics-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/statistics-pdf12-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/statistics-pdf34-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/statistics-additional-data.ts", import.meta.url), "utf8"),
   ]);
   const mainJavascript = compile(mainSource)
     .replaceAll('"./statistics-pdf12-data"', JSON.stringify(toDataUrl(compile(pdf12Source))))
-    .replaceAll('"./statistics-pdf34-data"', JSON.stringify(toDataUrl(compile(pdf34Source))));
+    .replaceAll('"./statistics-pdf34-data"', JSON.stringify(toDataUrl(compile(pdf34Source))))
+    .replaceAll('"./statistics-additional-data"', JSON.stringify(toDataUrl(compile(additionalSource))));
   return import(toDataUrl(mainJavascript));
 }
 
@@ -40,7 +42,7 @@ test("every taught Sigma formula keeps Sigma and adds a Sigma-free expansion", a
   const owners = [...data.STATISTICS_FORMULAS, ...data.STATISTICS_QUESTIONS];
   const sigmaOwners = owners.filter((owner) => owner.formula?.includes("\\sum"));
 
-  assert.equal(sigmaOwners.length, 13, "audit every current Sigma formula card and course question");
+  assert.equal(sigmaOwners.length, 16, "audit every current Sigma formula card and course question");
   for (const owner of sigmaOwners) {
     assert.equal(typeof owner.expandedFormula, "string", `${owner.id} needs expandedFormula`);
     assert.ok(owner.expandedFormula.length > 4, `${owner.id} expansion is too short`);

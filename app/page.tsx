@@ -262,7 +262,7 @@ export default function StudyHub() {
           <div>
             <p className="eyebrow"><span>REGULAR EXAM / 9 SUBJECTS</span><span>LOCAL STUDY DESK</span></p>
             <h1 id="hub-title">9教科を、<br /><em>ひとつずつ潰す。</em></h1>
-            <p>英語はZIP教材の専用演習、ネットワークは本試験の20文字以上記述と追試用の層暗算、熱・流体力学は熱力学7枚・6単元の公式と全範囲想定試験、確率統計・応用数学もA4想定試験まで収録。ほかの科目もここでまとめて回せます。</p>
+            <p>英語はZIP教材の専用演習、ネットワークは本試験の20文字以上記述と追試用の層暗算、熱・流体力学は追加範囲を含む熱力学9枚・7単元の公式と全範囲想定試験、確率統計も追加範囲5ページとA4想定試験、応用数学もA4想定試験まで収録。ほかの科目もここでまとめて回せます。</p>
           </div>
           <Link className="hub-primary-link" href="/subjects/network/written">
             <span>READY NOW</span>

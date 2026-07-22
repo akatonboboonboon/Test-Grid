@@ -21,7 +21,7 @@ export type MathFoundationEntry = {
   topic: string;
   title: string;
   formula: string;
-  /** 統計で formula に \sum がある場合は、必ず \sum を使わない同値な展開を書く。 */
+  /** 統計で formula に \\sum がある場合は、必ず \\sum を使わない同値な展開を書く。 */
   expandedFormula?: string;
   symbols: MathFoundationSymbol[];
   conditions: string[];
@@ -32,7 +32,7 @@ export type MathFoundationEntry = {
   sourceBasis: string[];
 };
 
-const STATISTICS_RANGE = ["確率統計範囲ZIP・演習PDF1〜4", "確率統計過去問形式"];
+const STATISTICS_RANGE = ["確率統計範囲ZIP・演習PDF1〜4", "確率統計追加範囲5枚（2026-07-22）", "確率統計過去問形式"];
 const APPLIED_RANGE = ["応用数学範囲・追加範囲 全22枚", "応用数学テスト形式1〜3の出題構成"];
 
 function statistics(entry: Omit<MathFoundationEntry, "subjectId" | "sourceBasis">): MathFoundationEntry {
@@ -209,6 +209,36 @@ export const STATISTICS_MATH_FOUNDATIONS: MathFoundationEntry[] = [
     symbols: [{ symbol: "E[X]", meaning: "連続型確率変数の期待値" }, { symbol: "V(X)", meaning: "連続型確率変数の分散" }],
     conditions: ["対応する積分が収束する", "定義域外では密度0として扱う"], purpose: "連続分布の平均とばらつきを求める。",
     commonMistakes: ["期待値でxを掛け忘れる", "E[X²]の積分でx²を掛け忘れる"], scope: "exam-range",
+  }),
+  statistics({
+    id: "foundation-stats-second-moment", topic: "random-variable", title: "二乗の期待値（2次モーメント）",
+    formula: "E[X^2]=\\sum_{i=1}^{k}x_i^2p_i",
+    expandedFormula: "E[X^2]=x_1^2p_1+x_2^2p_2+\\cdots+x_k^2p_k",
+    symbols: [{ symbol: "E[X^2]", meaning: "Xを二乗した量の期待値" }, { symbol: "p_i", meaning: "X=xiとなる確率" }],
+    conditions: ["値を二乗してから対応確率を掛ける", "E[X²]とE[X]²を区別する"], purpose: "分散をV(X)=E[X²]−E[X]²で計算する。",
+    commonMistakes: ["期待値を先に求めて二乗する", "値を二乗せず確率だけ掛ける"],
+    example: { given: "公平な6面サイコロ", working: "E[X^2]=\\frac{1^2+2^2+3^2+4^2+5^2+6^2}{6}", answer: "\\frac{91}{6}" }, scope: "exam-range",
+  }),
+  statistics({
+    id: "foundation-stats-variance-properties", topic: "random-variable", title: "分散の性質と独立な平均",
+    formula: "V(c)=0,\\quad V(X+c)=V(X),\\quad V(cX)=c^2V(X),\\quad V\\!\\left(\\frac{X_1+X_2}{2}\\right)=\\frac{V(X)}{2}",
+    symbols: [{ symbol: "c", meaning: "定数" }, { symbol: "X_1,X_2", meaning: "独立で同じ分散を持つ確率変数" }],
+    conditions: ["最後の式ではX1とX2が独立かつ同分布"], purpose: "平行移動・尺度変更と、標本平均によるばらつき減少を計算する。",
+    commonMistakes: ["V(X+c)へcを足す", "V(cX)をcV(X)とする", "独立でない変数の共分散を落とす"], scope: "exam-range",
+  }),
+  statistics({
+    id: "foundation-stats-special-variances", topic: "continuous", title: "指数分布・[0,1]一様分布の分散",
+    formula: "X\\sim\\operatorname{Exp}(\\lambda):V(X)=\\frac1{\\lambda^2},\\qquad X\\sim U(0,1):V(X)=\\frac1{12}",
+    symbols: [{ symbol: "\\lambda", meaning: "指数分布の率パラメータ" }, { symbol: "U(0,1)", meaning: "0以上1以下の一様分布" }],
+    conditions: ["指数分布は密度λe^{-λx}（x以上0）", "一様分布は[0,1]で密度1"], purpose: "追加範囲の代表分布の分散を即答する。",
+    commonMistakes: ["指数分布の分散を1/λとする", "一様分布のE[X²]=1/3を分散とする"], scope: "exam-range",
+  }),
+  statistics({
+    id: "foundation-stats-general-standardize", topic: "continuous", title: "一般の標準化",
+    formula: "Z=\\frac{X-E[X]}{\\sqrt{V(X)}},\\qquad E[Z]=0,\\qquad V(Z)=1",
+    symbols: [{ symbol: "Z", meaning: "標準化された無次元の確率変数" }, { symbol: "\\sqrt{V(X)}", meaning: "Xの標準偏差" }],
+    conditions: ["0<V(X)<∞", "平均と分散が存在する"], purpose: "単位の異なる確率変数を平均0・分散1へそろえて比較する。",
+    commonMistakes: ["分母へV(X)をそのまま置く", "正規分布にしか標準化できないと考える"], scope: "exam-range",
   }),
   statistics({
     id: "foundation-stats-normal-standardize", topic: "continuous", title: "正規分布と標準化",

@@ -359,7 +359,7 @@ function ThermodynamicsExpectedExamLab({ firstExam }: { firstExam: ExpectedExam 
           <div><span>SCORE</span><strong>100</strong><small>点換算</small></div>
           <div><span>PASS</span><strong>60</strong><small>練習用</small></div>
         </div>
-        <aside className={styles.scopeWarning}><strong>範囲境界</strong><p>範囲ZIPと形式3の確認済み重複だけを出題します。逆カルノーサイクルなど、今回の範囲に確認できない内容は含めません。</p></aside>
+        <aside className={styles.scopeWarning}><strong>範囲境界</strong><p>範囲ZIP9枚（冷凍サイクル・逆カルノーを含む）と形式3の確認済み重複だけを出題します。蒸気表・湿り蒸気・ランキンサイクル、形式だけの未確認内容は含めません。</p></aside>
 
         {savedExam && (
           <aside className={styles.savedCard} aria-label="保存された想定試験">

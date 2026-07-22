@@ -60,12 +60,16 @@ test("thermodynamics exams persist, resume, print A4, and keep long math respons
   assert.match(exams, /question\.diagram && <ThermodynamicsDiagram[^>]*solution/);
 });
 
-test("Otto and Carnot use dedicated closed-cycle diagrams without leaking solution labels on the question face", async () => {
+test("Otto, Carnot, and refrigeration use dedicated diagrams without leaking solution labels on the question face", async () => {
   const diagrams = await readFile(DIAGRAMS_URL, "utf8");
-  for (const kind of ["otto-pv", "carnot-pv", "carnot-ts"]) assert.match(diagrams, new RegExp(`"${kind}"`));
+  for (const kind of ["otto-pv", "carnot-pv", "carnot-ts", "refrigeration-cycle", "reversed-carnot-ts"]) assert.match(diagrams, new RegExp(`"${kind}"`));
   assert.match(diagrams, /solution && kind === "otto-pv"/);
   assert.match(diagrams, /solution && kind === "carnot-pv"/);
   assert.match(diagrams, /solution && kind === "carnot-ts"/);
+  assert.match(diagrams, /solution && kind === "reversed-carnot-ts"/);
+  assert.match(diagrams, /function RefrigerationCycleDiagram/);
+  assert.match(diagrams, /!solution && \(/);
+  assert.match(diagrams, /Q₁=Q₂\+W/);
   assert.match(diagrams, /M180 145 C145 132 108 111 76 96/);
   assert.match(diagrams, /M76 96 V48/);
   assert.match(diagrams, /M76 48 C109 54 147 68 180 84/);
@@ -84,5 +88,5 @@ test("study hub treats thermodynamics as ready material with real card metrics",
   assert.match(hub, /import \{ THERMODYNAMICS_FORMULAS \}/);
   assert.match(hub, /subject\.id === "subject-4"[\s\S]*?cards: THERMODYNAMICS_FORMULAS\.length/);
   assert.match(hub, /subject\.id === "subject-4"[^\n]*\|\| subject\.id === "subject-6"/);
-  assert.match(hub, /熱・流体力学は熱力学7枚・6単元/);
+  assert.match(hub, /熱・流体力学は追加範囲を含む熱力学9枚・7単元/);
 });

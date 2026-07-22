@@ -5,8 +5,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import CardDeckSearch from "../../card-deck-search";
 import CardFaceList from "../../card-face-list";
 import StatisticsExpectedExams from "../../statistics-expected-exams";
-import { STATISTICS_EXAM_LEVEL_QUESTIONS } from "../../statistics-expected-exams-data";
+import { STATISTICS_EXAM_LEVEL_QUESTIONS as STATISTICS_EXPECTED_LEVEL_QUESTIONS } from "../../statistics-expected-exams-data";
 import { DisplayMath, RichMathText } from "../../statistics-math";
+import { STATISTICS_ADDITIONAL_QUESTIONS, STATISTICS_ADDITIONAL_SOURCES } from "../../statistics-additional-data";
 import {
   STATISTICS_EXAM_FORMATS,
   STATISTICS_FORMULAS,
@@ -39,7 +40,11 @@ const PROGRESS_KEY = "test-grid:subject-7:progress:v1";
 const TEST_SESSION_KEY = "test-grid:subject-7:mock-test:v1";
 const ALL_TOPIC_IDS = STATISTICS_TOPICS.map((topic) => topic.id);
 const KNOWN_TOPIC_IDS = new Set<StatisticsTopicId>(ALL_TOPIC_IDS);
-const KNOWN_QUESTION_IDS = new Set(STATISTICS_EXAM_LEVEL_QUESTIONS.map((question) => question.id));
+const STATISTICS_PRACTICE_QUESTIONS: StatisticsQuestion[] = [
+  ...STATISTICS_EXPECTED_LEVEL_QUESTIONS,
+  ...STATISTICS_ADDITIONAL_QUESTIONS,
+];
+const KNOWN_QUESTION_IDS = new Set(STATISTICS_PRACTICE_QUESTIONS.map((question) => question.id));
 
 function randomize<T>(items: readonly T[]) {
   const copy = [...items];
@@ -346,7 +351,7 @@ export default function StatisticsSubjectPage() {
   const [cardFlipped, setCardFlipped] = useState(false);
 
   const [practiceTopics, setPracticeTopics] = useState<StatisticsTopicId[]>([...ALL_TOPIC_IDS]);
-  const [practiceDeck, setPracticeDeck] = useState([...STATISTICS_EXAM_LEVEL_QUESTIONS]);
+  const [practiceDeck, setPracticeDeck] = useState([...STATISTICS_PRACTICE_QUESTIONS]);
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceTypedAnswer, setPracticeTypedAnswer] = useState("");
   const [practiceSelectedChoice, setPracticeSelectedChoice] = useState("");
@@ -416,7 +421,7 @@ export default function StatisticsSubjectPage() {
 
   const currentPracticeQuestion = practiceDeck[practiceIndex];
   const availableTestQuestions = useMemo(
-    () => STATISTICS_EXAM_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic)),
+    () => STATISTICS_PRACTICE_QUESTIONS.filter((question) => testTopics.includes(question.topic)),
     [testTopics],
   );
   const currentTestQuestion = testQuestions[testIndex];
@@ -480,7 +485,7 @@ export default function StatisticsSubjectPage() {
 
   function changePracticeTopics(nextTopics: StatisticsTopicId[]) {
     setPracticeTopics(nextTopics);
-    setPracticeDeck(randomize(STATISTICS_EXAM_LEVEL_QUESTIONS.filter((question) => nextTopics.includes(question.topic))));
+    setPracticeDeck(randomize(STATISTICS_PRACTICE_QUESTIONS.filter((question) => nextTopics.includes(question.topic))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -488,7 +493,7 @@ export default function StatisticsSubjectPage() {
   }
 
   function shufflePractice() {
-    setPracticeDeck(randomize(STATISTICS_EXAM_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic))));
+    setPracticeDeck(randomize(STATISTICS_PRACTICE_QUESTIONS.filter((question) => practiceTopics.includes(question.topic))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -600,7 +605,7 @@ export default function StatisticsSubjectPage() {
   function resumeSavedTest() {
     if (!savedTestSession) return;
     const questions = savedTestSession.questionIds.flatMap((id) => {
-      const found = STATISTICS_EXAM_LEVEL_QUESTIONS.find((question) => question.id === id);
+      const found = STATISTICS_PRACTICE_QUESTIONS.find((question) => question.id === id);
       return found ? [found] : [];
     });
     if (!questions.length) {
@@ -608,7 +613,7 @@ export default function StatisticsSubjectPage() {
       return;
     }
     const results = savedTestSession.results.flatMap((savedResult) => {
-      const question = STATISTICS_EXAM_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId);
+      const question = STATISTICS_PRACTICE_QUESTIONS.find((item) => item.id === savedResult.questionId);
       return question ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
     });
     setTestTopics(savedTestSession.selectedTopics);
@@ -639,7 +644,7 @@ export default function StatisticsSubjectPage() {
           <span><strong>TEST//GRID</strong><small>PROBABILITY &amp; STATISTICS</small></span>
         </Link>
         <div className="header-actions statistics-header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {STATISTICS_EXAM_LEVEL_QUESTIONS.length} QUESTIONS</span>
+          <span className="card-count-label"><i aria-hidden="true" /> {STATISTICS_PRACTICE_QUESTIONS.length} QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-7">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-7">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-7">時間制限 即答練習</Link>
@@ -670,8 +675,8 @@ export default function StatisticsSubjectPage() {
         <section className="english-summary statistics-summary" aria-label="収録教材">
           <div><span>TOPICS</span><strong>{STATISTICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{STATISTICS_FORMULAS.length}</strong><small>枚</small></div>
-          <div><span>QUESTIONS</span><strong>{STATISTICS_EXAM_LEVEL_QUESTIONS.length}</strong><small>問</small></div>
-          <p>確率統計ZIPと「確率統計1〜4.pdf」を試験範囲として収録。テスト①PDF・テスト②写真は問題用紙の形式見本だけに使用し、想定試験12回はすべて全6単元を含みます。公式は {totalMastered}枚暗記済み。</p>
+          <div><span>QUESTIONS</span><strong>{STATISTICS_PRACTICE_QUESTIONS.length}</strong><small>問</small></div>
+          <p>確率統計ZIP、「確率統計1〜4.pdf」、2026-07-22追加範囲5枚を試験範囲として収録。テスト①PDF・テスト②写真は問題用紙の形式見本だけに使用し、想定試験12回はすべて全6単元と追加範囲を含みます。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
         <section ref={workspaceRef} id="statistics-workspace" className="english-workspace statistics-workspace">
@@ -688,16 +693,26 @@ export default function StatisticsSubjectPage() {
             <section className="english-guide-workspace statistics-scope-workspace" aria-labelledby="statistics-scope-title">
               <div className="english-panel-heading statistics-panel-heading">
                 <div><span>COURSE RANGE</span><h2 id="statistics-scope-title">今回の試験範囲</h2></div>
-                <p>ZIP内の教材写真と確率統計1〜4.pdfから整理した6単元です。過去問テストのPDF・写真は形式把握だけに使っています。</p>
+                <p>ZIP内の教材写真、確率統計1〜4.pdf、2026-07-22追加範囲5枚から整理した6単元です。過去問テストのPDF・写真は形式把握だけに使っています。</p>
               </div>
               <div className="english-guide-tip statistics-source-policy">
                 <span>SOURCE POLICY</span>
-                <p><b>出題する：</b>確率統計ZIP＋確率統計1〜4.pdfの演習　／　<b>出題しない：</b>指定されたモンティ・ホール問題、テスト①.pdf・テスト②.jpgにしかない本文・数値・設問<br /><small>過去問だけにある中央値・平均偏差・変動係数・幾何平均・調和平均・エントロピー・偏相関・順位相関なども除外済みです。</small></p>
+                <p><b>出題する：</b>確率統計ZIP＋確率統計1〜4.pdfの演習＋2026-07-22追加範囲5枚　／　<b>出題しない：</b>指定されたモンティ・ホール問題、テスト①.pdf・テスト②.jpgにしかない本文・数値・設問<br /><small>追加範囲p.99のモーメント・モーメント母関数・歪度・尖度は、写真に定義式がないため名称・概念確認だけです。</small></p>
+              </div>
+              <div className="english-guide-grid statistics-guide-grid" aria-label="追加範囲の出典台帳">
+                {STATISTICS_ADDITIONAL_SOURCES.map((source) => (
+                  <article key={source.filename}>
+                    <span>追加範囲 {source.page} / 5</span>
+                    <h3>{source.filename}</h3>
+                    <p>{source.summary}</p>
+                    <strong>{source.usePolicy}</strong>
+                  </article>
+                ))}
               </div>
               <div className="english-guide-grid statistics-topic-grid">
                 {STATISTICS_TOPICS.map((topic) => {
                   const formulaCount = STATISTICS_FORMULAS.filter((card) => card.topic === topic.id).length;
-                  const questionCount = STATISTICS_EXAM_LEVEL_QUESTIONS.filter((question) => question.topic === topic.id).length;
+                  const questionCount = STATISTICS_PRACTICE_QUESTIONS.filter((question) => question.topic === topic.id).length;
                   return (
                     <article key={topic.id} className="statistics-topic-card" style={{ borderTopColor: topic.color }}>
                       <span>{topic.number} / RANGE</span>

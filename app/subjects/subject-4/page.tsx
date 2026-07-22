@@ -730,7 +730,7 @@ export default function ThermodynamicsSubjectPage() {
           <div><span>TOPICS</span><strong>{THERMODYNAMICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{THERMODYNAMICS_FORMULAS.length}</strong><small>枚</small></div>
           <div><span>QUESTIONS</span><strong>{THERMODYNAMICS_QUESTIONS.length}</strong><small>問</small></div>
-          <p>テスト範囲ZIPを主教材に、形式3は今回範囲と確認できた部分だけを収録。形式1・2と形式3の未確認部分は紙面参考に限定します。想定試験{THERMODYNAMICS_EXPECTED_EXAMS.length}回は練習用100点換算・60点ライン。公式は {totalMastered}枚暗記済み。</p>
+          <p>テスト範囲ZIPを主教材に、追加2枚の冷凍サイクル・逆カルノーまで収録。形式3は今回範囲と確認できた部分だけを使い、形式1・2と形式3の未確認部分は紙面参考に限定します。想定試験{THERMODYNAMICS_EXPECTED_EXAMS.length}回は練習用100点換算・60点ライン。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
         <section ref={workspaceRef} id="statistics-workspace" className="english-workspace statistics-workspace">
@@ -751,7 +751,7 @@ export default function ThermodynamicsSubjectPage() {
               </div>
               <div className="english-guide-tip statistics-source-policy">
                 <span>SOURCE POLICY</span>
-                <p><b>出題する：</b>範囲ZIPに掲載された内容と、形式3の確認済み重複部分　／　<b>出題しない：</b>形式1・2にしかない内容、形式3の未確認部分、逆カルノーサイクルなど今回範囲に確認できない内容<br /><small>時間・正式満点・配点は資料から確認できないため、模試では練習用設定として明示します。</small></p>
+                <p><b>出題する：</b>範囲ZIP9枚に掲載された内容（冷凍サイクル・逆カルノーを含む）と、形式3の確認済み重複部分　／　<b>出題しない：</b>蒸気表・湿り蒸気・ランキンサイクル、形式1・2にしかない内容、形式3の未確認部分<br /><small>時間・正式満点・配点は資料から確認できないため、模試では練習用設定として明示します。</small></p>
               </div>
               <div className="english-guide-grid statistics-topic-grid">
                 {THERMODYNAMICS_TOPICS.map((topic) => {

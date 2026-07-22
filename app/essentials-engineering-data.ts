@@ -82,6 +82,18 @@ export const THERMODYNAMICS_ESSENTIALS: EssentialItem[] = [
     cue: "高温熱源 \\(T_1\\)、低温熱源 \\(T_2\\) が与えられる理想可逆機関。",
     pitfall: "温度比は必ずK。低温÷高温の順で、最後に1から引く。",
   },
+  {
+    id: "thermo-reversed-carnot-cop", kind: "formula", title: "冷凍機・ヒートポンプのCOP",
+    value: "冷凍機は低温側から取り除く熱量、ヒートポンプは高温側へ渡す熱量を、必要仕事で割る。逆カルノーでは絶対温度だけで最大COPが決まる。",
+    math: [
+      { tex: "Q_H=Q_L+W" },
+      { tex: "\\mathrm{COP}_R=\\frac{Q_L}{W}=\\frac{T_L}{T_H-T_L}" },
+      { tex: "\\mathrm{COP}_{HP}=\\frac{Q_H}{W}=\\frac{T_H}{T_H-T_L}=\\mathrm{COP}_R+1" },
+      { tex: "\\dot Q[\\mathrm{kW}]=q[\\mathrm{kcal/h}]\\frac{4.19}{3600}" },
+    ],
+    cue: "高温側・低温側の温度と、冷凍能力または加熱能力から必要動力を求める。",
+    pitfall: "温度は必ずK。冷凍能力は \\(Q_L\\)、ヒートポンプの加熱能力は \\(Q_H\\)。両COPを取り違えない。",
+  },
 ];
 
 export const MATERIAL_ESSENTIALS: EssentialItem[] = [

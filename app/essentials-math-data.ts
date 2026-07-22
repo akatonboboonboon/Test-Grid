@@ -65,10 +65,10 @@ export const STATISTICS_ESSENTIALS: EssentialItem[] = [
   },
   {
     id: "statistics-discrete", kind: "formula", title: "離散分布の期待値・分散",
-    value: "値と同じ列の確率を掛ける。確率の総和は1。",
+    value: "値と同じ列の確率を掛ける。E[X²]は値を二乗してから確率を掛け、確率の総和は1。",
     math: [
-      { label: "Σ表示", tex: "E[X]=\\sum_i x_ip_i,\\qquad V(X)=\\sum_i(x_i-\\mu)^2p_i" },
-      { label: "Σなし", tex: "E[X]=x_1p_1+\\cdots+x_kp_k,\\quad V(X)=(x_1-\\mu)^2p_1+\\cdots+(x_k-\\mu)^2p_k" },
+      { label: "Σ表示", tex: "E[X]=\\sum_i x_ip_i,\\quad E[X^2]=\\sum_i x_i^2p_i,\\quad V(X)=\\sum_i(x_i-\\mu)^2p_i" },
+      { label: "Σなし", tex: "E[X]=x_1p_1+\\cdots+x_kp_k,\\quad E[X^2]=x_1^2p_1+\\cdots+x_k^2p_k,\\quad V(X)=(x_1-\\mu)^2p_1+\\cdots+(x_k-\\mu)^2p_k" },
       { label: "計算公式", tex: "V(X)=E[X^2]-\\{E[X]\\}^2" },
     ],
     cue: "値xと確率pの表から平均・分散を求める。",
@@ -92,11 +92,23 @@ export const STATISTICS_ESSENTIALS: EssentialItem[] = [
     pitfall: "幾何平均は正の値が前提。調和平均は逆数和でnを割る。",
   },
   {
+    id: "statistics-added-variance", kind: "formula", title: "追加範囲：分散の性質・代表分布",
+    value: "定数加算で分散は不変、定数倍は二乗。独立な2個の平均では分散が半分になる。",
+    math: [
+      { tex: "V(c)=0,\\qquad V(X+c)=V(X),\\qquad V(cX)=c^2V(X)" },
+      { tex: "Y=\\frac{X_1+X_2}{2}\\Rightarrow V(Y)=\\frac{V(X)}2" },
+      { tex: "X\\sim\\operatorname{Exp}(\\lambda):V(X)=\\frac1{\\lambda^2},\\qquad X\\sim U(0,1):V(X)=\\frac1{12}" },
+    ],
+    cue: "一次変換、2個のサイコロの平均、指数分布・一様分布。",
+    pitfall: "E[X²]とE[X]²を混同しない。平均を取って分散が半分でも、標準偏差は半分ではない。",
+  },
+  {
     id: "statistics-continuous", kind: "rule", title: "密度・標準化・チェビシェフ",
     value: "密度の面積が確率。正規分布は標準化し、分布形を仮定しない下限はチェビシェフ。",
     math: [
       { tex: "\\int_{-\\infty}^{\\infty}f(x)dx=1,\\qquad P(a\\le X\\le b)=\\int_a^bf(x)dx" },
-      { tex: "Z=\\frac{X-\\mu}{\\sigma},\\qquad P(|X-\\mu|<k\\sigma)\\ge1-\\frac1{k^2}" },
+      { tex: "Z=\\frac{X-E[X]}{\\sqrt{V(X)}},\\qquad E[Z]=0,\\qquad V(Z)=1" },
+      { tex: "P(a<Z<b)=\\Phi(b)-\\Phi(a),\\qquad P(|X-\\mu|<k\\sigma)\\ge1-\\frac1{k^2}" },
     ],
     cue: "確率密度、正規分布表、または分布形を仮定しない確率下限。",
     pitfall: "連続型の一点確率は0。正規表の正確な確率とチェビシェフの最低保証を混同しない。",

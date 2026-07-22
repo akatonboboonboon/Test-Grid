@@ -111,7 +111,7 @@ test("application copy has no stale nine-page material range", async () => {
   const stale = [];
   for (const path of files) {
     const source = await readFile(new URL(path.replaceAll("\\", "/"), APP), "utf8");
-    if (/範囲ZIP\s*9(?:枚|ページ)/u.test(source)) stale.push(path);
+    if (/(?:材料力学|材料)[^\n]{0,80}範囲ZIP\s*9(?:枚|ページ)|範囲ZIP\s*9(?:枚|ページ)[^\n]{0,80}(?:材料力学|材料)/u.test(source)) stale.push(path);
   }
   assert.deepEqual(stale, []);
 });

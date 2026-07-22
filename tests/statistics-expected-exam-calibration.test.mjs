@@ -27,6 +27,7 @@ const requiredSources = [
   "exercise-pdf2",
   "exercise-pdf3",
   "exercise-pdf4",
+  "additional-range",
 ];
 
 const requiredGenres = [
@@ -38,6 +39,7 @@ const requiredGenres = [
   "スピアマン順位相関",
   "ケンドール順位相関",
   "平方和の恒等式",
+  "チェビシェフ",
 ];
 
 test("all 12 expected exams reproduce a 50-minute, 100-point past-paper density", async () => {

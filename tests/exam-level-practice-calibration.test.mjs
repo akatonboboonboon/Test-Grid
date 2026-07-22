@@ -21,9 +21,9 @@ test("mechanical, thermal, and material confirmation pools contain only exam-lev
   const contracts = [
     {
       label: "mechanical",
-      pool: mechanical.MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS,
+      pool: mechanical.MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS,
       topics: mechanical.MECHANICAL_DYNAMICS_TOPICS.map((topic) => topic.id),
-      minimum: 24,
+      minimum: 40,
       diagrams: true,
     },
     {
@@ -61,16 +61,36 @@ test("mechanical, thermal, and material confirmation pools contain only exam-lev
   }
 });
 
+test("mechanical normal practice pool is print-level, standalone, and retains actual-exam filtering", async () => {
+  const mechanical = await load("../app/mechanical-dynamics-data.ts");
+  const pool = mechanical.MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS;
+  assert.equal(pool.length, mechanical.MECHANICAL_DYNAMICS_EXPECTED_EXAMS.length * 7 + 2);
+  assert.equal(new Set(pool.map((question) => question.id)).size, pool.length);
+  assert.deepEqual(new Set(pool.map((question) => question.topic)), new Set(mechanical.MECHANICAL_DYNAMICS_TOPICS.map((topic) => topic.id)));
+  for (const question of pool) {
+    assert.equal(question.difficulty, 3, `${question.id} difficulty`);
+    assert.ok(question.steps.length >= 3, `${question.id} real multi-stage work`);
+    assert.ok(question.context?.length >= 20, `${question.id} standalone context`);
+    assert.ok(question.sourceRefs.length >= 1, `${question.id} source-backed`);
+    assert.match(question.prompt, /この大問を最初から通して解け/u, `${question.id} complete major`);
+    assert.match(question.prompt, /必要な中間量を上の条件から自分で導出/u, `${question.id} re-derives prior work`);
+    assert.equal(question.steps.some((step) => step.includes("答案上で照査する")), false, `${question.id} no generic padding step`);
+    assert.doesNotMatch(question.id, /^md-(?:actual|expected)-/u, `${question.id} no raw subquestion id`);
+  }
+  const actual = pool.filter((question) => question.sourceRefs.some((source) => source.kind === "actual-exam"));
+  assert.equal(actual.length, 2, "actual-exam source filter keeps complete majors 5 and 6");
+  assert.ok(actual.every((question) => /【実物過去問・大問[56]】/u.test(question.context)));
+});
 test("timed confirmation pages use and restore the exam-level pools", async () => {
   for (const [subject, token] of [
-    ["subject-3", "MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS"],
+    ["subject-3", "MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS"],
     ["subject-4", "THERMODYNAMICS_EXAM_LEVEL_QUESTIONS"],
     ["subject-5", "MATERIAL_MECHANICS_EXAM_LEVEL_QUESTIONS"],
   ]) {
     const source = await readFile(new URL(`../app/subjects/${subject}/page.tsx`, import.meta.url), "utf8");
     assert.match(source, new RegExp(`\\(\\) => ${token}\\.filter`), `${subject} candidates`);
     assert.match(source, new RegExp(`${token}\\.find\\(\\(question\\) => question\\.id === id\\)`), `${subject} resume`);
-    assert.match(source, /KNOWN_QUESTION_IDS = new Set\(\[\.\.\./, `${subject} saved id allow-list`);
+    assert.match(source, /KNOWN_QUESTION_IDS = new Set\(/, `${subject} saved id allow-list`);
   }
 });
 

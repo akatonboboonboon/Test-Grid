@@ -7,7 +7,9 @@ export type ThermodynamicsDiagramKind =
   | "piston"
   | "otto-pv"
   | "carnot-pv"
-  | "carnot-ts";
+  | "carnot-ts"
+  | "refrigeration-cycle"
+  | "reversed-carnot-ts";
 
 type DiagramProps = {
   kind: ThermodynamicsDiagramKind;
@@ -16,13 +18,16 @@ type DiagramProps = {
   className?: string;
 };
 
-const axisLabels: Record<Exclude<ThermodynamicsDiagramKind, "piston">, [string, string]> = {
+type AxisDiagramKind = Exclude<ThermodynamicsDiagramKind, "piston" | "refrigeration-cycle">;
+
+const axisLabels: Record<AxisDiagramKind, [string, string]> = {
   pv: ["V", "P"],
   ts: ["S", "T"],
   hs: ["s", "h"],
   "otto-pv": ["V", "P"],
   "carnot-pv": ["V", "P"],
   "carnot-ts": ["S", "T"],
+  "reversed-carnot-ts": ["S", "T"],
 };
 
 function ArrowMarker({ id }: { id: string }) {
@@ -103,7 +108,28 @@ function CarnotTsSolution({ arrowId }: { arrowId: string }) {
   );
 }
 
-function AxisDiagram({ kind, solution, arrowId }: { kind: Exclude<ThermodynamicsDiagramKind, "piston">; solution: boolean; arrowId: string }) {
+function ReversedCarnotTsSolution({ arrowId }: { arrowId: string }) {
+  return (
+    <g className="thermodynamics-diagram-solution">
+      <path d="M176 135 V55" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M176 55 H72" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M72 55 V135" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <path d="M72 135 H176" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+      <StatePoint x={176} y={135} label="1" labelX={182} labelY={142} />
+      <StatePoint x={176} y={55} label="2" labelX={182} labelY={51} />
+      <StatePoint x={72} y={55} label="3" labelX={57} labelY={51} />
+      <StatePoint x={72} y={135} label="4" labelX={57} labelY={142} />
+      <text x="124" y="45" textAnchor="middle">高温等温放熱 Q₁</text>
+      <text x="183" y="98">等エントロピー圧縮</text>
+      <text x="124" y="153" textAnchor="middle">低温等温吸熱 Q₂</text>
+      <text x="64" y="98" textAnchor="end">等エントロピー膨張</text>
+      <text x="51" y="59" textAnchor="end">T₁</text>
+      <text x="51" y="139" textAnchor="end">T₂</text>
+    </g>
+  );
+}
+
+function AxisDiagram({ kind, solution, arrowId }: { kind: AxisDiagramKind; solution: boolean; arrowId: string }) {
   const [horizontal, vertical] = axisLabels[kind];
   let solutionPath: ReactNode = null;
 
@@ -138,6 +164,8 @@ function AxisDiagram({ kind, solution, arrowId }: { kind: Exclude<Thermodynamics
     solutionPath = <CarnotPvSolution arrowId={arrowId} />;
   } else if (solution && kind === "carnot-ts") {
     solutionPath = <CarnotTsSolution arrowId={arrowId} />;
+  } else if (solution && kind === "reversed-carnot-ts") {
+    solutionPath = <ReversedCarnotTsSolution arrowId={arrowId} />;
   }
 
   return (
@@ -174,12 +202,57 @@ function PistonDiagram({ solution, arrowId }: { solution: boolean; arrowId: stri
   );
 }
 
+function RefrigerationCycleDiagram({ solution, arrowId }: { solution: boolean; arrowId: string }) {
+  return (
+    <svg viewBox="0 0 420 250" role="img" aria-label={`蒸気圧縮冷凍サイクル装置図${solution ? "の模範例" : "の空欄"}`}>
+      <ArrowMarker id={arrowId} />
+      <rect x="30" y="95" width="95" height="54" rx="4" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <rect x="160" y="28" width="100" height="54" rx="4" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <rect x="300" y="95" width="90" height="54" rx="4" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <rect x="160" y="168" width="100" height="54" rx="4" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <path d="M125 112 L160 70" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="2.5" />
+      <path d="M260 70 L300 112" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="2.5" />
+      <path d="M345 149 L260 190" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="2.5" />
+      <path d="M160 200 L78 149" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="2.5" />
+      {!solution && (
+        <g opacity="0.48">
+          <text x="77" y="128" textAnchor="middle">①</text>
+          <text x="210" y="61" textAnchor="middle">②</text>
+          <text x="345" y="128" textAnchor="middle">③</text>
+          <text x="210" y="201" textAnchor="middle">④</text>
+          <text x="210" y="133" textAnchor="middle">機器名・Q₁・Q₂・Wを記入</text>
+        </g>
+      )}
+      {solution && (
+        <g className="thermodynamics-diagram-solution">
+          <text x="77" y="126" textAnchor="middle" fontWeight="700">圧縮機</text>
+          <text x="210" y="59" textAnchor="middle" fontWeight="700">凝縮器</text>
+          <text x="345" y="126" textAnchor="middle" fontWeight="700">膨張弁</text>
+          <text x="210" y="199" textAnchor="middle" fontWeight="700">蒸発器</text>
+          <path d="M4 122 H28" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+          <text x="5" y="111" fontWeight="700">W入力</text>
+          <path d="M210 27 V4" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+          <text x="225" y="17" fontWeight="700">Q₁ 放出</text>
+          <path d="M210 246 V224" fill="none" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="3" />
+          <text x="225" y="241" fontWeight="700">Q₂ 吸収</text>
+          <text x="323" y="165">減圧・h₃=h₄</text>
+          <text x="151" y="115">Q₁=Q₂+W</text>
+        </g>
+      )}
+    </svg>
+  );
+}
+
 export default function ThermodynamicsDiagram({ kind, solution = false, title, className }: DiagramProps) {
   const arrowId = `thermo-arrow-${useId().replace(/:/g, "")}`;
   return (
     <figure className={className}>
       {title && <figcaption>{title}</figcaption>}
-      {kind === "piston" ? <PistonDiagram solution={solution} arrowId={arrowId} /> : <AxisDiagram kind={kind} solution={solution} arrowId={arrowId} />}
+      {kind === "piston"
+        ? <PistonDiagram solution={solution} arrowId={arrowId} />
+        : kind === "refrigeration-cycle"
+          ? <RefrigerationCycleDiagram solution={solution} arrowId={arrowId} />
+          : <AxisDiagram kind={kind} solution={solution} arrowId={arrowId} />}
     </figure>
   );
 }

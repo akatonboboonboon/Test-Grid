@@ -59,7 +59,7 @@ export const ESSENTIAL_SUBJECTS: EssentialSubject[] = [
     accent: "#a88bff",
     examDate: "2026-07-29",
     examDateLabel: "7/29",
-    description: "断熱・ポリトロープ・第二法則・エントロピー・オットー・カルノーを、状態変化の見分け方とセットで整理。",
+    description: "断熱・ポリトロープ・第二法則・エントロピー・オットー・カルノー・冷凍機COPを、状態変化の見分け方とセットで整理。",
     items: THERMODYNAMICS_ESSENTIALS,
   },
   {

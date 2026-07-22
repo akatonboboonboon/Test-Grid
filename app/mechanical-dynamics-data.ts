@@ -49,7 +49,7 @@ export type MechanicalDynamicsRangePage = {
   orientation?: "portrait-source" | "landscape-sideways-source";
 };
 
-export type MechanicalDynamicsDiagramKind = "spring-network" | "pinned-beam" | "simple-pendulum" | "single-spring-mass" | "damped-spring-mass" | "static-deflection" | "amplitude-decay" | "cantilever-mass" | "spring-rigid-rod";
+export type MechanicalDynamicsDiagramKind = "spring-network" | "series-parallel-chain" | "pinned-beam" | "simple-pendulum" | "single-spring-mass" | "damped-spring-mass" | "static-deflection" | "amplitude-decay" | "cantilever-mass" | "spring-rigid-rod";
 
 export type MechanicalDynamicsFormulaCard = {
   id: string;
@@ -780,6 +780,58 @@ export const MECHANICAL_DYNAMICS_EXAM_LEVEL_QUESTIONS: MechanicalDynamicsExamQue
     ),
   );
 
+function compositePrintLevelQuestion(
+  section: MechanicalDynamicsExamSection,
+  idPrefix: string,
+  sourceLabel: string,
+): MechanicalDynamicsQuestion {
+  const finalQuestion = section.questions.at(-1);
+  if (!finalQuestion) throw new Error(`${idPrefix}: empty mechanical section`);
+  const { major, sub, points, ...finalItem } = finalQuestion;
+  void points;
+  const sourceRefs = [...new Map(
+    section.questions
+      .flatMap((question) => question.sourceRefs)
+      .map((source) => [JSON.stringify(source), source] as const),
+  ).values()];
+  const questionOutline = section.questions
+    .map((question) => `(${question.sub}) ${question.prompt}`)
+    .join(" ／ ");
+  const linkedSteps = section.questions.flatMap((question) =>
+    question.steps.map((step) => `(${question.sub}) ${step}`),
+  );
+  return {
+    ...finalItem,
+    id: `${idPrefix}-m${major}`,
+    difficulty: 3,
+    genre: `${sourceLabel}・大問${major}完答・${section.title}`,
+    prompt: `この大問を最初から通して解け。${questionOutline}。前問の数値は与えられないため、必要な中間量を上の条件から自分で導出し、最後の(${sub})の答えを入力すること。`,
+    context: [`【${sourceLabel}・大問${major}】${section.title}`, section.context, finalItem.context]
+      .filter(Boolean)
+      .join("\n"),
+    steps: linkedSteps,
+    explanation: section.questions
+      .map((question) => `(${question.sub}) ${question.explanation}`)
+      .join(" "),
+    diagram: section.questions.find((question) => question.diagram)?.diagram ?? finalItem.diagram,
+    sourceRefs,
+  };
+}
+
+/**
+ * Normal practice, confirmation, and ranking pool calibrated to the uploaded print/past-paper level.
+ * Each entry is one complete major problem: isolated one-step subquestions are never exposed alone.
+ */
+export const MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS: MechanicalDynamicsQuestion[] = [
+  ...actualSections
+    .filter((section) => section.number === 5 || section.number === 6)
+    .map((section) => compositePrintLevelQuestion(section, "md-print-actual", "実物過去問")),
+  ...MECHANICAL_DYNAMICS_EXPECTED_EXAMS.flatMap((exam) =>
+    exam.sections.map((section) =>
+      compositePrintLevelQuestion(section, `md-print-expected-${exam.variant ?? exam.number}`, `想定試験${exam.variant ?? exam.number}`),
+    ),
+  ),
+];
 export const MECHANICAL_DYNAMICS_EXAM_FORMATS = [
   {
     id: "actual-layout",

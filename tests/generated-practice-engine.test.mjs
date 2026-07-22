@@ -72,7 +72,7 @@ test("on-demand generation metadata exposes only subjects with source-backed gen
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "network"), false);
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-5"), true);
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-9"), true);
-  assert.equal(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.length, 44);
+  assert.equal(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.length, 48);
   assert.deepEqual(
     [...new Set(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.map((template) => template.subjectId))],
     SUBJECT_IDS,
@@ -92,18 +92,18 @@ test("on-demand templates stay inside the formulas currently taught in the loade
   ]);
   const ids = engine.GENERATED_PRACTICE_TEMPLATE_METADATA.map((template) => template.id);
   for (const id of excluded) assert.equal(ids.includes(id), false, `${id} must remain outside generation`);
-  const sourceFileBySubject = {
-    "subject-3": "mechanical-dynamics-data.ts",
-    "subject-4": "thermodynamics-data.ts",
-    "subject-5": "material-mechanics-data.ts",
-    "subject-6": "smart-control-data.ts",
-    "subject-7": "statistics-data.ts",
-    "subject-8": "applied-math-data.ts",
+  const sourceFilesBySubject = {
+    "subject-3": ["mechanical-dynamics-data.ts"],
+    "subject-4": ["thermodynamics-data.ts"],
+    "subject-5": ["material-mechanics-data.ts"],
+    "subject-6": ["smart-control-data.ts"],
+    "subject-7": ["statistics-data.ts", "statistics-pdf34-data.ts", "statistics-additional-data.ts"],
+    "subject-8": ["applied-math-data.ts"],
   };
   const sourceTextBySubject = Object.fromEntries(await Promise.all(
-    Object.entries(sourceFileBySubject).map(async ([subjectId, filename]) => [
+    Object.entries(sourceFilesBySubject).map(async ([subjectId, filenames]) => [
       subjectId,
-      await readFile(new URL(filename, APP_URL), "utf8"),
+      (await Promise.all(filenames.map((filename) => readFile(new URL(filename, APP_URL), "utf8")))).join("\n"),
     ]),
   ));
   const numericTemplates = engine.GENERATED_PRACTICE_TEMPLATE_METADATA.filter((template) => template.kind === "calculation");
@@ -158,6 +158,94 @@ test("material and digital generators include scoped solution diagrams", async (
     assert.ok(question.answer);
     assert.ok(question.steps.length >= 2);
   }
+});
+test("mechanical past-paper generator reproduces major 6 as solved multi-stage linked work", async () => {
+  const { engine } = await loadModules();
+  for (let seed = 0; seed < 48; seed += 1) {
+    const question = engine.generatePracticeQuestion(
+      "subject-3",
+      `mechanical-major-6:${seed}`,
+      { templateId: "mechanical-lever-spring-damper" },
+    );
+    assert.deepEqual(question.sourceReferenceIds, ["md-f-rotational", "md-f-lever", "md-f-zeta", "md-f-critical"]);
+    assert.equal(question.difficulty, 3);
+    assert.ok(question.subpartCount >= 7);
+    assert.ok(question.steps.length >= 7);
+    assert.deepEqual(question.visual, { type: "mechanical-dynamics", kind: "pinned-beam" });
+    assert.match(question.source.label, /機械力学過去問\.pdf 大問6/u);
+    assert.match(question.sourceBasis.join(" "), /実物過去問 大問6/u);
+    assert.equal(question.parameters.rotationalInertia, question.parameters.mass * question.parameters.massArm ** 2);
+    assert.equal(question.parameters.rotationalDamping, question.parameters.damping * question.parameters.massArm ** 2);
+    assert.equal(question.parameters.rotationalStiffness, question.parameters.stiffness * question.parameters.springArm ** 2);
+    assert.ok(Math.abs(
+      question.parameters.naturalOmega
+        - Math.sqrt(question.parameters.rotationalStiffness / question.parameters.rotationalInertia),
+    ) <= 1e-12);
+    assert.ok(Math.abs(
+      question.evaluation.numericAnswer
+        - 2 * question.parameters.springArm * Math.sqrt(question.parameters.mass * question.parameters.stiffness) / question.parameters.damping,
+    ) <= 1e-12);
+    assert.ok(question.safety.denominators.every((value) => Number.isFinite(value) && value > 0));
+    assert.ok(question.evaluation.numericAnswer > 0 && question.evaluation.numericAnswer <= question.parameters.springArm, "0 < r_c <= l");
+    assert.equal(engine.validateGeneratedPracticeQuestion(question).ok, true);
+  }
+});
+test("mechanical generators grade the final linked result and render real math", async () => {
+  const { engine } = await loadModules();
+  const cases = [
+    ["mechanical-natural-frequency", "period", "s", undefined],
+    ["mechanical-series-springs", "period", "s", "series-parallel-chain"],
+    ["mechanical-damping-ratio", "c2", "m", undefined],
+    ["mechanical-pendulum-length", "length", "m", undefined],
+    ["mechanical-log-decrement", "stiffness", "N/m", undefined],
+  ];
+  for (const [templateId, finalParameter, unit, diagram] of cases) {
+    const question = engine.generatePracticeQuestion("subject-3", `mechanical-final:${templateId}`, { templateId });
+    assert.equal(question.evaluation.numericAnswer, question.parameters[finalParameter], `${templateId} grades final result`);
+    assert.equal(question.evaluation.expectedUnit, unit, `${templateId} final unit`);
+    assert.match(question.prompt, /\\\([^)]*\\\)/u, `${templateId} visible inline TeX`);
+    assert.match(question.prompt, /最後/u, `${templateId} explicitly asks for final result`);
+    assert.ok(question.steps.length >= 4, `${templateId} linked calculations`);
+    if (diagram) assert.equal(question.visual?.kind, diagram, `${templateId} matching diagram`);
+  }
+  const laplace = engine.generatePracticeQuestion("subject-3", "mechanical-laplace", { templateId: "mechanical-laplace-step-response" });
+  assert.equal(laplace.evaluation.numericAnswer, laplace.parameters.response);
+  assert.equal(laplace.difficulty, 3);
+  assert.ok(laplace.subpartCount >= 4 && laplace.steps.length >= 4);
+  assert.deepEqual(laplace.sourceReferenceIds, ["md-f-transfer", "md-f-coverup", "md-f-first-order", "md-f-step-response"]);
+  assert.match(laplace.prompt, /Y\(s\)[\s\S]*y\(t\)[\s\S]*y\(t_0\)/u);
+});
+test("additional thermodynamics and statistics generators keep exact source files and calculations", async () => {
+  const { engine } = await loadModules();
+  const reversed = engine.generatePracticeQuestion("subject-4", "additional-reversed-carnot", { templateId: "thermo-reversed-carnot" });
+  assert.deepEqual(reversed.sourceReferenceIds, [
+    "th-refrigeration-balance",
+    "th-refrigeration-cop",
+    "th-heat-pump-cop",
+    "th-reversed-carnot-cop",
+  ]);
+  assert.deepEqual(reversed.source.pages, [9]);
+  assert.match(reversed.source.label, /PXL_20260722_114536629\.MP\.jpg/u);
+  assert.match(reversed.sourceBasis.join(" "), /追加範囲 p\.9/u);
+  assert.equal(reversed.parameters.highC, 47);
+  assert.equal(reversed.parameters.lowC, 7);
+  assert.equal(reversed.parameters.copR, 7);
+  assert.equal(reversed.parameters.copHP, 8);
+  assert.ok(Math.abs(
+    reversed.evaluation.numericAnswer - reversed.parameters.refrigerationCapacity / reversed.parameters.copR,
+  ) <= 1e-12);
+  assert.ok(reversed.safety.denominators.every((value) => value > 0));
+
+  const chebyshev = engine.generatePracticeQuestion("subject-7", "additional-chebyshev", { templateId: "statistics-chebyshev" });
+  assert.deepEqual(chebyshev.sourceReferenceIds, ["stats-chebyshev"]);
+  assert.deepEqual(chebyshev.source.pages, [2, 3]);
+  assert.match(chebyshev.source.label, /PXL_20260722_114650437\.MP\.jpg/u);
+  assert.match(chebyshev.source.label, /PXL_20260722_114652791\.MP\.jpg/u);
+  assert.ok(chebyshev.parameters.k > 1);
+  assert.equal(chebyshev.parameters.intervalLower, chebyshev.parameters.mean - chebyshev.parameters.k * chebyshev.parameters.standardDeviation);
+  assert.equal(chebyshev.parameters.intervalUpper, chebyshev.parameters.mean + chebyshev.parameters.k * chebyshev.parameters.standardDeviation);
+  assert.ok(Math.abs(chebyshev.evaluation.numericAnswer - (1 - 1 / chebyshev.parameters.k ** 2) * 100) <= 1e-12);
+  assert.doesNotMatch(chebyshev.formula, /\\sum/u);
 });
 test("seeded API is deterministic and the set API cycles through every template", async () => {
   const { engine } = await loadModules();
@@ -367,7 +455,7 @@ test("statistics and applied-math generators keep numeric work exact and sign-sa
   const templates = engine.GENERATED_PRACTICE_TEMPLATE_METADATA.filter((template) =>
     ["subject-7", "subject-8"].includes(template.subjectId),
   );
-  assert.equal(templates.length, 10);
+  assert.equal(templates.length, 11);
 
   for (const template of templates) {
     for (let seed = 0; seed < 100; seed += 1) {
@@ -383,6 +471,7 @@ test("statistics and applied-math generators keep numeric work exact and sign-sa
         case "statistics-z-score": expected = p.zA - p.zB; break;
         case "statistics-bayes": expected = p.routeC / (p.routeA + p.routeB + p.routeC); break;
         case "statistics-combination": expected = p.twoFromB + p.threeFromB + p.fourFromB; break;
+        case "statistics-chebyshev": expected = (1 - 1 / p.k ** 2) * 100; break;
         case "applied-vector-norm": expected = Math.hypot(p.cx, p.cy, p.cz); break;
         case "applied-orthogonal-unknown": expected = Math.hypot(p.a, -(p.a * p.p + p.c * p.q) / p.b, p.c); break;
         case "applied-directional-derivative": expected = (p.gx * p.ux + p.gy * p.uy + p.gz * p.uz) / Math.hypot(p.ux, p.uy, p.uz); break;

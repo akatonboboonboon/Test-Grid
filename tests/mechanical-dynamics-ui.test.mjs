@@ -43,6 +43,8 @@ test("mechanical dynamics exposes six study modes and source-aware practice", as
   assert.match(page, /範囲ZIP/);
   assert.match(page, /過去問由来/);
   assert.match(page, /matchesSource/);
+  assert.match(page, /useState\(\[\.\.\.MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS\]\)/);
+  assert.match(page, /MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS\.filter/);
   assert.match(page, /複数選択/);
   assert.match(page, /DisplayMath/);
   assert.match(page, /RichMathText/);
@@ -85,7 +87,7 @@ test("mechanical dynamics prints a separate A4 answer sheet and renders the thre
   assert.match(css, /210mm/);
   assert.match(css, /297mm/);
   assert.match(css, /\.answerSheetGrid/);
-  for (const kind of ["spring-network", "pinned-beam", "simple-pendulum"]) {
+  for (const kind of ["spring-network", "series-parallel-chain", "pinned-beam", "simple-pendulum"]) {
     assert.match(diagrams, new RegExp(kind));
   }
   assert.match(diagrams, /useId/);

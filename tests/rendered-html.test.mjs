@@ -104,7 +104,8 @@ function loadCombinedStatisticsDataModule() {
     readFile(new URL("../app/statistics-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/statistics-pdf12-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/statistics-pdf34-data.ts", import.meta.url), "utf8"),
-  ]).then(([mainSource, pdf12Source, pdf34Source]) => {
+    readFile(new URL("../app/statistics-additional-data.ts", import.meta.url), "utf8"),
+  ]).then(([mainSource, pdf12Source, pdf34Source, additionalSource]) => {
     const compile = (source) => ts.transpileModule(source, {
       compilerOptions: {
         module: ts.ModuleKind.ESNext,
@@ -114,9 +115,11 @@ function loadCombinedStatisticsDataModule() {
     const toDataUrl = (javascript) => "data:text/javascript;base64," + Buffer.from(javascript).toString("base64");
     const pdf12Url = toDataUrl(compile(pdf12Source));
     const pdf34Url = toDataUrl(compile(pdf34Source));
+    const additionalUrl = toDataUrl(compile(additionalSource));
     const mainJavascript = compile(mainSource)
       .replaceAll('"./statistics-pdf12-data"', JSON.stringify(pdf12Url))
-      .replaceAll('"./statistics-pdf34-data"', JSON.stringify(pdf34Url));
+      .replaceAll('"./statistics-pdf34-data"', JSON.stringify(pdf34Url))
+      .replaceAll('"./statistics-additional-data"', JSON.stringify(additionalUrl));
     return import(toDataUrl(mainJavascript));
   });
 }

@@ -25,6 +25,8 @@ export type StatisticsFormulaCard = {
   explanation: string;
   cue: string;
   example?: string;
+  /** 2026-07-22追加範囲ZIPの1始まりの画像番号。 */
+  sourcePages?: number[];
 };
 
 export type StatisticsQuestionFormat = "number" | "choice" | "text";
@@ -49,6 +51,8 @@ export type StatisticsQuestion = {
   steps: string[];
   explanation: string;
   source: "course-range";
+  /** 2026-07-22追加範囲ZIPの1始まりの画像番号。 */
+  sourcePages?: number[];
 };
 
 export type StatisticsExamFormat = {
@@ -401,6 +405,7 @@ const CORE_STATISTICS_FORMULAS: StatisticsFormulaCard[] = [
 export const STATISTICS_FORMULAS: StatisticsFormulaCard[] = [
   ...CORE_STATISTICS_FORMULAS,
   ...STATISTICS_PDF34_FORMULAS,
+  ...STATISTICS_ADDITIONAL_FORMULAS,
 ];
 
 function question(question: Omit<StatisticsQuestion, "source">): StatisticsQuestion {
@@ -465,6 +470,7 @@ export const STATISTICS_QUESTIONS: StatisticsQuestion[] = [
   ...CORE_STATISTICS_QUESTIONS,
   ...STATISTICS_PDF12_QUESTIONS,
   ...STATISTICS_PDF34_QUESTIONS,
+  ...STATISTICS_ADDITIONAL_QUESTIONS,
 ];
 
 function validateSigmaExpansions(items: Array<{ id: string; formula?: string; expandedFormula?: string }>) {
@@ -507,3 +513,4 @@ export const STATISTICS_EXAM_FORMATS: StatisticsExamFormat[] = [
 ];
 import { STATISTICS_PDF12_QUESTIONS } from "./statistics-pdf12-data";
 import { STATISTICS_PDF34_FORMULAS, STATISTICS_PDF34_QUESTIONS } from "./statistics-pdf34-data";
+import { STATISTICS_ADDITIONAL_FORMULAS, STATISTICS_ADDITIONAL_QUESTIONS } from "./statistics-additional-data";
