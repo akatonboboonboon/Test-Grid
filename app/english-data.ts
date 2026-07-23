@@ -1377,7 +1377,212 @@ function withEnglishQuestionReference(question: EnglishQuestion): EnglishQuestio
   };
 }
 
+const CH14_FINAL_NOTE_TAKING_REFERENCE: EnglishQuestionReference = {
+  label: "Chapter 14 最終問題｜Target Genre: Note-taking",
+  quote: [
+    "About ( 1 ) % of Japan's energy supply comes from oil. The transportation sector, however, uses almost ( 2 ) % oil because there are so many gasoline-powered cars.",
+    "Therefore, Japan needs to improve its stable supply of energy. The government's new goal, then, is to reduce the use of oil in the transportation sector to ( 3 ) % by 2030.",
+    "Promoting the development of new technology for batteries and building charging stations may lead to the widespread use of electric cars by ( 4 ).",
+    "Word bank: 100 / 80 / 50 / 2030 / gasoline-powered / electric",
+  ].join("\n"),
+  translation: "日本のエネルギー供給の約50％は石油に由来する。しかし輸送部門では、ガソリン車が非常に多いため、ほぼ100％石油を使用している。したがって日本はエネルギーの安定供給体制を改善する必要がある。そこで政府の新しい目標は、2030年までに輸送部門の石油使用割合を80％まで引き下げることである。電池の新技術開発を促進し、充電設備を整備することによって、2030年までに電気自動車が広く普及する可能性がある。",
+};
+
+const CH15_FINAL_CONVERSATION_REFERENCE: EnglishQuestionReference = {
+  label: "Chapter 15 最終問題｜Target Genre: Corporate profile",
+  quote: [
+    "Ken: Hi, Eriko, how's the ( 1 ) hunt going? I'm not having much ( 2 ).",
+    "Eriko: Hi, Ken. That's too ( 3 ). I'm sure you'll ( 4 ) something soon. Actually, I found a job.",
+    "Ken: No way! That's great. ( 5 ) will you work? What ( 6 ) of job is it?",
+    "Eriko: I'll be working for Amyris. It's a biotech company that makes products, like cosmetics and fuels, from synthetic ( 7 ).",
+    "Ken: Really? That sounds interesting. ( 8 ) do they do that?",
+    "Eriko: Well, for example, I'll be working as a ( 9 ) engineer who will design new yeast microbes. I'll then use the new yeast to change plant ( 10 ) into new molecules.",
+    "Ken: Wow, that's pretty ( 11 ). Well, I'm really happy for you. Congratulations on your job!",
+    "Eriko: Thanks and good luck ( 12 ) a job!",
+  ].join("\n"),
+  translation: "ケン「やあエリコ、就職活動はどう？僕はなかなかうまくいっていないんだ。」エリコ「やあケン。それは残念。きっとすぐに何か見つかるよ。実は私は仕事が決まったの。」ケン「まさか！すごいね。どこで働くの？どんな仕事？」エリコ「Amyrisで働く予定よ。合成分子から化粧品や燃料などの製品を作るバイオテクノロジー企業なの。」ケン「本当？面白そう。どうやって作るの？」エリコ「例えば、新しい酵母微生物を設計する化学技術者として働くの。その新しい酵母を使い、植物由来の糖を新しい分子に変えるのよ。」ケン「わあ、かなり複雑だね。本当によかった。就職おめでとう！」エリコ「ありがとう。ケンも仕事探し、頑張ってね！」",
+};
+
+const CH15_FINAL_COMPLETED_CONVERSATION_REFERENCE: EnglishQuestionReference = {
+  ...CH15_FINAL_CONVERSATION_REFERENCE,
+  quote: [
+    "Ken: Hi, Eriko, how's the job hunt going? I'm not having much luck.",
+    "Eriko: Hi, Ken. That's too bad. I'm sure you'll find something soon. Actually, I found a job.",
+    "Ken: No way! That's great. Where will you work? What kind of job is it?",
+    "Eriko: I'll be working for Amyris. It's a biotech company that makes products, like cosmetics and fuels, from synthetic molecules.",
+    "Ken: Really? That sounds interesting. How do they do that?",
+    "Eriko: Well, for example, I'll be working as a chemical engineer who will design new yeast microbes. I'll then use the new yeast to change plant sugars into new molecules.",
+    "Ken: Wow, that's pretty complicated. Well, I'm really happy for you. Congratulations on your job!",
+    "Eriko: Thanks and good luck finding a job!",
+  ].join("\n"),
+};
+
+const CH14_CH15_FINAL_QUESTIONS: EnglishQuestion[] = [
+  ...[
+    {
+      id: "ch14-final-note-taking-1",
+      prompt: "About ( 1 ) % of Japan's energy supply comes from oil. 空欄（1）を写真の語群から選びなさい。",
+      answer: "50",
+      explanation: "about は概数を示す。50％は日本全体、100％は現在の輸送部門、80％は2030年の輸送部門目標である。",
+    },
+    {
+      id: "ch14-final-note-taking-2",
+      prompt: "The transportation sector, however, uses almost ( 2 ) % oil. 空欄（2）を写真の語群から選びなさい。",
+      answer: "100",
+      explanation: "almost が「ほぼ」を示し、ガソリン車が多いため輸送部門は現在ほぼ100％石油に依存している。",
+    },
+    {
+      id: "ch14-final-note-taking-3",
+      prompt: "The government's goal is to reduce the use of oil in the transportation sector to ( 3 ) % by 2030. 空欄（3）を選びなさい。",
+      answer: "80",
+      explanation: "reduce A to 80% は「Aを結果として80％まで減らす」。reduce A by 80%「80％分減らす」と区別する。",
+    },
+    {
+      id: "ch14-final-note-taking-4",
+      prompt: "The new technology may lead to the widespread use of electric cars by ( 4 ). 空欄（4）を選びなさい。",
+      answer: "2030",
+      explanation: "by + 年で「その年までに」。数値の50・100・80は割合であり、期限を示す空欄には入らない。",
+    },
+  ].map((item) => ({
+    ...item,
+    unit: "ch14",
+    group: "Note-taking｜本文参照｜配布最終問題",
+    format: "choice" as const,
+    options: ["100", "80", "50", "2030", "gasoline-powered", "electric"],
+    reference: CH14_FINAL_NOTE_TAKING_REFERENCE,
+  })),
+  ...[
+    {
+      id: "ch15-final-dialogue-1",
+      prompt: "Hi, Eriko, how's the ( 1 ) hunt going? 空欄（1）に入る1語を書きなさい。",
+      answer: "job",
+      options: ["job", "work", "career", "employment"],
+      explanation: "job hunt で「職探し・就職活動」という定型名詞句になる。",
+    },
+    {
+      id: "ch15-final-dialogue-2",
+      prompt: "I'm not having much ( 2 ). 空欄（2）に入る1語を書きなさい。",
+      answer: "luck",
+      options: ["luck", "time", "work", "chance"],
+      explanation: "have much luck は「うまくいく、成果がある」。否定文では not have much luck となる。",
+    },
+    {
+      id: "ch15-final-dialogue-3",
+      prompt: "That's too ( 3 ). 空欄（3）に入る1語を書きなさい。",
+      answer: "bad",
+      options: ["bad", "badly", "worse", "sadly"],
+      explanation: "That's too bad. は「それは残念」という定型句。be動詞後なので形容詞 bad を置く。",
+    },
+    {
+      id: "ch15-final-dialogue-4",
+      prompt: "I'm sure you'll ( 4 ) something soon. 空欄（4）に入る1語を書きなさい。",
+      answer: "find",
+      options: ["find", "found", "finding", "to find"],
+      explanation: "助動詞 will の後は動詞原形。find something で「何かを見つける」。",
+    },
+    {
+      id: "ch15-final-dialogue-5",
+      prompt: "( 5 ) will you work? 空欄（5）に入る1語を書きなさい。",
+      answer: "Where",
+      accepted: ["Where", "where"],
+      options: ["Where", "What", "How", "Who"],
+      explanation: "勤務場所を尋ねるので Where will you work? とする。",
+    },
+    {
+      id: "ch15-final-dialogue-6",
+      prompt: "What ( 6 ) of job is it? 空欄（6）に入る1語を書きなさい。",
+      answer: "kind",
+      options: ["kind", "kinds", "kindly", "place"],
+      explanation: "What kind of + 単数名詞で「どんな種類の～」を表す。",
+    },
+    {
+      id: "ch15-final-dialogue-7",
+      prompt: "It makes products, like cosmetics and fuels, from synthetic ( 7 ). 空欄（7）に入る1語を書きなさい。",
+      answer: "molecules",
+      options: ["molecules", "molecule", "molecular", "microbes"],
+      explanation: "synthetic は形容詞で、複数の合成分子を表す名詞複数形 molecules が続く。",
+    },
+    {
+      id: "ch15-final-dialogue-8",
+      prompt: "( 8 ) do they do that? 空欄（8）に入る1語を書きなさい。",
+      answer: "How",
+      accepted: ["How", "how"],
+      options: ["How", "What", "Why", "Where"],
+      explanation: "直前で述べた製造方法を尋ねるため How do they do that? とする。",
+    },
+    {
+      id: "ch15-final-dialogue-9",
+      prompt: "I'll be working as a ( 9 ) engineer who will design new yeast microbes. 空欄（9）に入る1語を書きなさい。",
+      answer: "chemical",
+      options: ["chemical", "chemistry", "chemically", "mechanical"],
+      explanation: "chemical engineer で「化学技術者」。a + 形容詞 + 単数名詞の語順になる。",
+    },
+    {
+      id: "ch15-final-dialogue-10",
+      prompt: "I'll use the new yeast to change plant ( 10 ) into new molecules. 空欄（10）に入る1語を書きなさい。",
+      answer: "sugars",
+      options: ["sugars", "sugared", "sugary", "molecules"],
+      explanation: "plant sugars は「植物由来の糖」。change A into B は「AをBに変える」。",
+    },
+    {
+      id: "ch15-final-dialogue-11",
+      prompt: "Wow, that's pretty ( 11 ). 空欄（11）に入る1語を書きなさい。",
+      answer: "complicated",
+      options: ["complicated", "complicate", "complication", "complicating"],
+      explanation: "pretty はここでは「かなり」という副詞で、後ろに形容詞 complicated を置く。",
+    },
+    {
+      id: "ch15-final-dialogue-12",
+      prompt: "Thanks and good luck ( 12 ) a job! 空欄（12）に入る1語を書きなさい。",
+      answer: "finding",
+      options: ["finding", "find", "found", "to find"],
+      explanation: "good luck doing で「～するのがうまくいくといいね」。動名詞 finding を用いる。",
+    },
+  ].map((item) => ({
+    ...item,
+    unit: "ch15",
+    group: "会話穴埋め｜本文参照｜配布最終問題",
+    format: "input" as const,
+    reference: CH15_FINAL_CONVERSATION_REFERENCE,
+  })),
+  ...[
+    {
+      id: "ch15-final-corporate-profile-1",
+      prompt: "What kind of company is Amyris?",
+      options: [
+        "A company that creates new plant sugars",
+        "A company that makes new molecules",
+        "A company that makes advertisements for cosmetics",
+        "A company that builds new laboratories",
+      ],
+      answer: "A company that makes new molecules",
+      explanation: "会話の change plant sugars into new molecules が直接の根拠。植物糖は材料であり、作るものは新しい分子である。",
+    },
+    {
+      id: "ch15-final-corporate-profile-2",
+      prompt: "Who found a job?",
+      options: ["Eriko", "Ken", "Both Eriko and Ken", "Neither person"],
+      answer: "Eriko",
+      explanation: "Eriko が Actually, I found a job. と述べる。Ken はまだ I'm not having much luck. の状態である。",
+    },
+    {
+      id: "ch15-final-corporate-profile-3",
+      prompt: "What kind of job did the person get?",
+      options: ["Mechanical engineer", "Plant engineer", "Systems engineer", "Chemical engineer"],
+      answer: "Chemical engineer",
+      explanation: "Eriko の I'll be working as a chemical engineer. が直接の根拠である。",
+    },
+  ].map((item) => ({
+    ...item,
+    unit: "ch15",
+    group: "Corporate profile｜本文参照｜配布最終問題",
+    format: "choice" as const,
+    reference: CH15_FINAL_COMPLETED_CONVERSATION_REFERENCE,
+  })),
+];
+
 const ADDITIONAL_CORE_QUESTIONS: EnglishQuestion[] = [
+  ...CH14_CH15_FINAL_QUESTIONS,
   {
     id: "ch14-able-disposable",
     unit: "ch14",

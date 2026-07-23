@@ -767,7 +767,7 @@ export function englishExamQuestionNeedsReference(question: Pick<EnglishQuestion
  * 単語だけに偏らず、文法・要約・一文整序・本文参照・和訳を毎回含む
  * 予想模試6回分を、そのまま自動採点可能な EnglishQuestion へ変換する。
  */
-export const ENGLISH_EXAM_LEVEL_QUESTIONS: EnglishQuestion[] = ENGLISH_EXPECTED_EXAMS.flatMap(
+const EXPECTED_EXAM_LEVEL_QUESTIONS: EnglishQuestion[] = ENGLISH_EXPECTED_EXAMS.flatMap(
   (exam) => exam.questions.map((question) => ({
     id: `exam-level-${question.id}`,
     unit: question.unit,
@@ -792,6 +792,48 @@ export const ENGLISH_EXAM_LEVEL_QUESTIONS: EnglishQuestion[] = ENGLISH_EXPECTED_
       : undefined,
   })),
 );
+
+const CH14_CH15_FINAL_SOURCE_IDS = [
+  "ch14-final-note-taking-1",
+  "ch14-final-note-taking-2",
+  "ch14-final-note-taking-3",
+  "ch14-final-note-taking-4",
+  "ch15-final-dialogue-1",
+  "ch15-final-dialogue-2",
+  "ch15-final-dialogue-3",
+  "ch15-final-dialogue-4",
+  "ch15-final-dialogue-5",
+  "ch15-final-dialogue-6",
+  "ch15-final-dialogue-7",
+  "ch15-final-dialogue-8",
+  "ch15-final-dialogue-9",
+  "ch15-final-dialogue-10",
+  "ch15-final-dialogue-11",
+  "ch15-final-dialogue-12",
+  "ch15-final-corporate-profile-1",
+  "ch15-final-corporate-profile-2",
+  "ch15-final-corporate-profile-3",
+] as const;
+
+const ENGLISH_SOURCE_FINAL_QUESTIONS: EnglishQuestion[] = CH14_CH15_FINAL_SOURCE_IDS.map((id) => {
+  const question = findExistingQuestion(id);
+  const base = existingToBase(id);
+  return {
+    ...question,
+    id: `exam-level-source-${id}`,
+    explanation: [
+      base.explanation,
+      `出典・根拠：${question.reference?.label ?? `${UNIT_LABELS[question.unit]}・配布最終問題`}`,
+      question.reference?.quote ? `問題原文：\n${question.reference.quote}` : "",
+      question.reference?.translation ? `全体和訳：\n${question.reference.translation}` : "",
+    ].filter(Boolean).join("\n\n"),
+  };
+});
+
+export const ENGLISH_EXAM_LEVEL_QUESTIONS: EnglishQuestion[] = [
+  ...EXPECTED_EXAM_LEVEL_QUESTIONS,
+  ...ENGLISH_SOURCE_FINAL_QUESTIONS,
+];
 
 
 /**

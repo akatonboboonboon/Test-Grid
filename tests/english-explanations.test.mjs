@@ -62,7 +62,7 @@ function sorted(values) {
   return [...values].sort((left, right) => left.localeCompare(right, "en"));
 }
 
-test("reading, language, and extra explanations cover all 520 study questions", async () => {
+test("reading, language, and extra explanations cover all 539 study questions", async () => {
   const { data, reading, language, extra } = await loadExplanationModules();
   const questions = data.ENGLISH_QUESTIONS;
   const questionIds = questions.map((question) => question.id);
@@ -74,8 +74,8 @@ test("reading, language, and extra explanations cover all 520 study questions", 
   ];
   const coveredIds = new Set(explanationMaps.flatMap((map) => Object.keys(map)));
 
-  assert.equal(questions.length, 520);
-  assert.equal(questionIdSet.size, 520, "question ids must be unique");
+  assert.equal(questions.length, 539);
+  assert.equal(questionIdSet.size, 539, "question ids must be unique");
   assert.deepEqual(
     sorted([...coveredIds]),
     sorted(questionIds),
@@ -155,7 +155,7 @@ test("every choice question explains its correct choice and distractors", async 
     (question) => question.format === "choice",
   );
 
-  assert.equal(choiceQuestions.length, 62);
+  assert.equal(choiceQuestions.length, 69);
 
   for (const question of choiceQuestions) {
     assert.ok(question.options?.length >= 2, `${question.id} must expose its choices`);
