@@ -6,6 +6,7 @@ import CardDeckSearch from "../../card-deck-search";
 import CardFaceList from "../../card-face-list";
 import SmartControlDiagram from "../../smart-control-diagrams";
 import SmartControlExams from "../../smart-control-exams";
+import SmartControlPracticeSheet from "../../smart-control-practice-sheet";
 import SmartControlResponseGraph from "../../smart-control-response-graph";
 import {
   smartControlDiagramIdFor,
@@ -22,7 +23,7 @@ import {
 import { TEXTBOOK_RESPONSE_CARDS, TEXTBOOK_RESPONSE_QUESTIONS } from "../../smart-control-textbook-data";
 import { DisplayMath, RichMathText } from "../../statistics-math";
 
-type Mode = "scope" | "textbook" | "cards" | "practice" | "test" | "expected" | "guide";
+type Mode = "scope" | "textbook" | "cards" | "practice" | "provided-practice" | "test" | "expected" | "guide";
 type CardState = "learning" | "mastered";
 type CardProgress = Record<string, CardState>;
 type Feedback = { response: string; correct: boolean };
@@ -700,7 +701,7 @@ export default function SmartControlSubjectPage() {
           <div><span>TOPICS</span><strong>{SMART_CONTROL_TOPICS.length}</strong><small>単元</small></div>
           <div><span>CARDS</span><strong>{SMART_CONTROL_CARDS.length}</strong><small>枚</small></div>
           <div><span>QUESTIONS</span><strong>{SMART_CONTROL_QUESTIONS.length}</strong><small>問</small></div>
-          <p>範囲ZIPと教科書p.65〜68を本体に、過去問2の重複分野だけを収録。赤文字と図5.1〜5.3の数値もカード・演習・模試へ追加済みです。暗記済み {totalMastered}枚。</p>
+          <p>範囲ZIPと教科書p.65〜68を本体に、過去問2の重複分野だけを収録。追加範囲はありません。新しい配布プリントは、範囲を増やさない独立練習13問として収録しました。暗記済み {totalMastered}枚。</p>
         </section>
 
         <section ref={workspaceRef} id="smart-control-workspace" className="english-workspace statistics-workspace">
@@ -709,9 +710,10 @@ export default function SmartControlSubjectPage() {
             <button type="button" role="tab" aria-selected={mode === "textbook"} className={mode === "textbook" ? "active english-tab-memory" : "english-tab-memory"} onClick={() => changeMode("textbook")}>② 教科書赤字・図</button>
             <button type="button" role="tab" aria-selected={mode === "cards"} className={mode === "cards" ? "active" : ""} onClick={() => changeMode("cards")}>③ 暗記カード</button>
             <button type="button" role="tab" aria-selected={mode === "practice"} className={mode === "practice" ? "active" : ""} onClick={() => changeMode("practice")}>④ 演習</button>
-            <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>⑤ ランダム模試</button>
-            <button type="button" role="tab" aria-selected={mode === "expected"} className={mode === "expected" ? "active" : ""} onClick={() => changeMode("expected")}>⑥ A4想定試験</button>
-            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑦ 出題形式</button>
+            <button type="button" role="tab" aria-selected={mode === "provided-practice"} className={mode === "provided-practice" ? "active" : ""} onClick={() => changeMode("provided-practice")}>⑤ 配布練習13問</button>
+            <button type="button" role="tab" aria-selected={mode === "test"} className={mode === "test" ? "active" : ""} onClick={() => changeMode("test")}>⑥ ランダム模試</button>
+            <button type="button" role="tab" aria-selected={mode === "expected"} className={mode === "expected" ? "active" : ""} onClick={() => changeMode("expected")}>⑦ A4想定試験</button>
+            <button type="button" role="tab" aria-selected={mode === "guide"} className={mode === "guide" ? "active" : ""} onClick={() => changeMode("guide")}>⑧ 出題形式</button>
           </div>
 
           {mode === "scope" && (
@@ -742,6 +744,11 @@ export default function SmartControlSubjectPage() {
                   <p>赤文字10語と図5.1〜5.3の数値・記号を収録。0.1、0.5、0.9、0.95、1.05と、t_r・t_d・t_p・t_s・O_sを位置と定義まで出題します。</p>
                   <strong>赤字とグラフ数値はすべて試験範囲</strong>
                 </article>
+                <article>
+                  <span>PROVIDED PRACTICE / NOT NEW RANGE</span><h3>前期期末・配布練習問題</h3>
+                  <p>逆ラプラス変換11問と単位負帰還2問を、原稿どおり収録。今回の範囲を計算練習する教材であり、追加範囲ではありません。</p>
+                  <strong>専用タブで問題・極・途中式を確認</strong>
+                </article>
               </div>
 
               <div className="english-guide-tip statistics-source-policy">
@@ -768,6 +775,7 @@ export default function SmartControlSubjectPage() {
                 <button type="button" onClick={() => changeMode("textbook")}>教科書の赤字・図を確認</button>
                 <button type="button" onClick={() => changeMode("cards")}>全範囲の暗記カード</button>
                 <button type="button" onClick={() => changeMode("practice")}>演習へ進む</button>
+                <button type="button" onClick={() => changeMode("provided-practice")}>配布練習13問を解く</button>
               </div>
             </section>
           )}
@@ -917,6 +925,8 @@ export default function SmartControlSubjectPage() {
               )}
             </section>
           )}
+
+          {mode === "provided-practice" && <SmartControlPracticeSheet />}
 
           {mode === "test" && (
             <section className="generic-test-workspace english-test-workspace statistics-test-workspace" aria-labelledby="smart-test-title">

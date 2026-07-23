@@ -1,0 +1,484 @@
+.workspace {
+  display: grid;
+  gap: 24px;
+}
+
+.scopeNotice {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) 1fr;
+  gap: 18px;
+  align-items: center;
+  padding: 20px;
+  border: 2px solid #111820;
+  border-left: 9px solid #ff8fc7;
+  background: #fff7fb;
+}
+
+.scopeNotice > span,
+.solution > span {
+  color: #9c2f68;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.scopeNotice strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: clamp(19px, 3vw, 27px);
+}
+
+.scopeNotice p,
+.scopeNotice small {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.scopeNotice small {
+  color: #53606c;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #18212a;
+  background: #111820;
+  color: #f8f4ea;
+}
+
+.toolbar span {
+  margin-right: auto;
+  font-weight: 900;
+}
+
+.toolbar button,
+.revealButton {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #f8f4ea;
+  background: #ff8fc7;
+  color: #111820;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.majorSection {
+  display: grid;
+  gap: 18px;
+  padding: clamp(16px, 3vw, 30px);
+  border: 2px solid #111820;
+  background: #f8f4ea;
+}
+
+.majorSection > header {
+  display: grid;
+  grid-template-columns: minmax(240px, .7fr) 1fr;
+  gap: 20px;
+  align-items: end;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #111820;
+}
+
+.majorSection > header span,
+.problemHead,
+.taskChips {
+  font-family: var(--font-mono), monospace;
+}
+
+.majorSection > header span {
+  color: #9c2f68;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.majorSection h3 {
+  margin: 4px 0 0;
+  font-size: clamp(24px, 4vw, 42px);
+}
+
+.majorSection > header p {
+  margin: 0;
+  line-height: 1.75;
+}
+
+.problemGrid,
+.feedbackGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.problemCard {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #1b2631;
+  border-top: 7px solid #ff8fc7;
+  background: #fff;
+}
+
+.problemHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #53606c;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .06em;
+}
+
+.problemHead span {
+  color: #9c2f68;
+}
+
+.problemCard h4 {
+  margin: 18px 0;
+  overflow-x: auto;
+}
+
+.taskChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.taskChips span {
+  padding: 5px 8px;
+  border: 1px solid #b8c0c8;
+  background: #f2f4f5;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.poleFigure,
+.feedbackFigure {
+  margin: 16px 0;
+}
+
+.poleFigure figcaption,
+.feedbackFigure figcaption {
+  margin-bottom: 7px;
+  color: #53606c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.polePlane {
+  position: relative;
+  aspect-ratio: 8 / 5;
+  min-height: 190px;
+  overflow: hidden;
+  border: 1px solid #7f8b95;
+  background:
+    linear-gradient(to right, transparent 49.7%, #17212b 49.7%, #17212b 50.3%, transparent 50.3%),
+    linear-gradient(to bottom, transparent 49.4%, #17212b 49.4%, #17212b 50.6%, transparent 50.6%),
+    repeating-linear-gradient(to right, transparent 0, transparent calc(12.5% - 1px), #dde2e5 calc(12.5% - 1px), #dde2e5 12.5%),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(12.5% - 1px), #dde2e5 calc(12.5% - 1px), #dde2e5 12.5%),
+    #fbfcfc;
+}
+
+.realLabel,
+.imaginaryLabel,
+.origin,
+.leftHalf,
+.rightHalf {
+  position: absolute;
+  z-index: 2;
+  color: #53606c;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.realLabel { right: 6px; top: calc(50% + 5px); }
+.imaginaryLabel { left: calc(50% + 7px); top: 5px; }
+.origin { left: calc(50% + 5px); top: calc(50% + 4px); }
+.leftHalf { left: 5px; bottom: 4px; }
+.rightHalf { right: 5px; bottom: 4px; }
+
+.polePoint {
+  position: absolute;
+  z-index: 3;
+  left: var(--pole-x);
+  top: var(--pole-y);
+  translate: -50% -50%;
+  color: #d51655;
+  font-size: 27px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.polePoint sup {
+  font-size: 10px;
+}
+
+.polePoint small {
+  position: absolute;
+  left: 18px;
+  top: -2px;
+  width: max-content;
+  padding: 2px 4px;
+  background: rgb(255 255 255 / 88%);
+  color: #8f194c;
+  font-size: 10px;
+}
+
+.answerInput {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0;
+  font-weight: 900;
+}
+
+.answerInput textarea {
+  width: 100%;
+  min-height: 126px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid #596571;
+  background: #fff;
+  color: #111820;
+  font: inherit;
+  line-height: 1.6;
+}
+
+.revealButton {
+  width: 100%;
+  border-color: #111820;
+}
+
+.solution {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 2px solid #111820;
+  background: #f9eef4;
+}
+
+.solution ol {
+  display: grid;
+  gap: 7px;
+  margin: 6px 0 0;
+  padding-left: 22px;
+  line-height: 1.65;
+}
+
+.solution p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.stability {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 9px;
+  align-items: start;
+  padding: 11px;
+  border-left: 6px solid;
+  background: #fff;
+}
+
+.stability strong {
+  padding: 2px 7px;
+  color: #fff;
+}
+
+.stable { border-color: #00835f; }
+.stable strong { background: #00835f; }
+.marginal { border-color: #a36300; }
+.marginal strong { background: #a36300; }
+.unstable { border-color: #bd194d; }
+.unstable strong { background: #bd194d; }
+
+.feedbackFigure {
+  padding: 14px;
+  border: 1px solid #111820;
+  background: #fff;
+}
+
+.feedbackDiagram {
+  position: relative;
+  min-height: 210px;
+  overflow: hidden;
+  padding: 28px 20px 72px;
+}
+
+.forwardPath {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: max-content minmax(28px, 1fr) 48px minmax(28px, 1fr) minmax(60px, 90px) minmax(28px, 1fr) minmax(88px, 130px) minmax(28px, 1fr) max-content;
+  gap: 5px;
+  align-items: center;
+}
+
+.arrow {
+  position: relative;
+  display: block;
+  height: 3px;
+  background: #111820;
+}
+
+.arrow::after {
+  position: absolute;
+  right: -1px;
+  top: -5px;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 10px solid #111820;
+  content: "";
+}
+
+.sum {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 2px solid #111820;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.sum b,
+.sum i {
+  position: absolute;
+  font-style: normal;
+  font-size: 13px;
+}
+
+.sum b { left: 5px; top: 2px; }
+.sum i { left: 5px; bottom: 1px; }
+
+.block {
+  display: grid;
+  place-items: center;
+  min-height: 58px;
+  padding: 8px;
+  border: 2px solid #111820;
+  background: #fff;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.returnPath {
+  position: absolute;
+  z-index: 1;
+  left: calc(12% + 30px);
+  right: calc(5% + 28px);
+  top: 63px;
+  bottom: 24px;
+  border-right: 3px solid #111820;
+  border-bottom: 3px solid #111820;
+  border-left: 3px solid #111820;
+}
+
+.returnPath::after {
+  position: absolute;
+  left: -7px;
+  top: -1px;
+  width: 0;
+  height: 0;
+  border-right: 6px solid transparent;
+  border-left: 6px solid transparent;
+  border-bottom: 10px solid #111820;
+  content: "";
+}
+
+.returnPath span {
+  position: absolute;
+  left: 50%;
+  bottom: -27px;
+  translate: -50% 0;
+  width: max-content;
+  padding: 2px 8px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rangeAnswer {
+  padding: 10px;
+  border-left: 5px solid #9c2f68;
+  background: #fff;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .problemGrid,
+  .feedbackGrid,
+  .majorSection > header {
+    grid-template-columns: 1fr;
+  }
+
+  .forwardPath {
+    grid-template-columns: max-content minmax(16px, 1fr) 42px minmax(16px, 1fr) 52px minmax(16px, 1fr) 72px minmax(16px, 1fr) max-content;
+    gap: 3px;
+  }
+
+  .feedbackDiagram {
+    padding-inline: 2px;
+  }
+}
+
+@media (max-width: 560px) {
+  .scopeNotice {
+    grid-template-columns: 1fr;
+  }
+
+  .majorSection,
+  .problemCard {
+    padding: 13px;
+  }
+
+  .polePlane {
+    min-height: 170px;
+  }
+
+  .feedbackDiagram {
+    min-height: 185px;
+    overflow-x: auto;
+  }
+
+  .forwardPath {
+    min-width: 610px;
+  }
+
+  .returnPath {
+    right: 28px;
+    left: 88px;
+    min-width: 470px;
+  }
+}
+
+@media print {
+  .toolbar,
+  .answerInput,
+  .revealButton,
+  .solution {
+    display: none !important;
+  }
+
+  .workspace,
+  .majorSection,
+  .problemCard {
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .problemGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .problemCard {
+    break-inside: avoid;
+  }
+}
