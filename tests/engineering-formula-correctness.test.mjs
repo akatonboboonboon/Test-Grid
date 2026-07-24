@@ -22,17 +22,16 @@ const [
   readFile(new URL("generated-practice-engine.ts", app), "utf8"),
 ]);
 
-test("material overhang equilibrium keeps valid delimiters and sign convention", () => {
+test("material beam equilibrium keeps current-scope sign-safe formulas", () => {
   assert.match(
     material,
-    /A回り（反時計回りを正）で\\\\\(300\(100\)\+150\(200\)\+R_B\(400\)=0\\\\\)/,
+    /id: "mm-f-equilibrium"[\s\S]*?formula: "\\\\sum F_y=0,\\\\qquad \\\\sum M_O=0"/,
   );
-  assert.doesNotMatch(material, /\\\\\(300\)\(100\)/);
-
-  const reactionB = -(300 * 100 + 150 * 200) / 400;
-  const reactionA = 300 - 150 - reactionB;
-  assert.equal(reactionB, -150);
-  assert.equal(reactionA, 300);
+  assert.match(
+    material,
+    /id: "mm-f-simple-point-general"[\s\S]*?formula: "R_A=\\\\frac\{Pb\}\{L\},\\\\qquad R_B=\\\\frac\{Pa\}\{L\},\\\\qquad M_\{max\}=\\\\frac\{Pab\}\{L\}"/,
+  );
+  assert.doesNotMatch(material, /300\(100\)\+150\(200\)\+R_B\(400\)/);
 });
 
 test("mechanical cover-up formula defines the pole sign unambiguously", () => {
@@ -68,7 +67,8 @@ test("material generator descriptions match implemented input domains", () => {
   assert.match(materialGenerator, /P=8〜30 kW、N=600〜1800 rpm、d=30〜60 mm/);
   assert.match(materialGenerator, /P=80〜240 kW、N=80〜240 rpm、di\/do=0\.40〜0\.70/);
   assert.match(materialGenerator, /d=12〜22 mm、D=100〜220 mm、n=5〜12/);
-  assert.match(materialGenerator, /L=2\.0〜6\.0 m、w=1\.5〜6\.0 kN\/m、d=50〜120 mm/);
+  assert.match(materialGenerator, /L=2\.0〜6\.0 m、w=1\.5〜6\.0 kN\/m、b=60〜180 mm、h=120〜260 mm/);
+  assert.doesNotMatch(materialGenerator, /d=50〜120 mm/);
 });
 
 test("generated engineering work uses approximation signs for rounded irrational results", () => {

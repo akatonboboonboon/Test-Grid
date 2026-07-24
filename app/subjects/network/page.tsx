@@ -35,6 +35,7 @@ const MIN_CARD_COUNT = 1;
 const MAX_CARD_COUNT = 100;
 const MIN_SPEED_MS = 100;
 const MAX_SPEED_MS = 10_000;
+const RETEST_CARD_STORAGE_KEY = "layer-sum-retest-cards-formal-20260724-v1";
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -110,7 +111,7 @@ export default function Home() {
   /* Device-local preferences can only be restored after the client mounts. */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setCards(normalizeCards(storageRead<unknown>("layer-sum-cards-v1", DEFAULT_CARDS)));
+    setCards(normalizeCards(storageRead<unknown>(RETEST_CARD_STORAGE_KEY, DEFAULT_CARDS)));
     setStats(normalizeStats(storageRead<unknown>("layer-sum-stats-v1", EMPTY_STATS)));
     const savedSettings = storageRead<unknown>("layer-sum-settings-v1", null);
     const settings = savedSettings && typeof savedSettings === "object" ? savedSettings as {
@@ -136,7 +137,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    storageWrite("layer-sum-cards-v1", cards);
+    storageWrite(RETEST_CARD_STORAGE_KEY, cards);
     storageWrite("layer-sum-stats-v1", stats);
     storageWrite("layer-sum-settings-v1", { cardCount, speed });
   }, [cards, stats, cardCount, speed, hydrated]);
@@ -356,7 +357,7 @@ export default function Home() {
         <section className="intro-block" aria-labelledby="page-title">
           <p className="eyebrow"><span>NETWORK EXAM TRAINING</span><span>NEW FORMAT / 20+ CHARACTERS</span></p>
           <h1 id="page-title">本試験は、<br /><em>層＋20文字記述。</em></h1>
-          <p className="lede">新しい本試験は、元写真の96プロトコルから好きなものを選び、該当する層と20文字以上の説明を書く形式です。下のフラッシュ暗算は追試対策として残しています。</p>
+          <p className="lede">本試験範囲の正本は「2026-07-24正式範囲PDF・全50項目」です。好きな項目を選び、該当する層と20文字以上の説明を書きます。下の旧フラッシュ暗算は追試用として残しています。</p>
           <Link className="network-memory-callout" href="/subjects/network/written">
             <span>本試験対策・新形式</span><strong>プロトコルを選び、層＋20文字で説明する</strong><b aria-hidden="true">最優先で練習 →</b>
           </Link>
@@ -424,7 +425,7 @@ export default function Home() {
                   />
                   <button type="submit" disabled={answer.trim() === ""}>判定する <span>↵</span></button>
                 </form>
-                <p>表示された層番号をすべて足して入力。複数層の語は、写真にあるどちらで足しても正解です。</p>
+                <p>表示された層番号をすべて足して入力。正式PDFの括弧付き用語は、リスト上の分類層と括弧内層のどちらで足しても正解です。</p>
               </div>
             )}
 
@@ -545,7 +546,7 @@ export default function Home() {
 
         <section className="source-note">
           <span>READING NOTE</span>
-          <p><strong>丸数字①〜⑦を、そのまま第1〜第7層として再読解。</strong> 欄内の用語と実用的な括弧内表記を収録し、規格番号などの説明書きと③より上の欄外メモは除外しました。同じ表記は1枚へ統合し、イーサネット・SSH・TLSは写真どおり複数の層を正解にします。</p>
+          <p><strong>2026-07-24正式範囲PDF・全50項目が正本です。</strong> PDFで括弧が付く項目は、リスト上の分類層と括弧内の推奨層のどちらでも正解にします。旧写真由来の項目は本試験・暗記帳・層即答・ランキング・総合問題へ混ぜません。</p>
         </section>
       </main>
 
@@ -560,7 +561,7 @@ export default function Home() {
             </div>
             <div className="editor-notice">
               <strong>読み取り違いがあれば、ここで直接直せます。</strong>
-              <p>変更はこの端末に自動保存。表示名・正式名称・層・出題のON/OFFを編集できます。</p>
+              <p>変更は追試用フラッシュ専用としてこの端末に保存されます。本試験・正式暗記帳・ランキング・総合問題の50項目には影響しません。</p>
             </div>
 
             <form className="add-card-form" onSubmit={addCard}>
@@ -621,7 +622,7 @@ export default function Home() {
             </div>
 
             <div className="editor-footer">
-              <button type="button" className={resetArmed ? "danger" : ""} onClick={resetCards}>{resetArmed ? "もう一度押すと初期化" : "初期96枚に戻す"}</button>
+              <button type="button" className={resetArmed ? "danger" : ""} onClick={resetCards}>{resetArmed ? "もう一度押すと初期化" : "正式50項目に戻す"}</button>
               <button type="button" className="primary-button" onClick={() => setEditorOpen(false)}>編集を完了</button>
             </div>
           </div>

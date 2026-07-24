@@ -1,19 +1,25 @@
 import { DEFAULT_CARDS, cardLayers, type Layer } from "./protocols";
-import { gradeNetworkWrittenContent } from "./network-written-grading";
+import {
+  gradeNetworkWrittenContent,
+  type StrictNetworkRubricDimension,
+} from "./network-written-grading";
 
 export type NetworkWrittenLayerChoice = Layer;
 
 export type NetworkWrittenTerm = {
   id: string;
   term: string;
-  fullName?: string;
+  fullName: string;
   category: string;
+  listedLayer: Layer;
   expectedLayers: Layer[];
+  alternateLayers: Layer[];
   layerLabel: string;
   layerReason: string;
+  layerExceptionReason?: string;
   keywords: string[];
   modelAnswer: string;
-  source: "protocol-card";
+  source: "network-range-pdf-2026-07-24";
 };
 
 export type NetworkWrittenEvaluation = {
@@ -24,6 +30,7 @@ export type NetworkWrittenEvaluation = {
   contentMatched: boolean;
   matchedRubricItems: string[];
   expectedRubricItems: string[];
+  matchedDimensions: StrictNetworkRubricDimension[];
   requiredRubricItems: number;
   detailMatched: boolean;
   actionMatched: boolean;
@@ -95,25 +102,31 @@ function protocolKeywords(description: string, layers: Layer[]) {
   return [...new Set(candidates)];
 }
 
-/**
- * 今回の出題範囲は、最初に提供された層別写真から作成したDEFAULT_CARDSのみ。
- * 後から提供された「ネットワーク形式1・2」の印字語は形式例であり、ここへ追加しない。
- */
+export const NETWORK_WRITTEN_SOURCE = "ネットワーク範囲.pdf（2026-07-24）";
+
+/** 正式PDFに掲載された50語だけを、掲載層と括弧内の正解層を区別して構成する。 */
 export const NETWORK_WRITTEN_TERMS: NetworkWrittenTerm[] = DEFAULT_CARDS.map((card) => {
-  const layers = cardLayers(card);
-  const description = card.description?.trim()
-    || `${card.label}はネットワーク通信で利用され、対応する層の通信手順や処理方法を定めます。`;
+  const expectedLayers = cardLayers(card);
+  const alternateLayers = expectedLayers.filter((layer) => layer !== card.layer);
+  const description = card.description?.trim();
+  if (!description) throw new Error(`${card.label}の正式な説明がありません。`);
+  const layerExceptionReason = alternateLayers.length > 0
+    ? `正式PDFではL${card.layer}に掲載され、括弧内に${alternateLayers.map((layer) => `L${layer}`).join("・")}も正解と明記されています。`
+    : undefined;
   return {
     id: `protocol-${card.id}`,
     term: card.label,
-    fullName: card.fullName?.trim() || undefined,
-    category: layers.map((layer) => LAYER_LABELS[layer]).join("・"),
-    expectedLayers: layers,
-    layerLabel: layers.map((layer) => LAYER_LABELS[layer]).join("・"),
-    layerReason: card.note || layers.map((layer) => LAYER_REASON[layer]).join(" "),
-    keywords: protocolKeywords(description, layers),
+    fullName: card.fullName?.trim() || card.label,
+    category: expectedLayers.map((layer) => LAYER_LABELS[layer]).join("・"),
+    listedLayer: card.layer,
+    expectedLayers,
+    alternateLayers,
+    layerLabel: expectedLayers.map((layer) => LAYER_LABELS[layer]).join("・"),
+    layerReason: layerExceptionReason || card.note || LAYER_REASON[card.layer],
+    layerExceptionReason,
+    keywords: protocolKeywords(description, expectedLayers),
     modelAnswer: description,
-    source: "protocol-card",
+    source: "network-range-pdf-2026-07-24",
   };
 });
 
@@ -159,28 +172,22 @@ export function evaluateNetworkWrittenAnswer(
     ? normalizedAnswer.split(normalizedTerm).join("")
     : normalizedAnswer;
   const matchedKeywords = term.keywords.filter((keyword) => answerWithoutRepeatedTerm.includes(normalizeForMatch(keyword)));
-  const contentMatched = matchedKeywords.length > 0;
   const strictContent = gradeNetworkWrittenContent(term, answer);
+  const matchedDimensionCount = strictContent.matchedDimensions.length;
+  const contentMatched = matchedDimensionCount > 0;
   const fullyQualified = (
     enoughCharacters
     && layerCorrect
-    && strictContent.detailMatched
-    && strictContent.actionMatched
+    && matchedDimensionCount === strictContent.requiredItems
     && strictContent.contradictions.length === 0
-  );
-  const nearlyComplete = (
-    enoughCharacters
-    && layerCorrect
-    && strictContent.actionMatched
-    && strictContent.matchedItems.length >= Math.max(2, strictContent.requiredItems - 1)
   );
   const estimatedScore: NetworkWrittenEvaluation["estimatedScore"] =
     !enoughCharacters ? 0
       : strictContent.contradictions.length > 0 ? 0
-        : !layerCorrect ? (strictContent.detailMatched && strictContent.actionMatched ? 3 : 0)
-          : fullyQualified ? 10
-            : nearlyComplete ? 8
-              : strictContent.matchedItems.length > 0 && strictContent.actionMatched ? 5
+        : !layerCorrect ? (matchedDimensionCount >= 2 ? 3 : 0)
+          : matchedDimensionCount === 3 ? 10
+            : matchedDimensionCount === 2 ? 8
+              : matchedDimensionCount === 1 ? 5
                 : 3;
   return {
     characterCount,
@@ -190,6 +197,7 @@ export function evaluateNetworkWrittenAnswer(
     contentMatched,
     matchedRubricItems: strictContent.matchedItems,
     expectedRubricItems: strictContent.expectedItems,
+    matchedDimensions: strictContent.matchedDimensions,
     requiredRubricItems: strictContent.requiredItems,
     detailMatched: strictContent.detailMatched,
     actionMatched: strictContent.actionMatched,
@@ -228,7 +236,7 @@ export type NetworkWrittenMockPaper = {
 };
 
 const EXAM_CONTEXT =
-  "本試験の記述答案を選択式に置き換えた問題です。層だけでなく、20文字以上に相当する働きの説明まで正しいものを選びます。";
+  `${NETWORK_WRITTEN_SOURCE}の記述答案を選択式に置き換えた問題です。層だけでなく、20文字以上に相当する働きの説明まで正しいものを選びます。`;
 
 function retargetModelAnswer(source: NetworkWrittenTerm, target: NetworkWrittenTerm) {
   const remainder = source.modelAnswer.startsWith(source.term)
@@ -291,7 +299,7 @@ export const NETWORK_EXAM_LEVEL_QUESTIONS: NetworkWrittenExamQuestion[] = NETWOR
       "主要な働きからOSI層を判定する。",
       "選択肢の説明が、そのプロトコル自身の働きかまで照合する。",
     ],
-    sourceBasis: "最初に提供された層別写真から作成した96プロトコル（形式資料の印字語は除外）",
+    sourceBasis: NETWORK_WRITTEN_SOURCE,
     termId: term.id,
     minimumCharacters: 20,
   };
@@ -300,7 +308,7 @@ export const NETWORK_EXAM_LEVEL_QUESTIONS: NetworkWrittenExamQuestion[] = NETWOR
 function buildBalancedMockTermIds(paperIndex: number) {
   const picked = new Set<string>();
   ([1, 2, 3, 4, 5, 6, 7] as Layer[]).forEach((layer) => {
-    const candidates = NETWORK_WRITTEN_TERMS.filter((term) => term.expectedLayers.includes(layer));
+    const candidates = NETWORK_WRITTEN_TERMS.filter((term) => term.listedLayer === layer);
     const candidate = candidates[(paperIndex * 5 + layer - 1) % candidates.length];
     if (candidate) picked.add(candidate.id);
   });

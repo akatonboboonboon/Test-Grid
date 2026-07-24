@@ -17,8 +17,8 @@ test("network rapid drill filters the source pool by any selected OSI layer", as
   assert.match(data, /acceptedOptions\.some\(\(option\) => selectedLabels\.has\(option\)\)/);
   assert.match(data, /acceptedOptions: labels/);
   assert.match(protocols, /layers:\s*\[1,\s*2\]/);
-  assert.match(protocols, /layers:\s*\[5,\s*7\]/);
-  assert.match(protocols, /layers:\s*\[5,\s*6\]/);
+  assert.match(protocols, /label: "RADIUS"[^\n]*layers:\s*\[2,\s*7\]/);
+  assert.match(protocols, /label: "QUIC"[^\n]*layers:\s*\[6,\s*4\]/);
 
   assert.match(drill, /const \[sourcePool, setSourcePool\]/);
   assert.match(drill, /filterNetworkRapidPoolByLayers\(sourcePool, selectedLayers\)/);
@@ -47,7 +47,7 @@ test("layer filter stays out of fixed ranking and comprehensive pools", async ()
     read("comprehensive-challenge.tsx"),
   ]);
 
-  assert.match(data, /const NETWORK_RAPID = examLevelPool\([\s\S]*?NETWORK_EXAM_LEVEL_QUESTIONS/);
+  assert.match(data, /const NETWORK_RAPID = networkCardsToRapid\(DEFAULT_CARDS\)/);
   assert.match(data, /network:\s*NETWORK_RAPID/);
   assert.doesNotMatch(official, /filterNetworkRapidPoolByLayers/);
   assert.doesNotMatch(comprehensive, /filterNetworkRapidPoolByLayers/);

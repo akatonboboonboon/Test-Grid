@@ -1,4 +1,5 @@
 import {
+  CH15_RANGE_QUIZ_SOURCE_IDS,
   ENGLISH_PASSAGES,
   ENGLISH_QUESTIONS,
   ENGLISH_VOCAB,
@@ -73,7 +74,7 @@ const CORE_ENGLISH_EXPECTED_UNITS: CoreEnglishExpectedUnit[] = ["ch15", "ch16", 
 export const ENGLISH_EXPECTED_SCOPE_UNITS: EnglishExpectedUnit[] = ["ch14", "ch15", "ch16", "ch18", "toeic", "housing", "medical"];
 export const ENGLISH_EXPECTED_FORMAT_ONLY_SOURCES = ["英語.pdf", "英語テスト過去問.zip"] as const;
 export const ENGLISH_EXPECTED_SOURCE_POLICY =
-  "追加教材の指定範囲（Chapter 14・15・16・18、TOEIC Reading、Housing・Medical語彙）から出題し、Chapter 14冒頭の対象外欄とChapter 19は使わない。";
+  "追加教材の指定範囲（Chapter 14・15・16・18、Chapter 15範囲補足小テスト、TOEIC Reading、Housing・Medical語彙）から出題し、英語PDF・過去問は形式だけを参照する。Chapter 14冒頭の対象外欄とChapter 19は使わない。";
 
 export const ENGLISH_EXPECTED_EXAM_SECTIONS: EnglishExpectedSection[] = [
   { id: "vocab-ja-en", number: "I", title: "語彙・熟語｜日→英", instruction: "日本語に対応する教材表現を英語で書きなさい。", page: 1 },
@@ -813,6 +814,7 @@ const CH14_CH15_FINAL_SOURCE_IDS = [
   "ch15-final-corporate-profile-1",
   "ch15-final-corporate-profile-2",
   "ch15-final-corporate-profile-3",
+  ...CH15_RANGE_QUIZ_SOURCE_IDS,
 ] as const;
 
 const ENGLISH_SOURCE_FINAL_QUESTIONS: EnglishQuestion[] = CH14_CH15_FINAL_SOURCE_IDS.map((id) => {

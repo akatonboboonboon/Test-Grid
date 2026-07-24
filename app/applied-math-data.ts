@@ -122,22 +122,27 @@ export const APPLIED_MATH_RANGE_PAGES: AppliedMathRangePage[] = [
   { number: 16, filename: "PXL_20260716_080412986.MP.jpg", lesson: "第12回", topics: ["divergence-curl"], summary: "微小直方体を用いた発散の物理的意味" },
   { number: 17, filename: "PXL_20260717_060743444.jpg", lesson: "第11回演習", topics: ["surfaces"], summary: "回転曲面の偏微分ベクトル、外積、曲面積の計算演習" },
   { number: 18, filename: "PXL_20260717_060748486.jpg", lesson: "第12回演習", topics: ["gradient"], summary: "勾配、同方向の単位ベクトル、方向微分、勾配の演算法則" },
-  { number: 19, filename: "PXL_20260717_060758953.jpg", lesson: "前期末基本問題", topics: ["curves", "surfaces", "gradient", "divergence-curl", "line-integrals", "surface-integrals", "green-theorem"], summary: "全範囲基本問題14題。問4は第三成分の表記が対応演習と矛盾するため自動出題から除外" },
+  { number: 19, filename: "PXL_20260717_060758953.jpg", lesson: "前期末基本問題", topics: ["curves", "surfaces", "gradient", "divergence-curl", "line-integrals", "surface-integrals", "green-theorem"], summary: "全範囲基本問題14題。追加範囲2の高画質版で問4の第三成分がu²と確定" },
   { number: 20, filename: "PXL_20260717_060803762.jpg", lesson: "第13回", topics: ["line-integrals"], summary: "曲線の向き、閉曲線、区分的に滑らかな曲線、スカラー場の線積分の定義" },
   { number: 21, filename: "PXL_20260717_060809811.jpg", lesson: "第13回", topics: ["line-integrals"], summary: "スカラー線積分・成分線積分・ベクトル場の線積分の計算公式" },
   { number: 22, filename: "PXL_20260717_060812494.jpg", lesson: "第13回", topics: ["line-integrals"], summary: "経路の結合と反転、勾配定理、経路独立性、閉曲線上の積分" },
+  { number: 23, filename: "PXL_20260724_091158945.jpg", lesson: "第13回演習", topics: ["line-integrals"], summary: "円・らせんに沿うスカラー線積分とdx・dy型線積分の計算演習" },
+  { number: 24, filename: "PXL_20260724_091203177.jpg", lesson: "第13回演習", topics: ["line-integrals"], summary: "ベクトル場の線積分、経路の反転・結合を使う計算演習" },
+  { number: 25, filename: "PXL_20260724_091215721.jpg", lesson: "第14回演習", topics: ["green-theorem"], summary: "正方形・円の閉曲線で直接計算とグリーンの定理を照合する演習" },
+  { number: 26, filename: "PXL_20260724_091224452.jpg", lesson: "第14回", topics: ["green-theorem"], summary: "グリーンの定理の仮定と、Pdx・Qdyに分けた証明" },
+  { number: 27, filename: "PXL_20260724_091230758.jpg", lesson: "前期末基本問題・高画質版", topics: ["curves", "surfaces", "gradient", "divergence-curl", "line-integrals", "surface-integrals", "green-theorem"], summary: "全範囲基本問題14題の高画質版。問4の曲面はr=(u cos v,u sin v,u²)と確認済み" },
 ];
 
 export const APPLIED_MATH_TOPICS: AppliedMathTopic[] = [
   { id: "vectors", number: "01", title: "ベクトル・内積・外積", shortTitle: "内積・外積", description: "成分、ノルム、直交、外積、三角形の面積を扱う。", pages: [1, 2, 4, 5], color: "#7aa7ff" },
   { id: "vector-functions", number: "02", title: "ベクトル関数の微分", shortTitle: "微分・速さ", description: "成分ごとの微分と積の微分、導関数の大きさを扱う。", pages: [3, 5], color: "#a88bff" },
-  { id: "curves", number: "03", title: "パラメータ曲線", shortTitle: "接線・弧長", description: "接ベクトル、単位接ベクトル、曲線の長さを求める。", pages: [6, 7, 10, 19], color: "#55dde0" },
-  { id: "surfaces", number: "04", title: "パラメータ曲面", shortTitle: "法線・表面積", description: "接平面、単位法線、幾何学的表面積を求める。", pages: [8, 9, 11, 17, 19], color: "#66e39e" },
-  { id: "gradient", number: "05", title: "勾配・等位面・方向微分", shortTitle: "勾配・方向微分", description: "勾配の計算と演算法則、方向微分の最大値を扱う。", pages: [12, 13, 14, 18, 19], color: "#ffd65c" },
-  { id: "divergence-curl", number: "06", title: "ベクトル場・発散・回転", shortTitle: "発散・回転", description: "ベクトル場を図示し、発散と回転、その意味を求める。", pages: [15, 16, 19], color: "#ff9f68" },
-  { id: "line-integrals", number: "07", title: "スカラー・ベクトル線積分", shortTitle: "線積分", description: "曲線の向きと速さを使い、スカラー場・ベクトル場を曲線に沿って積分する。", pages: [19, 20, 21, 22], color: "#ff7fbf" },
-  { id: "surface-integrals", number: "08", title: "スカラー・流束面積分", shortTitle: "面積分・流束", description: "曲面の面積要素を使い、スカラー場の面積分とベクトル場の流束を求める。", pages: [19], color: "#70d6ff" },
-  { id: "green-theorem", number: "09", title: "グリーンの定理", shortTitle: "グリーン", description: "正向きの閉曲線上の線積分を、内部領域の二重積分へ変換する。", pages: [19], color: "#c9f27b" },
+  { id: "curves", number: "03", title: "パラメータ曲線", shortTitle: "接線・弧長", description: "接ベクトル、単位接ベクトル、曲線の長さを求める。", pages: [6, 7, 10, 19, 27], color: "#55dde0" },
+  { id: "surfaces", number: "04", title: "パラメータ曲面", shortTitle: "法線・表面積", description: "接平面、単位法線、幾何学的表面積を求める。", pages: [8, 9, 11, 17, 19, 27], color: "#66e39e" },
+  { id: "gradient", number: "05", title: "勾配・等位面・方向微分", shortTitle: "勾配・方向微分", description: "勾配の計算と演算法則、方向微分の最大値を扱う。", pages: [12, 13, 14, 18, 19, 27], color: "#ffd65c" },
+  { id: "divergence-curl", number: "06", title: "ベクトル場・発散・回転", shortTitle: "発散・回転", description: "ベクトル場を図示し、発散と回転、その意味を求める。", pages: [15, 16, 19, 27], color: "#ff9f68" },
+  { id: "line-integrals", number: "07", title: "スカラー・ベクトル線積分", shortTitle: "線積分", description: "曲線の向きと速さを使い、スカラー場・ベクトル場を曲線に沿って積分する。", pages: [19, 20, 21, 22, 23, 24, 27], color: "#ff7fbf" },
+  { id: "surface-integrals", number: "08", title: "スカラー・流束面積分", shortTitle: "面積分・流束", description: "曲面の面積要素を使い、スカラー場の面積分とベクトル場の流束を求める。", pages: [19, 27], color: "#70d6ff" },
+  { id: "green-theorem", number: "09", title: "グリーンの定理", shortTitle: "グリーン", description: "正向きの閉曲線上の線積分を、内部領域の二重積分へ変換する。", pages: [19, 25, 26, 27], color: "#c9f27b" },
 ];
 
 const APPLIED_MATH_FORMULA_DEFINITIONS: Array<Omit<AppliedMathFormulaCard, "sourcePages">> = [
@@ -196,6 +201,8 @@ const APPLIED_MATH_FORMULA_DEFINITIONS: Array<Omit<AppliedMathFormulaCard, "sour
   { id: "am-scalar-surface-integral", topic: "surface-integrals", title: "スカラー場の面積分", prompt: "パラメータ曲面上で \\(\\phi\\) を面積分すると？", formula: "\\int_S\\phi\\,dS=\\iint_D\\phi(\\mathbf r(u,v))\\,|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv", explanation: "曲面上の場の値に面積の拡大率を掛け、パラメータ領域で二重積分する。向きには依存しない。", cue: "場を代入×外積の大きさ" },
   { id: "am-flux-surface-integral", topic: "surface-integrals", title: "ベクトル場の流束面積分", prompt: "向き付き曲面を通過する流束は？", formula: "\\int_S\\mathbf a\\cdot\\mathbf n\\,dS=\\iint_D\\mathbf a(\\mathbf r(u,v))\\cdot(\\mathbf r_u\\times\\mathbf r_v)\\,du\\,dv", explanation: "場の法線方向成分を曲面全体で足す。指定された法線方向に合わせて外積の順序を決める。", cue: "場と向き付き外積の内積" },
   { id: "am-green-theorem", topic: "green-theorem", title: "グリーンの定理", prompt: "正向きの閉曲線上の線積分を二重積分へ直すと？", formula: "\\oint_C(P\\,dx+Q\\,dy)=\\iint_D\\left(\\frac{\\partial Q}{\\partial x}-\\frac{\\partial P}{\\partial y}\\right)dA", explanation: "反時計回りの閉曲線を境界にもつ平面領域で使う。線積分を内部の回転を足す二重積分へ変換する。", cue: "Qをxで微分−Pをyで微分" },
+  { id: "am-green-conditions", topic: "green-theorem", title: "グリーンの定理の使用条件", prompt: "グリーンの定理を使うための曲線の向きと関数の条件は？", formula: "C=\\partial D\\quad(\\mathrm{positive\\ orientation}),\\qquad P,Q\\in C^1(D)", explanation: "Cは領域Dを左側に見ながら進む単純閉曲線、すなわち通常は反時計回りである。P、Qと必要な偏導関数がD上で連続であることも確認する。", cue: "単純閉曲線・反時計回り・連続偏導関数" },
+  { id: "am-green-proof-components", topic: "green-theorem", title: "グリーンの定理の成分別証明", prompt: "Pdx項とQdy項をそれぞれ二重積分へ直す式は？", formula: "\\begin{aligned}\\oint_C P\\,dx&=-\\iint_D\\frac{\\partial P}{\\partial y}\\,dA\\\\ \\oint_C Q\\,dy&=\\iint_D\\frac{\\partial Q}{\\partial x}\\,dA\\end{aligned}", explanation: "下側と上側、右側と左側の境界積分を基本定理でまとめると2式が得られる。両式を加えることでグリーンの定理になる。", cue: "Pdxは−P_y、Qdyは＋Q_x" },
 ];
 
 function sourcePagesForTopic(topic: AppliedMathTopicId) {
@@ -259,7 +266,7 @@ export const APPLIED_MATH_QUESTIONS: AppliedMathQuestion[] = [
   courseQuestion({ id: "am-q-div-curl-scalar-product", topic: "divergence-curl", genre: "補助公式・積の微分", difficulty: 2, format: "choice", prompt: "スカラー場 \\(\\phi\\) とベクトル場 \\(\\mathbf a\\) の積に関する正しい組を選べ。", answer: "\\(\\nabla\\cdot(\\phi\\mathbf a)=\\nabla\\phi\\cdot\\mathbf a+\\phi\\nabla\\cdot\\mathbf a,\\ \\nabla\\times(\\phi\\mathbf a)=\\nabla\\phi\\times\\mathbf a+\\phi\\nabla\\times\\mathbf a\\)", options: ["\\(\\nabla\\cdot(\\phi\\mathbf a)=\\nabla\\phi\\cdot\\mathbf a+\\phi\\nabla\\cdot\\mathbf a,\\ \\nabla\\times(\\phi\\mathbf a)=\\nabla\\phi\\times\\mathbf a+\\phi\\nabla\\times\\mathbf a\\)", "\\(\\nabla\\cdot(\\phi\\mathbf a)=\\phi\\nabla\\cdot\\mathbf a\\) だけ", "\\(\\nabla\\times(\\phi\\mathbf a)=\\mathbf a\\times\\nabla\\phi+\\phi\\nabla\\times\\mathbf a\\)", "どちらも \\(\\nabla\\phi+\\nabla\\mathbf a\\)"], steps: ["スカラー場を微分する項と、ベクトル場を微分する項に分ける", "curlでは \\(\\nabla\\phi\\times\\mathbf a\\) の順序を保つ"], explanation: "積の微分と同じ2項が必要で、外積は順序を逆にすると符号が変わる。" }),
   courseQuestion({ id: "am-q-vector-calculus-zero-identities", topic: "divergence-curl", genre: "補助公式・恒等式", difficulty: 1, format: "choice", prompt: "十分滑らかな場で常に成り立つ組を選べ。", answer: "\\(\\nabla\\times(\\nabla\\phi)=\\mathbf0,\\ \\nabla\\cdot(\\nabla\\times\\mathbf a)=0\\)", options: ["\\(\\nabla\\times(\\nabla\\phi)=\\mathbf0,\\ \\nabla\\cdot(\\nabla\\times\\mathbf a)=0\\)", "\\(\\nabla\\cdot(\\nabla\\phi)=0,\\ \\nabla\\times(\\nabla\\times\\mathbf a)=\\mathbf0\\)", "\\(\\nabla\\times(\\nabla\\phi)=1,\\ \\nabla\\cdot(\\nabla\\times\\mathbf a)=1\\)", "どちらも一般には定義できない"], steps: ["curl gradでは混合偏微分が差で相殺する", "div curlでも混合偏微分が差で相殺する"], explanation: "十分滑らかなら混合偏微分の順序を交換できるため、curl gradとdiv curlはともに0になる。" }),
 
-  courseQuestion({ id: "am-q-source-paraboloid-area", topic: "surfaces", genre: "追加範囲・曲面積", difficulty: 3, format: "text", prompt: "\\(\\mathbf r(u,v)=(u\\cos v,u\\sin v,u^2)\\), \\(0\\le u\\le1,0\\le v\\le2\\pi\\) の曲面積を求めよ。", answer: "\\(\\frac{\\pi}{6}(5\\sqrt5-1)\\)", accepted: ["pi(5sqrt5-1)/6", "π(5√5-1)/6"], keywords: ["5", "1", "6"], minKeywords: 3, formula: "S=\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv", steps: ["\\(\\mathbf r_u=(\\cos v,\\sin v,2u),\\ \\mathbf r_v=(-u\\sin v,u\\cos v,0)\\)", "\\(\\mathbf r_u\\times\\mathbf r_v=(-2u^2\\cos v,-2u^2\\sin v,u)\\)", "\\(|\\mathbf r_u\\times\\mathbf r_v|=u\\sqrt{4u^2+1}\\)", "\\(2\\pi\\int_0^1u\\sqrt{4u^2+1}\\,du=\\frac{\\pi}{6}(5\\sqrt5-1)\\)"], explanation: "追加演習紙の第三成分 \\(u^2\\) を採用する。基本問題問4の \\(v^2\\) 表記とは矛盾するため、その版は自動出題しない。" }),
+  courseQuestion({ id: "am-q-source-paraboloid-area", topic: "surfaces", genre: "追加範囲・曲面積", difficulty: 3, format: "text", prompt: "\\(\\mathbf r(u,v)=(u\\cos v,u\\sin v,u^2)\\), \\(0\\le u\\le1,0\\le v\\le2\\pi\\) の曲面積を求めよ。", answer: "\\(\\frac{\\pi}{6}(5\\sqrt5-1)\\)", accepted: ["pi(5sqrt5-1)/6", "π(5√5-1)/6"], keywords: ["5", "1", "6"], minKeywords: 3, formula: "S=\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv", steps: ["\\(\\mathbf r_u=(\\cos v,\\sin v,2u),\\ \\mathbf r_v=(-u\\sin v,u\\cos v,0)\\)", "\\(\\mathbf r_u\\times\\mathbf r_v=(-2u^2\\cos v,-2u^2\\sin v,u)\\)", "\\(|\\mathbf r_u\\times\\mathbf r_v|=u\\sqrt{4u^2+1}\\)", "\\(2\\pi\\int_0^1u\\sqrt{4u^2+1}\\,du=\\frac{\\pi}{6}(5\\sqrt5-1)\\)"], explanation: "追加範囲2の高画質な基本問題問4で第三成分が \\(u^2\\) と確認できた。偏微分ベクトル、外積、その大きさを順に求めて曲面積へつなぐ。" }),
   courseQuestion({ id: "am-q-source-cylinder-area", topic: "surfaces", genre: "追加範囲・曲面積", difficulty: 2, format: "number", prompt: "\\(\\mathbf r(u,v)=(\\cos u,\\sin u,v^2)\\), \\(0\\le u\\le\\pi,0\\le v\\le2\\) の曲面積を \\(\\pi\\) の係数で答えよ。", answer: "\\(4\\pi\\)（係数4）", numericAnswer: 4, formula: "S=\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv", steps: ["\\(\\mathbf r_u=(-\\sin u,\\cos u,0),\\ \\mathbf r_v=(0,0,2v)\\)", "\\(|\\mathbf r_u\\times\\mathbf r_v|=2v\\)", "\\(\\int_0^\\pi\\int_0^2 2v\\,dv\\,du=4\\pi\\)"], explanation: "入力欄には \\(\\pi\\) の係数4を入力する。範囲では \\(v\\ge0\\) なので大きさは \\(2v\\)。" }),
 
   courseQuestion({ id: "am-q-source-gradient", topic: "gradient", genre: "追加範囲・勾配", difficulty: 2, format: "choice", prompt: "\\(\\phi=xyz^3+2x^2z\\) の点 \\(P=(1,-1,1)\\) における勾配を選べ。", answer: "\\((3,1,-1)\\)", options: ["\\((3,1,-1)\\)", "\\((1,3,-1)\\)", "\\((3,-1,1)\\)", "\\((4,1,-3)\\)"], formula: "\\nabla\\phi=(\\phi_x,\\phi_y,\\phi_z)", steps: ["\\(\\nabla\\phi=(yz^3+4xz,xz^3,3xyz^2+2x^2)\\)", "\\(P=(1,-1,1)\\) を代入する", "\\(\\nabla\\phi(P)=(3,1,-1)\\)"], explanation: "各偏微分を先に作ってから点を代入する。特にz成分の符号を確認する。" }),
@@ -277,9 +284,12 @@ export const APPLIED_MATH_QUESTIONS: AppliedMathQuestion[] = [
   courseQuestion({ id: "am-q-vector-line-two", topic: "line-integrals", genre: "ベクトル線積分", difficulty: 3, format: "number", prompt: "\\(C:\\mathbf r(t)=(t,t^2,t+t^2)\\), \\(1\\le t\\le2\\)、\\(\\mathbf a=(x-2y,2z,-x)\\) の線積分を求めよ。", answer: "15", numericAnswer: 15, formula: "\\int_C\\mathbf a\\cdot d\\mathbf r=\\int_a^b\\mathbf a(\\mathbf r(t))\\cdot\\mathbf r'(t)dt", steps: ["\\(\\mathbf a(\\mathbf r(t))=(t-2t^2,2t+2t^2,-t)\\)", "\\(\\mathbf r'(t)=(1,2t,1+2t)\\)", "内積を整理すると \\(4t^3\\)", "\\(\\int_1^2 4t^3dt=[t^4]_1^2=15\\)"], explanation: "展開時に2次項が打ち消し合う。積分区間が1から2であることにも注意する。" }),
   courseQuestion({ id: "am-q-gradient-theorem", topic: "line-integrals", genre: "勾配定理", difficulty: 1, format: "choice", prompt: "\\(\\mathbf a=\\nabla\\phi\\) のとき、点AからBへ至る曲線C上の線積分として正しいものを選べ。", answer: "\\(\\phi(B)-\\phi(A)\\)", options: ["\\(\\phi(B)-\\phi(A)\\)", "\\(\\phi(A)-\\phi(B)\\)", "\\(\\phi(A)+\\phi(B)\\)", "経路ごとに必ず異なる"], steps: ["合成関数の微分で被積分関数は \\(\\frac{d}{dt}\\phi(\\mathbf r(t))\\)", "端点で評価して \\(\\phi(B)-\\phi(A)\\)"], explanation: "勾配場の線積分は経路独立で、始点と終点のスカラー場の値だけで決まる。" }),
 
+  courseQuestion({ id: "am-q-path-reversal", topic: "line-integrals", genre: "経路反転", difficulty: 2, format: "number", prompt: "\\(C_1:\\mathbf r(t)=(t,0,0)\\), \\(-3\\le t\\le3\\)、\\(\\mathbf a=(x^2,y,-z)\\) とする。逆向きの経路 \\(-C_1\\) に沿う \\(\\int_{-C_1}\\mathbf a\\cdot d\\mathbf r\\) を求めよ。", answer: "-18", numericAnswer: -18, formula: "\\int_{-C}\\mathbf a\\cdot d\\mathbf r=-\\int_C\\mathbf a\\cdot d\\mathbf r", steps: ["\\(C_1\\) 上では \\(\\mathbf a=(t^2,0,0)\\)、\\(d\\mathbf r=(1,0,0)dt\\)", "\\(\\int_{C_1}\\mathbf a\\cdot d\\mathbf r=\\int_{-3}^{3}t^2dt=18\\)", "逆向きなので \\(\\int_{-C_1}\\mathbf a\\cdot d\\mathbf r=-18\\)"], explanation: "経路を逆向きにたどると接ベクトルの向きが反転するため、ベクトル場の線積分は符号が反転する。" }),
+  courseQuestion({ id: "am-q-path-concatenation", topic: "line-integrals", genre: "経路結合", difficulty: 3, format: "number", prompt: "\\(C_1:\\mathbf r(t)=(t,0,0),-3\\le t\\le3\\)、\\(C_2:\\mathbf r(t)=(3\\cos t,3\\sin t,0),0\\le t\\le\\pi\\)、\\(\\mathbf a=(x^2,y,-z)\\) とする。\\(\\int_{C_1+C_2}\\mathbf a\\cdot d\\mathbf r\\) を求めよ。", answer: "0", numericAnswer: 0, formula: "\\int_{C_1+C_2}\\mathbf a\\cdot d\\mathbf r=\\int_{C_1}\\mathbf a\\cdot d\\mathbf r+\\int_{C_2}\\mathbf a\\cdot d\\mathbf r", steps: ["前問と同様に \\(\\int_{C_1}\\mathbf a\\cdot d\\mathbf r=18\\)", "\\(C_2\\) では \\(\\mathbf a=(9\\cos^2t,3\\sin t,0)\\)、\\(\\mathbf r'=(-3\\sin t,3\\cos t,0)\\)", "\\(\\int_0^\\pi(-27\\cos^2t\\sin t+9\\sin t\\cos t)dt=-18\\)", "したがって \\(18+(-18)=0\\)"], explanation: "結合経路では各区間の線積分を足す。2本目を単独で計算してから合計すると、符号と向きを確認しやすい。" }),
   courseQuestion({ id: "am-q-scalar-surface-cylinder", topic: "surface-integrals", genre: "スカラー面積分", difficulty: 3, format: "text", prompt: "半径 \\(a\\)、高さ \\(h\\) の円柱側面 \\(\\mathbf r(u,v)=(a\\cos u,a\\sin u,v)\\) 上で \\(\\phi=x^2\\) の面積分を求めよ。", context: "\\(0\\le u\\le2\\pi,\\ 0\\le v\\le h\\)", answer: "\\(\\pi a^3h\\)", accepted: ["pi a^3 h", "πa3h"], keywords: ["a", "3", "h"], minKeywords: 3, formula: "\\int_S\\phi\\,dS=\\iint_D\\phi(\\mathbf r)|\\mathbf r_u\\times\\mathbf r_v|dudv", steps: ["\\(|\\mathbf r_u\\times\\mathbf r_v|=a\\)", "\\(\\phi=a^2\\cos^2u\\)", "\\(\\int_0^h\\int_0^{2\\pi}a^3\\cos^2u\\,du\\,dv=\\pi a^3h\\)"], explanation: "スカラー場の値と曲面の面積要素を掛ける。円周方向の \\(\\cos^2u\\) の積分は \\(\\pi\\)。" }),
   courseQuestion({ id: "am-q-flux-source", topic: "surface-integrals", genre: "流束面積分", difficulty: 3, format: "number", prompt: "\\(\\mathbf r(u,v)=(u,v,\\sqrt{9-u^2})\\), \\(0\\le u\\le3,0\\le v\\le4\\)、\\(\\mathbf a=(6z,2x+y,-x)\\) とする。z成分が正の法線方向の流束 \\(\\int_S\\mathbf a\\cdot\\mathbf n\\,dS\\) を求めよ。", answer: "90", numericAnswer: 90, formula: "\\int_S\\mathbf a\\cdot\\mathbf n\\,dS=\\iint_D\\mathbf a(\\mathbf r)\\cdot(\\mathbf r_u\\times\\mathbf r_v)dudv", steps: ["\\(\\mathbf r_u\\times\\mathbf r_v=(\\frac{u}{\\sqrt{9-u^2}},0,1)\\) はz成分が正", "\\(\\mathbf a(\\mathbf r)\\cdot(\\mathbf r_u\\times\\mathbf r_v)=6u-u=5u\\)", "\\(\\int_0^4\\int_0^3 5u\\,du\\,dv=90\\)"], explanation: "単位法線とdSを別々に計算する代わりに、向き付き外積をそのまま使うと簡潔になる。" }),
 
+  courseQuestion({ id: "am-q-green-proof-components", topic: "green-theorem", genre: "グリーンの定理・証明", difficulty: 2, format: "text", prompt: "正向きの単純閉曲線 \\(C=\\partial D\\) について、\\(P\\,dx\\) 項と \\(Q\\,dy\\) 項をそれぞれ領域D上の二重積分へ直す2式を書き、加えるとグリーンの定理になることを示せ。", answer: "\\(\\oint_C P\\,dx=-\\iint_D P_y\\,dA\\)、\\(\\oint_C Q\\,dy=\\iint_D Q_x\\,dA\\)", accepted: ["∮Pdx=-∬PydA,∮Qdy=∬QxdA", "Pdx=-Py,Qdy=Qx"], keywords: ["P", "Q", "-", "x", "y"], minKeywords: 5, formula: "\\begin{aligned}\\oint_C P\\,dx&=-\\iint_D\\frac{\\partial P}{\\partial y}\\,dA\\\\ \\oint_C Q\\,dy&=\\iint_D\\frac{\\partial Q}{\\partial x}\\,dA\\end{aligned}", steps: ["領域を \\(D=\\{(x,y)\\mid a\\le x\\le b,\\ \\varphi(x)\\le y\\le\\psi(x)\\}\\) と表す", "下側と上側の向きを含めて \\(\\oint_C Pdx=\\int_a^b[P(x,\\varphi(x))-P(x,\\psi(x))]dx\\)", "微積分の基本定理から \\(\\oint_C Pdx=-\\iint_D P_y\\,dA\\)", "同様に \\(\\oint_C Qdy=\\iint_D Q_x\\,dA\\) とし、2式を加える"], explanation: "追加範囲2の証明用紙にある分解である。Pdx側だけ負号が付き、Qdy側は正号になる点が重要。" }),
   courseQuestion({ id: "am-q-green-square", topic: "green-theorem", genre: "グリーンの定理", difficulty: 3, format: "number", prompt: "正方形 \\(0\\le x\\le1,0\\le y\\le1\\) の境界Cを反時計回りに一周するとき、\\(\\oint_C\\{(x^2+2y^2)dx+xy^2dy\\}\\) を求めよ。", answer: "\\(-\\frac53\\)", numericAnswer: -5 / 3, tolerance: 0.0001, formula: "\\oint_C(Pdx+Qdy)=\\iint_D(Q_x-P_y)dA", steps: ["\\(P=x^2+2y^2,\\ Q=xy^2\\)", "\\(Q_x-P_y=y^2-4y\\)", "\\(\\int_0^1\\int_0^1(y^2-4y)\\,dy\\,dx=-\\frac53\\)"], explanation: "O→A→B→Cの順は反時計回りの正向き。微分の順序は \\(Q_x-P_y\\) である。" }),
   courseQuestion({ id: "am-q-green-circle", topic: "green-theorem", genre: "グリーンの定理", difficulty: 2, format: "number", prompt: "半径2の円の境界Cを反時計回りに一周するとき、\\(\\oint_C\\{(x-y)dx+(x+y)dy\\}\\) を \\(\\pi\\) の係数で答えよ。", answer: "\\(8\\pi\\)（係数8）", numericAnswer: 8, formula: "\\oint_C(Pdx+Qdy)=\\iint_D(Q_x-P_y)dA", steps: ["\\(Q_x=1,\\ P_y=-1\\) より \\(Q_x-P_y=2\\)", "半径2の円の面積は \\(4\\pi\\)", "\\(2\\times4\\pi=8\\pi\\)"], explanation: "入力欄には \\(\\pi\\) の係数8を入力する。向きを逆にすると答えの符号も逆になる。" }),
 ];
@@ -778,17 +788,18 @@ function buildAppliedMathExam(variant: number): AppliedMathExpectedExam {
           genre: "Greenの定理",
           difficulty: 3,
           format: "number",
-          prompt: "前問と同じ線積分をGreenの定理で計算し、前問の値と一致することを確認せよ。答えは \\(\\pi\\) の係数で入力すること。",
+          prompt: "グリーンの定理の使用条件（曲線の向きと関数の条件）を述べたうえで、前問と同じ線積分を二重積分へ直し、前問の値と一致することを確認せよ。答えは \\(\\pi\\) の係数で入力すること。",
           answer: "\\(" + circulationCoefficient + "\\pi\\)（係数" + circulationCoefficient + "）",
           numericAnswer: circulationCoefficient,
           formula: "\\oint_C(P\\,dx+Q\\,dy)=\\iint_D(Q_x-P_y)\\,dA",
           steps: [
+            "Cは反時計回りの単純閉曲線で、P、Qと必要な偏導関数は領域上で連続なのでグリーンの定理を適用できる",
             "第(2)問と同じく \\(Q_x-P_y=" + fieldB + "-(-" + fieldB + ")=" + curlZ + "\\)",
             "円の面積は \\(" + greenRadius ** 2 + "\\pi\\)",
             "\\(\\iint_D" + curlZ + "\\,dA=" + curlZ + "\\cdot" + greenRadius ** 2 + "\\pi="
               + circulationCoefficient + "\\pi\\) で前問と一致する",
           ],
-          explanation: "反時計回りは正向きなので符号を変えない。回転のz成分、直接線積分、Greenの定理の3つを一続きで照合する問題である。",
+          explanation: "反時計回りの単純閉曲線、領域上での連続偏導関数という使用条件まで答案へ書く。回転のz成分、直接線積分、Greenの定理を一続きで照合する問題である。",
         }),
       ],
     },
@@ -814,7 +825,7 @@ function buildAppliedMathExam(variant: number): AppliedMathExpectedExam {
     id,
     number: variant,
     title: "全範囲予想 " + String(variant).padStart(2, "0"),
-    subtitle: "応用数学・全22枚範囲・形式1/2/3の記述構成に準拠",
+    subtitle: "応用数学・全27枚範囲・形式1/2/3の記述構成に準拠",
     variant,
     durationMinutes: 50,
     minutes: 50,
@@ -859,7 +870,7 @@ export const APPLIED_MATH_EXAM_LEVEL_QUESTIONS: AppliedMathQuestion[] = APPLIED_
   );
 
 /** 模試の各大問を、前問を省略しない一続きの本番型問題として出すプール。 */
-export const APPLIED_MATH_PRINT_LEVEL_QUESTIONS: AppliedMathQuestion[] =
+const APPLIED_MATH_EXPECTED_PRINT_LEVEL_QUESTIONS: AppliedMathQuestion[] =
   APPLIED_MATH_EXPECTED_EXAMS.flatMap((exam) =>
     exam.sections.map((section) => {
       const finalQuestion = section.questions.at(-1)!;
@@ -888,6 +899,93 @@ export const APPLIED_MATH_PRINT_LEVEL_QUESTIONS: AppliedMathQuestion[] =
     }),
   );
 
+export const APPLIED_MATH_RANGE2_PRINT_LEVEL_QUESTIONS: AppliedMathQuestion[] = [
+  courseQuestion({
+    id: "am-range2-print-scalar-line-integrals",
+    topic: "line-integrals",
+    genre: "追加範囲2・第13回線積分大問",
+    difficulty: 3,
+    format: "text",
+    context: "\\(C_1:\\mathbf r(t)=(\\cos t,\\sin t,1),0\\le t\\le\\pi\\)、\\(C_2:\\mathbf r(t)=(\\cos t,\\sin t,t),0\\le t\\le\\frac{\\pi}{2}\\) とする。",
+    prompt: "次を順に計算せよ。(1) \\(C_1\\) 上の \\(\\int_C(x^2+z)ds\\) と \\(\\int_C(x^2+z)dx\\)。(2) \\(C_2\\) 上の \\(\\int_C(x+y^2)ds\\) と \\(\\int_C(x+y^2)dy\\)。解答欄には最後の積分値を入力すること。",
+    answer: "\\(\\frac{\\pi}{4}+\\frac13\\)",
+    accepted: ["pi/4+1/3", "π/4+1/3"],
+    keywords: ["4", "1", "3"],
+    minKeywords: 3,
+    formula: "\\int_C\\phi\\,ds=\\int_a^b\\phi(\\mathbf r(t))|\\mathbf r'(t)|dt",
+    steps: [
+      "\\(C_1\\) では \\(|\\mathbf r'|=1\\) より \\(\\int_C(x^2+z)ds=\\frac{3\\pi}{2}\\)",
+      "\\(dx=-\\sin tdt\\) より \\(\\int_C(x^2+z)dx=-\\frac83\\)",
+      "\\(C_2\\) では \\(|\\mathbf r'|=\\sqrt2\\) より \\(\\int_C(x+y^2)ds=\\sqrt2(1+\\frac{\\pi}{4})\\)",
+      "\\(dy=\\cos tdt\\) より \\(\\int_C(x+y^2)dy=\\frac{\\pi}{4}+\\frac13\\)",
+    ],
+    explanation: "ds型では速さを掛け、dx・dy型では対応する座標成分の導関数を掛ける。4問を並べて違いを確認する第13回演習そのままの構成。",
+  }),
+  courseQuestion({
+    id: "am-range2-print-path-composition",
+    topic: "line-integrals",
+    genre: "追加範囲2・経路反転と結合",
+    difficulty: 3,
+    format: "number",
+    context: "\\(C_1:\\mathbf r(t)=(t,0,0),-3\\le t\\le3\\)、\\(C_2:\\mathbf r(t)=(3\\cos t,3\\sin t,0),0\\le t\\le\\pi\\)、\\(\\mathbf a=(x^2,y,-z)\\) とする。",
+    prompt: "(1) \\(\\int_{C_1}\\mathbf a\\cdot d\\mathbf r\\) を求め、向きを反転した値を答えよ。(2) \\(\\int_{C_2}\\mathbf a\\cdot d\\mathbf r\\) を求め、最後に \\(\\int_{C_1+C_2}\\mathbf a\\cdot d\\mathbf r\\) を求めよ。解答欄には結合経路の値を入力すること。",
+    answer: "0",
+    numericAnswer: 0,
+    formula: "\\int_{C_1+C_2}\\mathbf a\\cdot d\\mathbf r=\\int_{C_1}\\mathbf a\\cdot d\\mathbf r+\\int_{C_2}\\mathbf a\\cdot d\\mathbf r",
+    steps: [
+      "\\(\\int_{C_1}t^2dt=18\\)、逆向きでは \\(-18\\)",
+      "\\(C_2\\) では内積が \\(-27\\cos^2t\\sin t+9\\sin t\\cos t\\)",
+      "\\(\\int_{C_2}\\mathbf a\\cdot d\\mathbf r=-18\\)",
+      "結合経路では \\(18+(-18)=0\\)",
+    ],
+    explanation: "向きを反転すると符号が変わり、経路を結合すると各区間の積分を足す。経路法則と実積分を同時に使う。",
+  }),
+  courseQuestion({
+    id: "am-range2-print-paraboloid-area",
+    topic: "surfaces",
+    genre: "追加範囲2・基本問題問4",
+    difficulty: 3,
+    format: "text",
+    context: "\\(\\mathbf r(u,v)=(u\\cos v,u\\sin v,u^2)\\)、\\(0\\le u\\le1,0\\le v\\le2\\pi\\) が表す曲面Sを考える。",
+    prompt: "(1) \\(\\mathbf r_u\\)、\\(\\mathbf r_v\\)、\\(\\mathbf r_u\\times\\mathbf r_v\\) を求めよ。(2) 外積の大きさを求めよ。(3) 曲面Sの面積を求めよ。解答欄には(3)を入力すること。",
+    answer: "\\(\\frac{\\pi}{6}(5\\sqrt5-1)\\)",
+    accepted: ["pi(5sqrt5-1)/6", "π(5√5-1)/6"],
+    keywords: ["5", "1", "6"],
+    minKeywords: 3,
+    formula: "S=\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv",
+    steps: [
+      "\\(\\mathbf r_u=(\\cos v,\\sin v,2u)\\)、\\(\\mathbf r_v=(-u\\sin v,u\\cos v,0)\\)",
+      "\\(\\mathbf r_u\\times\\mathbf r_v=(-2u^2\\cos v,-2u^2\\sin v,u)\\)",
+      "\\(|\\mathbf r_u\\times\\mathbf r_v|=u\\sqrt{4u^2+1}\\)",
+      "\\(2\\pi\\int_0^1u\\sqrt{4u^2+1}du=\\frac{\\pi}{6}(5\\sqrt5-1)\\)",
+    ],
+    explanation: "高画質版で第三成分はu²と確定した。接ベクトル、外積、面積拡大率、二重積分を省略せずにつなぐ基本問題問4。",
+  }),
+  courseQuestion({
+    id: "am-range2-print-green-proof-and-calculation",
+    topic: "green-theorem",
+    genre: "追加範囲2・第14回Green大問",
+    difficulty: 3,
+    format: "number",
+    context: "Cは領域Dを左側に見ながら反時計回りに一周する単純閉曲線とする。",
+    prompt: "(1) グリーンの定理の使用条件と、Pdx項・Qdy項を別々に二重積分へ直す2式を書け。(2) 単位正方形で \\(P=x^2+2y^2,Q=xy^2\\) の線積分を求めよ。(3) 半径2の円で \\(P=x-y,Q=x+y\\) の線積分を求めよ。解答欄には(3)の \\(\\pi\\) の係数を入力すること。",
+    answer: "\\(8\\pi\\)（係数8）",
+    numericAnswer: 8,
+    formula: "\\oint_C(P\\,dx+Q\\,dy)=\\iint_D(Q_x-P_y)\\,dA",
+    steps: [
+      "単純閉曲線の正向きと、P、Qの連続偏導関数を確認する",
+      "\\(\\oint_C Pdx=-\\iint_D P_y dA\\)、\\(\\oint_C Qdy=\\iint_D Q_xdA\\)",
+      "正方形では \\(Q_x-P_y=y^2-4y\\) より \\(-\\frac53\\)",
+      "円では \\(Q_x-P_y=2\\)、面積 \\(4\\pi\\) より \\(8\\pi\\)",
+    ],
+    explanation: "第14回の証明と2つの演習を一続きにした問題。Pdx側の負号、正向き、円の面積をまとめて確認する。",
+  }),
+];
+
+export const APPLIED_MATH_PRINT_LEVEL_QUESTIONS: AppliedMathQuestion[] = [
+  ...APPLIED_MATH_EXPECTED_PRINT_LEVEL_QUESTIONS,
+  ...APPLIED_MATH_RANGE2_PRINT_LEVEL_QUESTIONS,
+];
 export const APPLIED_MATH_EXAM_FORMATS = [
   {
     id: "format1-no1",
@@ -924,5 +1022,5 @@ export const APPLIED_MATH_EXAM_SPEC = {
   bigQuestionCount: 6,
   expectedExamCount: 6,
   paper: "A4 portrait",
-  sourcePolicy: "問題内容は当初範囲16画像と追加範囲6画像の全22画像だけを使用",
+  sourcePolicy: "問題内容は当初範囲16画像・追加範囲6画像・追加範囲2の5画像、全27画像だけを使用",
 } as const;

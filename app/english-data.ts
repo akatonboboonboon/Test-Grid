@@ -305,6 +305,9 @@ const ADDITIONAL_RAW_VOCAB: RawVocab[] = [
   ["medical", "outpatient", "外来患者", "out「外で」+ patient「患者」。入院せず、外から通院して診療を受ける人。"],
   ["medical", "surgery", "手術、外科", "ギリシャ語 kheirourgia「手の仕事」に由来し、手を用いる治療から手術・外科。"],
   ["medical", "temperature", "体温、温度", "ラテン語 temperare「適度にする・調整する」と同系で、熱さ冷たさの程度。"],
+
+  ["ch15", "intersection", "交差点、交差する領域", "範囲補足小テストの指定語。inter-「間で」+ section「切ること」から、線が交わる点や二分野が交わる領域を表す。"],
+  ["ch15", "involve", "～を含む、伴う", "範囲補足小テストの指定語。in-「中へ」+ ラテン語 volvere「巻く」と同系で、物事の中へ巻き込むことから「含む・伴う」。"],
 ];
 
 export const ENGLISH_VOCAB: EnglishVocabCard[] = [...RAW_VOCAB, ...ADDITIONAL_RAW_VOCAB]
@@ -666,6 +669,16 @@ const ORDER_QUESTIONS: RawOrder[] = [
   ["ch19", "container", "刺身のプラスチックの入れ物が、店の棚の上にあります。", ["Plastic", "containers of", "sashimi", "are", "on", "the store", "shelves"], "Plastic containers of sashimi are on the store shelves."],
 ];
 
+const CH15_RANGE_QUIZ_SOURCE_LABEL = "Chapter 15 範囲補足小テスト（提供写真）";
+
+function ch15RangeQuizReference(quote: string, translation: string): EnglishQuestionReference {
+  return {
+    label: CH15_RANGE_QUIZ_SOURCE_LABEL,
+    quote,
+    translation,
+  };
+}
+
 const CORE_QUESTIONS: EnglishQuestion[] = [
   {
     id: "sample-his",
@@ -747,6 +760,10 @@ const CORE_QUESTIONS: EnglishQuestion[] = [
     options: ["前置詞なし", "per", "by", "at"],
     answer: "per",
     explanation: "per + 単位で「～につき」です。",
+    reference: ch15RangeQuizReference(
+      "The rental fee of the device costs 2000 yen ( ___ ) week. Choices: by / per",
+      "その装置のレンタル料は1週間につき2,000円です。",
+    ),
   },
   {
     id: "ch15-prep-3",
@@ -757,6 +774,10 @@ const CORE_QUESTIONS: EnglishQuestion[] = [
     options: ["前置詞なし", "per", "by", "for"],
     answer: "by",
     explanation: "by the hourで「時間単位で」です。",
+    reference: ch15RangeQuizReference(
+      "The researcher gets paid ( ___ ) the hour. Choices: by / per",
+      "その研究者は時間給で報酬を受け取ります。",
+    ),
   },
   {
     id: "ch15-prep-4",
@@ -767,6 +788,10 @@ const CORE_QUESTIONS: EnglishQuestion[] = [
     options: ["前置詞なし", "per", "by", "on"],
     answer: "前置詞なし",
     explanation: "twice a monthで「月2回」です。",
+    reference: ch15RangeQuizReference(
+      "This science magazine is published twice ( ___ ) a month. Choices: by / per / no word",
+      "この科学雑誌は月に2回発行されます。",
+    ),
   },
   {
     id: "ch15-tf-1",
@@ -1581,7 +1606,203 @@ const CH14_CH15_FINAL_QUESTIONS: EnglishQuestion[] = [
   })),
 ];
 
+export const CH15_RANGE_QUIZ_SOURCE_IDS = [
+  "ch15-range-quiz-translation-1",
+  "ch15-range-quiz-translation-2",
+  "ch15-range-quiz-translation-3",
+  "ch15-range-quiz-vocab-intersection",
+  "ch15-range-quiz-vocab-genetic-engineering",
+  "ch15-range-quiz-vocab-involve",
+  "ch15-range-quiz-vocab-revive",
+  "ch15-range-quiz-order-leaning",
+  "ch15-range-quiz-order-eyes-closed",
+  "ch15-range-quiz-term-petrochemicals",
+  "ch15-range-quiz-term-dna-sequence",
+] as const;
+
+const CH15_RANGE_QUIZ_QUESTIONS: EnglishQuestion[] = [
+  {
+    id: "ch15-range-quiz-translation-1",
+    unit: "ch15",
+    group: "範囲補足小テスト｜和訳",
+    format: "translation",
+    grading: "japanese-semantic",
+    prompt: "次の英文を、挿入部分の働きと数量表現を落とさず自然な日本語に訳しなさい。Newman’s biotech company is creating new organisms, mostly forms of genetically modified yeast, at a dizzying rate of more than 1,500 a day.",
+    answer: "ニューマン氏のバイオテクノロジー企業は、主に遺伝子組み換え酵母の形をした新しい生命体を、1日1,500体を超えるめまぐるしい速度で作り出している。",
+    accepted: ["ニューマン氏のバイオ企業は、主に遺伝子組み換え酵母の形態である新しい生物を、1日に1500体を超える驚異的な速さで作っている。"],
+    options: [
+      "ニューマン氏のバイオテクノロジー企業は、主に遺伝子組み換え酵母の形をした新しい生命体を、1日1,500体を超えるめまぐるしい速度で作り出している。",
+      "ニューマン氏の企業は、遺伝子組み換え酵母を年間1,500体だけ作っている。",
+      "ニューマン氏は、1日に1,500個を超えるアプリを使って酵母を改造している。",
+      "ニューマン氏の会社は、遺伝子組み換えを行わずに既存の生命体を保存している。",
+    ],
+    explanation: "主節は Newman’s biotech company / is creating / new organisms。mostly forms of genetically modified yeast は organisms の中身を同格的に補足し、genetically modified は過去分詞で yeast を修飾します。at a dizzying rate が速度、of more than 1,500 a day がその具体量です。a day は前置詞なしで「1日につき」と訳します。",
+    reference: ch15RangeQuizReference(
+      "Newman’s biotech company is creating new organisms, mostly forms of genetically modified yeast, at a dizzying rate of more than 1,500 a day.",
+      "ニューマン氏のバイオテクノロジー企業は、主に遺伝子組み換え酵母の形をした新しい生命体を、1日1,500体を超えるめまぐるしい速度で作り出している。",
+    ),
+  },
+  {
+    id: "ch15-range-quiz-translation-2",
+    unit: "ch15",
+    group: "範囲補足小テスト｜和訳",
+    format: "translation",
+    grading: "japanese-semantic",
+    prompt: "Some と Others の対比、convert A into B、関係節を保って訳しなさい。Some convert sugar into medicines. Others create moisturizers that can be used in cosmetics.",
+    answer: "砂糖を医薬品に変換するものもあれば、化粧品に使用できる保湿剤を作り出すものもある。",
+    accepted: ["砂糖を薬に変えるものもあれば、化粧品に使える保湿剤を作るものもある。"],
+    options: [
+      "砂糖を医薬品に変換するものもあれば、化粧品に使用できる保湿剤を作り出すものもある。",
+      "医薬品を砂糖に戻すものと、化粧品を保湿剤として使うものがある。",
+      "すべての生命体が砂糖と化粧品から同じ医薬品を作る。",
+      "一部の研究者だけが医薬品と化粧品を購入している。",
+    ],
+    explanation: "Some ... Others ... は「～するものもあれば、別のものは…」という対比です。convert A into B は A を材料、B を変換後の結果として読むため、sugar が材料、medicines が生成物です。that can be used in cosmetics は moisturizers を修飾する関係節で、can be used は助動詞を伴う受動態です。",
+    reference: ch15RangeQuizReference(
+      "Some convert sugar into medicines. Others create moisturizers that can be used in cosmetics.",
+      "砂糖を医薬品に変換するものもあれば、化粧品に使用できる保湿剤を作り出すものもある。",
+    ),
+  },
+  {
+    id: "ch15-range-quiz-translation-3",
+    unit: "ch15",
+    group: "範囲補足小テスト｜和訳",
+    format: "translation",
+    grading: "japanese-semantic",
+    prompt: "数量表現と熟語の意味を保って訳しなさい。Hundreds of products are in the pipeline.",
+    answer: "何百もの製品が現在開発中である。",
+    accepted: ["何百もの製品が進行中である。", "数百の製品が開発段階にある。"],
+    options: [
+      "何百もの製品が現在開発中である。",
+      "何百本ものパイプの中に製品が入っている。",
+      "数百社が完成品を販売している。",
+      "製品の開発は数百日後に始まる。",
+    ],
+    explanation: "Hundreds of + 複数名詞は「何百もの～」。in the pipeline は物理的な配管の中ではなく、「計画・開発が進行中で」という熟語です。主語 products が複数なので be 動詞は are になります。",
+    reference: ch15RangeQuizReference(
+      "Hundreds of products are in the pipeline.",
+      "何百もの製品が現在開発中である。",
+    ),
+  },
+  {
+    id: "ch15-range-quiz-vocab-intersection",
+    unit: "ch15",
+    group: "範囲補足小テスト｜語彙（英→日）",
+    format: "input",
+    grading: "japanese-semantic",
+    prompt: "範囲補足小テスト：intersection の日本語の意味を書きなさい。",
+    answer: "交差点、交差する領域",
+    accepted: ["交差点", "交点", "交差する領域"],
+    options: ["交差点、交差する領域", "遺伝子工学", "～を含む、伴う", "再燃させる"],
+    explanation: "intersection は inter-「間で」+ section「切ること」。二本の線が互いに切り合う場所から「交差点・交点」、本文の at the intersection of biology and engineering では「生物学と工学が交わる領域」を表します。",
+    reference: ch15RangeQuizReference("Vocabulary: intersection", "交差点、交差する領域"),
+  },
+  {
+    id: "ch15-range-quiz-vocab-genetic-engineering",
+    unit: "ch15",
+    group: "範囲補足小テスト｜語彙（英→日）",
+    format: "input",
+    grading: "japanese-semantic",
+    prompt: "範囲補足小テスト：genetic engineering の日本語の意味を書きなさい。",
+    answer: "遺伝子工学",
+    accepted: ["遺伝子工学", "遺伝子操作技術"],
+    options: ["遺伝子工学", "交差点、交差する領域", "生物学的安全保障", "化学工学"],
+    explanation: "genetic は gene「遺伝子」+ 形容詞語尾 -ic、engineering は設計・操作の技術です。遺伝子を設計・操作する工学分野なので「遺伝子工学」。本文では traditional genetic engineering と新しい手法が対比されます。",
+    reference: ch15RangeQuizReference("Vocabulary: genetic engineering", "遺伝子工学"),
+  },
+  {
+    id: "ch15-range-quiz-vocab-involve",
+    unit: "ch15",
+    group: "範囲補足小テスト｜語彙（英→日）",
+    format: "input",
+    grading: "japanese-semantic",
+    prompt: "範囲補足小テスト：involve の日本語の意味を書きなさい。",
+    answer: "～を含む、伴う",
+    accepted: ["含む", "伴う", "～を含む", "～を伴う", "関与させる"],
+    options: ["～を含む、伴う", "再燃させる", "交換する", "ゼロから作る"],
+    explanation: "involve は in-「中へ」+ ラテン語 volvere「巻く」と同系で、対象を物事の中へ巻き込むイメージです。本文の involves swapping a few genes は「少数の遺伝子を入れ替えることを含む」と読みます。",
+    reference: ch15RangeQuizReference("Vocabulary: involve", "～を含む、伴う"),
+  },
+  {
+    id: "ch15-range-quiz-vocab-revive",
+    unit: "ch15",
+    group: "範囲補足小テスト｜語彙（英→日）",
+    format: "input",
+    grading: "japanese-semantic",
+    prompt: "範囲補足小テスト：revive の日本語の意味を書きなさい。",
+    answer: "再燃させる、復活させる",
+    accepted: ["再燃させる", "復活させる", "よみがえらせる", "再び活発にする"],
+    options: ["再燃させる、復活させる", "～を含む、伴う", "変換する", "大変革をもたらす"],
+    explanation: "revive は re-「再び」+ viv「生きる」で、再び生命や勢いを与える語です。本文では revive the ethical debate として、生命体を作ることを巡る「倫理的論争を再燃させる」と使われます。",
+    reference: ch15RangeQuizReference("Vocabulary: revive", "再燃させる、復活させる"),
+  },
+  {
+    id: "ch15-range-quiz-order-leaning",
+    unit: "ch15",
+    group: "語順整序｜範囲補足小テスト",
+    format: "order",
+    prompt: "「ある男の人が壁にもたれかかって立っています。」を並べ替えなさい。写真の印刷語群にある with は、この完成文では使わない。",
+    answer: "A man is standing, leaning against the wall.",
+    tokens: ["A", "man", "is", "standing,", "leaning", "against", "the", "wall."],
+    options: [
+      "A man is standing, leaning against the wall.",
+      "A man standing, is against leaning the wall.",
+      "A man leaning is standing, against the wall.",
+      "A man against the is standing, leaning wall.",
+    ],
+    explanation: "主節は A man / is standing。コンマ後の leaning against the wall は、同じ男性が同時にしている動作を補足する現在分詞句です。lean against + 物で「～にもたれかかる」というまとまりになるため、この構造に with は入りません。",
+    reference: ch15RangeQuizReference(
+      "並べ替え対象文（日本語）：ある男の人が壁にもたれかかって立っています。 印刷語群：against / standing, / the / is / a man / with / leaning / wall",
+      "A man is standing, leaning against the wall.",
+    ),
+  },
+  {
+    id: "ch15-range-quiz-order-eyes-closed",
+    unit: "ch15",
+    group: "語順整序｜範囲補足小テスト",
+    format: "order",
+    prompt: "「ある男の人が目を閉じて座っています。」を、eyes / sitting / a / man / closed / is / his / with を使って並べ替えなさい。",
+    answer: "A man is sitting with his eyes closed.",
+    tokens: ["A", "man", "is", "sitting", "with", "his", "eyes", "closed."],
+    options: [
+      "A man is sitting with his eyes closed.",
+      "A man with his eyes is sitting closed.",
+      "A man his eyes is sitting with closed.",
+      "A man is with his eyes sitting closed.",
+    ],
+    explanation: "主節は A man / is sitting。with his eyes closed は with + 目的語 his eyes + 補語 closed の付帯状況で、「目が閉じられた状態で」を表します。closed は eyes の状態を説明する過去分詞で、主節の動詞ではありません。",
+    reference: ch15RangeQuizReference(
+      "並べ替え対象文（日本語）：ある男の人が目を閉じて座っています。 語群：eyes / sitting / a man / closed / is / his / with",
+      "A man is sitting with his eyes closed.",
+    ),
+  },
+  {
+    id: "ch15-range-quiz-term-petrochemicals",
+    unit: "ch15",
+    group: "範囲補足小テスト｜専門語（日→英）",
+    format: "input",
+    prompt: "範囲補足小テスト：「石油化学製品」を英語で書きなさい。",
+    answer: "petrochemicals",
+    accepted: ["petrochemicals", "petrochemical products"],
+    options: ["petrochemicals", "petroleum", "biochemicals", "cosmetics"],
+    explanation: "petro- は petroleum「石油」、chemicals は「化学製品」。複数の製品群を指す教材表現なので複数形 petrochemicals を用います。petroleum は石油そのもの、cosmetics は化粧品です。",
+    reference: ch15RangeQuizReference("石油化学製品 p__________", "petrochemicals"),
+  },
+  {
+    id: "ch15-range-quiz-term-dna-sequence",
+    unit: "ch15",
+    group: "範囲補足小テスト｜専門語（日→英）",
+    format: "input",
+    prompt: "範囲補足小テスト：「DNA配列」を英語で書きなさい。",
+    answer: "DNA sequence",
+    accepted: ["DNA sequence", "dna sequence"],
+    options: ["DNA sequence", "DNA security", "genetic engineering", "gene swap"],
+    explanation: "DNA は deoxyribonucleic acid の略、sequence はラテン語 sequi「後に続く」と同系で、要素が順に並ぶ「配列」です。本文では type out a DNA sequence と単数形で使われています。",
+    reference: ch15RangeQuizReference("DNA配列 DNA s__________", "DNA sequence"),
+  },
+];
 const ADDITIONAL_CORE_QUESTIONS: EnglishQuestion[] = [
+  ...CH15_RANGE_QUIZ_QUESTIONS,
   ...CH14_CH15_FINAL_QUESTIONS,
   {
     id: "ch14-able-disposable",

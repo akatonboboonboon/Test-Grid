@@ -172,7 +172,7 @@ test("server-renders the network exam hub and preserved retest trainer", async (
   assert.match(html, /本試験は/);
   assert.match(html, /層＋20文字記述/);
   assert.match(html, /href="\/subjects\/network\/written"/);
-  assert.match(html, /96(?:<!-- -->)? CARDS/);
+  assert.match(html, /50(?:<!-- -->)? CARDS/);
   assert.match(html, /暗算を始める/);
   assert.match(html, /追試用・時間制限つき層即答/);
   assert.match(html, /層を即答・連続正解の練習/);
@@ -190,8 +190,9 @@ test("server-renders the new network 20-character written practice", async () =>
   assert.match(html, /<title>ネットワーク本試験・20文字記述練習 \| TEST\/\/GRID/);
   assert.match(html, /好きなプロトコルを選び/);
   assert.match(html, /空白を除き20文字以上/);
-  assert.match(html, /既存96プロトコルだけを出題/);
-  assert.match(html, /形式だけを参照/);
+  assert.match(html, /ネットワーク範囲\.pdf/);
+  assert.match(html, /正式50語だけを出題/);
+  assert.match(html, /2026-07-24/);
   assert.doesNotMatch(html, /特定層なし／複数層/);
   assert.match(html, /模範解答/);
   assert.match(html, /旧フラッシュ形式も残しています/);
@@ -204,6 +205,7 @@ test("server-renders the memorization card page", async () => {
 
   const html = await response.text();
   assert.match(html, /暗記カード \| ネットワーク \| TEST\/\/GRID/);
+  assert.match(html, /2026-07-24正式範囲PDF・全50項目が正本/);
   assert.match(html, /まず覚える/);
   assert.match(html, /タップして層と正式名称を確認/);
   assert.match(html, /WHAT IT DOES|FLIP TO LEARN/);
@@ -431,8 +433,12 @@ test("supports translation grading, explanations, genre filters, and the course-
 
   const translationQuestions = ENGLISH_QUESTIONS.filter((question) => question.format === "translation");
   const passageParagraphCount = ENGLISH_PASSAGES.reduce((total, passage) => total + passage.paragraphs.length, 0);
-  assert.equal(translationQuestions.length, passageParagraphCount, "every passage paragraph should be available as translation practice");
-  assert.ok(translationQuestions.every((question) => question.passageId && question.answer));
+  const passageTranslationQuestions = translationQuestions.filter((question) => question.passageId);
+  const supplementalTranslationQuestions = translationQuestions.filter((question) => !question.passageId);
+  assert.equal(passageTranslationQuestions.length, passageParagraphCount, "every passage paragraph should be available as translation practice");
+  assert.ok(translationQuestions.every((question) => question.answer));
+  assert.ok(supplementalTranslationQuestions.length >= 3);
+  assert.ok(supplementalTranslationQuestions.every((question) => question.reference?.quote));
 
   assert.match(englishPage, /if \(question\.format === "translation"\)/);
   assert.match(englishPage, /normalizeJapanese/);
@@ -1020,22 +1026,24 @@ test("ships the study hub without starter artifacts", async () => {
     stat(new URL("../public/og-test-grid.png", import.meta.url)),
   ]);
 
-  assert.match(protocols, /const DEFAULT_CARDS/);
-  assert.match(protocols, /"FHRP"/);
-  assert.match(protocols, /"TKIP"/);
-  for (const label of ["10BASE-T", "IEEE 802.1X", "RIPv2", "QUIC", "TLS1.3", "POP3", "Syslog"]) {
-    assert.ok(protocols.includes(`"${label}"`), `${label} should be included in the OCR corpus`);
+  assert.match(protocols, /const OFFICIAL_PROTOCOL_SEEDS/);
+  assert.match(protocols, /export const DEFAULT_CARDS/);
+  for (const label of ["1000BASE-T", "IEEE 802.11ax", "OpenFlow", "QUIC", "RTSP", "IMAP4", "HSRP"]) {
+    assert.ok(protocols.includes(`"${label}"`), `${label} should be included in the formal 50-item corpus`);
+  }
+  for (const retired of ["10BASE-T", "IEEE 802.1X", "RIPv2", "TLS1.3", "SFTP", "Syslog", "RTP"]) {
+    assert.equal(protocols.includes(`"${retired}"`), false, `${retired} should stay outside the formal corpus`);
   }
   assert.match(protocols, /layers\?: Layer\[\]/);
   assert.match(protocols, /fullName\?: string/);
   assert.match(protocols, /description\?: string/);
   assert.match(protocols, /PROTOCOL_FORMAL_NAMES/);
-  assert.match(protocols, /"SFTP": "SSH File Transfer Protocol"/);
+  assert.match(protocols, /"ALPN": "Application-Layer Protocol Negotiation"/);
   assert.match(protocols, /"RADIUS": "Remote Authentication Dial-In User Service"/);
   assert.match(protocols, /layers:\s*\[1,\s*2\]/);
-  assert.match(protocols, /layers:\s*\[5,\s*7\]/);
-  assert.match(protocols, /layers:\s*\[5,\s*6\]/);
-  assert.match(protocols, /makeCards\(\["SSL"\], 6, 2\)/);
+  assert.match(protocols, /layers:\s*\[2,\s*7\]/);
+  assert.match(protocols, /layers:\s*\[6,\s*4\]/);
+  assert.match(protocols, /OFFICIAL_PROTOCOL_SEEDS\.map/);
   assert.match(protocols, /export function cardLayers/);
   assert.match(protocols, /export function cardLayerLabel/);
   assert.match(studyData, /DEFAULT_SUBJECTS/);
@@ -1043,7 +1051,8 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(hubPage, /subjects\.map/);
   assert.match(hubPage, /\[dialogOpen\]/);
   assert.doesNotMatch(hubPage, /\[editing\]\);/);
-  assert.match(networkPage, /layer-sum-cards-v1/);
+  assert.match(networkPage, /layer-sum-retest-cards-formal-20260724-v1/);
+  assert.match(networkPage, /2026-07-24正式範囲PDF・全50項目が正本/);
   assert.match(networkPage, /cardLayers\(/);
   assert.match(networkPage, /cardLayerLabel\(/);
   assert.match(networkPage, /href="\/rapid\/network"/);
@@ -1060,7 +1069,8 @@ test("ships the study hub without starter artifacts", async () => {
   assert.match(cardsPage, /memory-full-name/);
   assert.match(cardsPage, /memory-explanation/);
   assert.match(cardsPage, /currentDescription/);
-  for (const label of ["ARP", "TCP", "TLS1.3", "HTTP\/3", "DNS", "RTP"]) {
+  assert.match(cardsPage, /2026-07-24正式範囲PDF・全50項目が正本/);
+  for (const label of ["ARP", "TCP", "SSL\/TLS", "OpenFlow", "IMAP4", "RTSP"]) {
     assert.ok(protocolDescriptions.includes(`"${label}"`), `${label} should have a role explanation`);
   }
   assert.match(englishPage, /test-grid:english-memory:v1/);

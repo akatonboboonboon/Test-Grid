@@ -12,9 +12,8 @@ import {
   MATERIAL_MECHANICS_EXAM_SPEC,
   MATERIAL_MECHANICS_EXPECTED_EXAMS,
   MATERIAL_MECHANICS_FORMULAS,
-  MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS,
+  MATERIAL_MECHANICS_PRACTICE_QUESTIONS,
   MATERIAL_MECHANICS_QUESTIONS,
-  MATERIAL_MECHANICS_RANGE_PAGES,
   MATERIAL_MECHANICS_TOPICS,
 } from "../../material-mechanics-data";
 
@@ -49,7 +48,7 @@ const PROGRESS_KEY = "test-grid:subject-5:progress:v1";
 const TEST_SESSION_KEY = "test-grid:subject-5:mock-test:v1";
 const ALL_TOPIC_IDS = MATERIAL_MECHANICS_TOPICS.map((topic) => topic.id);
 const KNOWN_TOPIC_IDS = new Set<MaterialMechanicsTopicId>(ALL_TOPIC_IDS);
-const KNOWN_QUESTION_IDS = new Set(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.map((question) => question.id));
+const KNOWN_QUESTION_IDS = new Set(MATERIAL_MECHANICS_PRACTICE_QUESTIONS.map((question) => question.id));
 
 function randomize<T>(items: readonly T[]) {
   const copy = [...items];
@@ -252,7 +251,7 @@ function CurrentRangeSourceNotice() {
   return (
     <div className="english-guide-tip statistics-format-notice" aria-label="現在の出典">
       <span>CURRENT RANGE SOURCE</span>
-      <p><b>範囲ZIP13枚だけが今回範囲の正本です。</b> 形式2は形式のみ参照し、問題内容・数値は使用していません。</p>
+      <p><b>範囲資料15枚（ZIP13枚＋補足2枚）だけが今回範囲の正本です。</b> 形式2は形式のみ参照し、問題内容・数値は使用していません。</p>
     </div>
   );
 }
@@ -404,7 +403,7 @@ export default function MaterialMechanicsSubjectPage() {
   const [cardFlipped, setCardFlipped] = useState(false);
 
   const [practiceTopics, setPracticeTopics] = useState<MaterialMechanicsTopicId[]>([...ALL_TOPIC_IDS]);
-  const [practiceDeck, setPracticeDeck] = useState(() => MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter(matchesCurrentRange));
+  const [practiceDeck, setPracticeDeck] = useState(() => MATERIAL_MECHANICS_PRACTICE_QUESTIONS.filter(matchesCurrentRange));
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceTypedAnswer, setPracticeTypedAnswer] = useState("");
   const [practiceSelectedChoice, setPracticeSelectedChoice] = useState("");
@@ -490,7 +489,7 @@ export default function MaterialMechanicsSubjectPage() {
 
   const currentPracticeQuestion = practiceDeck[practiceIndex];
   const availableTestQuestions = useMemo(
-    () => MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic) && matchesCurrentRange(question)),
+    () => MATERIAL_MECHANICS_PRACTICE_QUESTIONS.filter((question) => testTopics.includes(question.topic) && matchesCurrentRange(question)),
     [testTopics],
   );
   const currentTestQuestion = testQuestions[testIndex];
@@ -555,7 +554,7 @@ export default function MaterialMechanicsSubjectPage() {
 
   function changePracticeTopics(nextTopics: MaterialMechanicsTopicId[]) {
     setPracticeTopics(nextTopics);
-    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => nextTopics.includes(question.topic) && matchesCurrentRange(question))));
+    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRACTICE_QUESTIONS.filter((question) => nextTopics.includes(question.topic) && matchesCurrentRange(question))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -564,7 +563,7 @@ export default function MaterialMechanicsSubjectPage() {
 
 
   function shufflePractice() {
-    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesCurrentRange(question))));
+    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRACTICE_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesCurrentRange(question))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -683,7 +682,7 @@ export default function MaterialMechanicsSubjectPage() {
   function resumeSavedTest() {
     if (!savedTestSession) return;
     const questions = savedTestSession.questionIds.flatMap((id) => {
-      const found = MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.find((question) => question.id === id);
+      const found = MATERIAL_MECHANICS_PRACTICE_QUESTIONS.find((question) => question.id === id);
       return found && matchesCurrentRange(found) ? [found] : [];
     });
     if (!questions.length) {
@@ -691,7 +690,7 @@ export default function MaterialMechanicsSubjectPage() {
       return;
     }
     const results = savedTestSession.results.flatMap((savedResult) => {
-      const question = MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId);
+      const question = MATERIAL_MECHANICS_PRACTICE_QUESTIONS.find((item) => item.id === savedResult.questionId);
       return question && matchesCurrentRange(question) ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
     });
     setTestTopics(savedTestSession.selectedTopics);
@@ -724,7 +723,7 @@ export default function MaterialMechanicsSubjectPage() {
           <span><strong>TEST//GRID</strong><small>MATERIAL MECHANICS</small></span>
         </Link>
         <div className="header-actions statistics-header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.length} PRINT-LEVEL MAJORS</span>
+          <span className="card-count-label"><i aria-hidden="true" /> {MATERIAL_MECHANICS_PRACTICE_QUESTIONS.length} PRACTICE QUESTIONS</span>
           <Link className="outline-button header-link" href="/cards?subject=subject-5">暗記帳検索</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-5">基礎情報一覧</Link>
           <Link className="outline-button header-link" href="/rapid/subject-5">時間制限 即答練習</Link>
@@ -743,7 +742,7 @@ export default function MaterialMechanicsSubjectPage() {
           <div className="english-hero-copy statistics-hero-copy">
             <p><span>SUBJECT 05</span><span>RANGE-VERIFIED ONLY</span></p>
             <h1 id="statistics-title">材料力学</h1>
-            <small>範囲ZIP13枚だけを今回範囲の正本として、ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを学習します。形式1・2・3は形式のみ参照し、問題内容・数値は使用していません。</small>
+            <small>範囲資料15枚（ZIP13枚＋補足2枚）だけを今回範囲の正本として、ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを学習します。形式1・2・3は形式のみ参照し、問題内容・数値は使用していません。</small>
           </div>
           <button className="english-hero-memory-button statistics-hero-card-button" type="button" onClick={() => changeMode("cards")}>
             <span>FORMULAS FIRST</span>
@@ -755,8 +754,8 @@ export default function MaterialMechanicsSubjectPage() {
         <section className="english-summary statistics-summary" aria-label="収録教材">
           <div><span>TOPICS</span><strong>{MATERIAL_MECHANICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{MATERIAL_MECHANICS_FORMULAS.length}</strong><small>枚</small></div>
-          <div><span>QUESTIONS</span><strong>{MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.length}</strong><small>本番大問</small></div>
-          <p>範囲ZIP13枚のねじり・はり・曲げ範囲だけを演習へ収録。A4想定試験{MATERIAL_MECHANICS_EXPECTED_EXAMS.length}回を、50分初期値・練習用100点・60点ラインで解けます。形式2の問題内容・数値は使っていません。公式は {totalMastered}枚暗記済み。</p>
+          <div><span>QUESTIONS</span><strong>{MATERIAL_MECHANICS_PRACTICE_QUESTIONS.length}</strong><small>練習問題</small></div>
+          <p>範囲資料15枚（ZIP13枚＋補足2枚）のねじり・はり・曲げ範囲だけを演習へ収録。A4想定試験{MATERIAL_MECHANICS_EXPECTED_EXAMS.length}回を、50分初期値・練習用100点・60点ラインで解けます。形式2の問題内容・数値は使っていません。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
         <section ref={workspaceRef} id="statistics-workspace" className="english-workspace statistics-workspace">
@@ -773,16 +772,16 @@ export default function MaterialMechanicsSubjectPage() {
             <section className="english-guide-workspace statistics-scope-workspace" aria-labelledby="statistics-scope-title">
               <div className="english-panel-heading statistics-panel-heading">
                 <div><span>COURSE RANGE</span><h2 id="statistics-scope-title">今回の試験範囲</h2></div>
-                <p>範囲ZIP13枚だけを正本として整理した{MATERIAL_MECHANICS_TOPICS.length}単元です。追加ページ10〜13の曲げ応力・断面量・単純支持/片持ちばりも含みます。形式2は形式のみ参照し、問題内容・数値は使用していません。</p>
+                <p>範囲資料15枚（ZIP13枚＋補足2枚）だけを正本として整理した{MATERIAL_MECHANICS_TOPICS.length}単元です。追加ページ10〜14の4つのはり計算と、補足ページ15の指定問2・5・7・10だけを含みます。形式2は形式のみ参照し、問題内容・数値は使用していません。</p>
               </div>
               <div className="english-guide-tip statistics-source-policy">
                 <span>SOURCE POLICY</span>
-                <p><b>出題する：</b>範囲ZIP13枚のみ（曲げ応力・長方形/中空円断面I/Zを含む）　／　<b>形式資料：</b>形式1・2・3は形式のみ参照、問題内容・数値は不使用　／　<b>範囲外：</b>EIによるたわみ、曲率、カスティリアーノの定理<br /><small>正式な試験時間と配点は資料で確認できないため、50分・100点・60点は練習用です。</small></p>
+                <p><b>出題する：</b>範囲資料15枚（ZIP13枚＋補足2枚。補足2枚目は指定問2・5・7・10のみ）　／　<b>形式資料：</b>形式1・2・3は形式のみ参照、問題内容・数値は不使用　／　<b>範囲外：</b>EIによるたわみ、曲率、カスティリアーノの定理<br /><small>正式な試験時間と配点は資料で確認できないため、50分・100点・60点は練習用です。</small></p>
               </div>
               <div className="english-guide-grid statistics-topic-grid">
                 {MATERIAL_MECHANICS_TOPICS.map((topic) => {
                   const formulaCount = MATERIAL_MECHANICS_FORMULAS.filter((card) => card.topic === topic.id).length;
-                  const questionCount = MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => question.topic === topic.id).length;
+                  const questionCount = MATERIAL_MECHANICS_PRACTICE_QUESTIONS.filter((question) => question.topic === topic.id).length;
                   return (
                     <article key={topic.id} className="statistics-topic-card" style={{ borderTopColor: topic.color }}>
                       <span>{topic.number} / RANGE</span>
@@ -896,7 +895,7 @@ export default function MaterialMechanicsSubjectPage() {
             <section className="generic-test-workspace english-test-workspace statistics-test-workspace" aria-labelledby="statistics-test-title">
               {testPhase === "setup" && (
                 <div className="english-test-setup statistics-test-setup">
-                  <div className="english-panel-heading statistics-panel-heading"><div><span>MOCK EXAM</span><h2 id="statistics-test-title">模擬テストを作る</h2></div><p>選んだ単元から、範囲ZIP13枚に基づく問題だけをランダム出題します。</p></div>
+                  <div className="english-panel-heading statistics-panel-heading"><div><span>MOCK EXAM</span><h2 id="statistics-test-title">模擬テストを作る</h2></div><p>選んだ単元から、範囲資料15枚（ZIP13枚＋補足2枚）に基づく問題だけをランダム出題します。</p></div>
                   {savedTestSession && (
                     <div className="generic-test-answer english-test-feedback english-saved-test statistics-saved-test" aria-label="保存中の模擬テスト">
                       <strong>途中の模擬テストがあります</strong>
@@ -963,8 +962,8 @@ export default function MaterialMechanicsSubjectPage() {
 
           {mode === "guide" && (
             <section className="english-guide-workspace statistics-guide-workspace" aria-labelledby="statistics-guide-title">
-              <div className="english-panel-heading statistics-panel-heading"><div><span>FORMAT GUIDE</span><h2 id="statistics-guide-title">出題形式ガイド</h2></div><p>形式1・2・3は形式のみ参照し、問題内容・数値は使用していません。曲げ応力・断面量を含む学習内容は、範囲ZIP13枚だけに基づきます。</p></div>
-              <div className="english-guide-tip statistics-format-notice"><span>SOURCE POLICY</span><p><b>範囲ZIP13枚だけが今回範囲の正本です。</b> 形式2は形式のみ参照し、問題内容・数値は使用していません。EIによるたわみ、曲率、カスティリアーノの定理は対象外です。A4模試は{MATERIAL_MECHANICS_EXAM_SPEC.bigQuestionCount}大問・練習用{MATERIAL_MECHANICS_EXAM_SPEC.totalPoints}点で構成し、正式時間と配点は未確認です。初期値50分、{MATERIAL_MECHANICS_EXAM_SPEC.passPoints}点ラインで練習します。</p></div>
+              <div className="english-panel-heading statistics-panel-heading"><div><span>FORMAT GUIDE</span><h2 id="statistics-guide-title">出題形式ガイド</h2></div><p>形式1・2・3は形式のみ参照し、問題内容・数値は使用していません。曲げ応力・断面量を含む学習内容は、範囲資料15枚（ZIP13枚＋補足2枚）だけに基づきます。</p></div>
+              <div className="english-guide-tip statistics-format-notice"><span>SOURCE POLICY</span><p><b>範囲資料15枚（ZIP13枚＋補足2枚）だけが今回範囲の正本です。</b> 形式2は形式のみ参照し、問題内容・数値は使用していません。EIによるたわみ、曲率、カスティリアーノの定理は対象外です。A4模試は{MATERIAL_MECHANICS_EXAM_SPEC.bigQuestionCount}大問・練習用{MATERIAL_MECHANICS_EXAM_SPEC.totalPoints}点で構成し、正式時間と配点は未確認です。初期値50分、{MATERIAL_MECHANICS_EXAM_SPEC.passPoints}点ラインで練習します。</p></div>
               <div className="english-guide-grid statistics-guide-grid">
                 {MATERIAL_MECHANICS_EXAM_FORMATS.map((format, index) => (
                   <article key={format.id}>

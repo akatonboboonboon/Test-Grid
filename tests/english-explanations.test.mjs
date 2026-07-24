@@ -62,7 +62,7 @@ function sorted(values) {
   return [...values].sort((left, right) => left.localeCompare(right, "en"));
 }
 
-test("reading, language, and extra explanations cover all 539 study questions", async () => {
+test("reading, language, and extra explanations cover all 554 study questions", async () => {
   const { data, reading, language, extra } = await loadExplanationModules();
   const questions = data.ENGLISH_QUESTIONS;
   const questionIds = questions.map((question) => question.id);
@@ -74,8 +74,8 @@ test("reading, language, and extra explanations cover all 539 study questions", 
   ];
   const coveredIds = new Set(explanationMaps.flatMap((map) => Object.keys(map)));
 
-  assert.equal(questions.length, 539);
-  assert.equal(questionIdSet.size, 539, "question ids must be unique");
+  assert.equal(questions.length, 554);
+  assert.equal(questionIdSet.size, 554, "question ids must be unique");
   assert.deepEqual(
     sorted([...coveredIds]),
     sorted(questionIds),
@@ -247,7 +247,7 @@ test("all in-scope vocabulary cards explain meaning, form, origin, and the answe
     (question) => question.group === "語彙・熟語（日→英）",
   );
 
-  assert.equal(data.ENGLISH_VOCAB.length, 171);
+  assert.equal(data.ENGLISH_VOCAB.length, 173);
   assert.equal(vocabularyQuestions.length, data.ENGLISH_VOCAB.length);
 
   for (const card of data.ENGLISH_VOCAB) {

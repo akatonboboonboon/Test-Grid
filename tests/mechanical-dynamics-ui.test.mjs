@@ -51,6 +51,8 @@ test("mechanical dynamics exposes six study modes and source-aware practice", as
   assert.match(page, /cardFlipped \? <RichMathText text=\{currentCard\.cue\}/);
   assert.match(page, /currentCard\.diagram/);
   assert.match(page, /question\.diagram && <MechanicalDynamicsDiagram[^>]*solution/);
+  assert.match(page, /currentPracticeQuestion\.printedFormula/);
+  assert.match(page, /currentTestQuestion\.printedFormula/);
   assert.match(page, /振り返り用の模範図/);
 });
 
@@ -87,12 +89,14 @@ test("mechanical dynamics prints a separate A4 answer sheet and renders the thre
   assert.match(css, /210mm/);
   assert.match(css, /297mm/);
   assert.match(css, /\.answerSheetGrid/);
-  for (const kind of ["spring-network", "series-parallel-chain", "pinned-beam", "simple-pendulum"]) {
+  for (const kind of ["spring-network", "series-parallel-chain", "pinned-beam", "simple-pendulum", "torsional-shaft-disk", "axial-bar-mass"]) {
     assert.match(diagrams, new RegExp(kind));
   }
   assert.match(diagrams, /useId/);
   assert.match(exams, /question\.diagram && <MechanicalDynamicsDiagram[^>]*解答用線図/);
   assert.match(exams, /question\.diagram && <MechanicalDynamicsDiagram[^>]*solution/);
+  assert.match(exams, /question\.printedFormula &&/);
+  assert.match(exams, /試験用紙に記載される式/);
 });
 
 test("study hub reports the dedicated mechanical dynamics deck as ready", async () => {

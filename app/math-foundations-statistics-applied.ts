@@ -33,7 +33,7 @@ export type MathFoundationEntry = {
 };
 
 const STATISTICS_RANGE = ["確率統計範囲ZIP・演習PDF1〜4", "確率統計追加範囲5枚（2026-07-22）", "確率統計過去問形式"];
-const APPLIED_RANGE = ["応用数学範囲・追加範囲 全22枚", "応用数学テスト形式1〜3の出題構成"];
+const APPLIED_RANGE = ["応用数学範囲・追加範囲・追加範囲2 全27枚", "応用数学テスト形式1〜3の出題構成"];
 
 function statistics(entry: Omit<MathFoundationEntry, "subjectId" | "sourceBasis">): MathFoundationEntry {
   return { ...entry, subjectId: "subject-7", sourceBasis: STATISTICS_RANGE };

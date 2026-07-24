@@ -658,7 +658,7 @@ export default function AppliedMathSubjectPage() {
           <div className="english-hero-copy statistics-hero-copy">
             <p><span>SUBJECT 08</span><span>COURSE-RANGE ONLY</span></p>
             <h1 id="statistics-title">応用数学</h1>
-            <small>全22枚（当初16枚＋追加6枚）の範囲を数式の形で覚え、演習を反復し、A4・50分・80点満点の全範囲予想試験6回で仕上げます。</small>
+            <small>全27枚（当初16枚＋追加6枚＋追加範囲2の5枚）の範囲を数式の形で覚え、演習を反復し、A4・50分・80点満点の全範囲予想試験6回で仕上げます。</small>
           </div>
           <button className="english-hero-memory-button statistics-hero-card-button" type="button" onClick={() => changeMode("cards")}>
             <span>FORMULAS FIRST</span>
@@ -671,7 +671,7 @@ export default function AppliedMathSubjectPage() {
           <div><span>TOPICS</span><strong>{APPLIED_MATH_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{APPLIED_MATH_FORMULAS.length}</strong><small>枚</small></div>
           <div><span>QUESTIONS</span><strong>{APPLIED_MATH_PRINT_LEVEL_QUESTIONS.length}</strong><small>問</small></div>
-          <p>当初のテスト範囲ZIP 16枚と追加範囲ZIP 6枚の全22枚を学習内容として収録。形式1〜3は紙面・配点・途中式欄の参考だけに使用し、予想試験6回は毎回全9単元を含みます。公式は {totalMastered}枚暗記済み。</p>
+          <p>当初のテスト範囲ZIP 16枚、追加範囲ZIP 6枚、追加範囲2 ZIP 5枚の全27枚を学習内容として収録。形式1〜3は紙面・配点・途中式欄の参考だけに使用し、予想試験6回は毎回全9単元を含みます。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
         <section ref={workspaceRef} id="statistics-workspace" className="english-workspace statistics-workspace">
@@ -689,11 +689,11 @@ export default function AppliedMathSubjectPage() {
             <section className="english-guide-workspace statistics-scope-workspace" aria-labelledby="statistics-scope-title">
               <div className="english-panel-heading statistics-panel-heading">
                 <div><span>COURSE RANGE</span><h2 id="statistics-scope-title">今回の試験範囲</h2></div>
-                <p>当初範囲16枚と追加範囲6枚から整理した全22枚・9単元です。形式1.pdf・形式2.pdf・形式3.zipは形式把握だけに使っています。</p>
+                <p>当初範囲16枚・追加範囲6枚・追加範囲2の5枚から整理した全27枚・9単元です。形式1.pdf・形式2.pdf・形式3.zipは形式把握だけに使っています。</p>
               </div>
               <div className="english-guide-tip statistics-source-policy">
                 <span>SOURCE POLICY</span>
-                <p><b>出題する：</b>全22画像にあるベクトル・曲線・曲面・勾配・発散・回転・線積分・スカラー/流束面積分・グリーンの定理　／　<b>出題しない：</b>ガウスの発散定理・ストークスの定理<br /><small><RichMathText text={"幾何学的曲面積 \\(\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv\\)、スカラー面積分、向き付き流束面積分を区別して練習します。"} /></small><br /><small><b>資料注記：</b><RichMathText text={"追加基本問題の問4は第三成分が \\(v^2\\)、対応する第11回演習は \\(u^2\\) と表記が矛盾するため、その問4は自動出題から外し、演習紙の \\(u^2\\) 版だけを収録しています。"} /></small></p>
+                <p><b>出題する：</b>全27画像にあるベクトル・曲線・曲面・勾配・発散・回転・線積分・スカラー/流束面積分・グリーンの定理　／　<b>出題しない：</b>ガウスの発散定理・ストークスの定理<br /><small><RichMathText text={"幾何学的曲面積 \\(\\iint_D|\\mathbf r_u\\times\\mathbf r_v|\\,du\\,dv\\)、スカラー面積分、向き付き流束面積分を区別して練習します。"} /></small><br /><small><b>資料注記：</b><RichMathText text={"追加範囲2の高画質版で、基本問題問4の第三成分は \\(u^2\\) と確認できました。問4は高画質版の式で暗記・演習・自動生成に収録しています。"} /></small></p>
               </div>
               <div className="english-guide-grid statistics-topic-grid">
                 {APPLIED_MATH_TOPICS.map((topic) => {

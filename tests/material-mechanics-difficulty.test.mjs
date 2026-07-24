@@ -93,22 +93,22 @@ test("all six material papers keep print-level difficulty inside the documented 
     }
   }
 });
-test("additional beam chains use pages 10-13 while every past-paper problem stays format-only", async () => {
+test("additional beam chains use pages 10-14 while every past-paper problem stays format-only", async () => {
   const data = await loadData();
   const beamQuestions = data.MATERIAL_MECHANICS_EXPECTED_EXAMS.flatMap((exam) => section(exam, 5).questions);
   assert.equal(beamQuestions.length, 18);
   for (const question of beamQuestions) {
     assert.deepEqual(
       question.sourceRefs.filter((ref) => ref.kind === "range-zip").map((ref) => ref.page),
-      [10, 11, 12, 13],
-      `${question.id}: page 10 problem sheet and pages 11-13 worked notes`,
+      [10, 11, 12, 13, 14],
+      `${question.id}: page 10 problem sheet, pages 11-13 notes, and supplement page 14`,
     );
     assert.ok(question.sourceRefs.every((ref) => ref.kind === "range-zip"));
   }
 
   const refs = data.MATERIAL_MECHANICS_EXPECTED_EXAMS.flatMap((exam) => exam.questions.flatMap((question) => question.sourceRefs));
-  assert.ok(refs.every((ref) => ref.kind === "range-zip"), "all problem content comes from the 13 range pages");
-  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.included.join(" "), /合計13枚/);
+  assert.ok(refs.every((ref) => ref.kind === "range-zip"), "all problem content comes from the 15 range sheets");
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.included.join(" "), /合計15枚/);
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.formatOnly.join(" "), /形式2.*数値.*出題しない/);
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /過去問固有/);
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /EI/);

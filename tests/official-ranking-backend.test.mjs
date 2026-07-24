@@ -7,7 +7,7 @@ import { createServer } from "vite";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-test("official ranking v2 is an endless server-scored streak for every subject", async (context) => {
+test("official ranking v3 is an endless server-scored streak for every subject", async (context) => {
   const server = await createServer({
     root: projectRoot,
     configFile: false,
@@ -17,20 +17,21 @@ test("official ranking v2 is an endless server-scored streak for every subject",
   context.after(() => server.close());
   const config = await server.ssrLoadModule("/app/official-ranking-config.ts");
   const questionsModule = await server.ssrLoadModule("/app/official-ranking-questions.ts");
+  const protocolsModule = await server.ssrLoadModule("/app/protocols.ts");
 
   assert.equal(config.OFFICIAL_RANKING_SUBJECT_IDS.length, 9);
   for (const subjectId of config.OFFICIAL_RANKING_SUBJECT_IDS) {
     const spec = config.getOfficialRankingSpec(subjectId);
     const questions = questionsModule.getOfficialRankingQuestions(subjectId);
     assert.equal(spec.mode, "official-ranking-streak");
-    assert.equal(spec.version, 2);
+    assert.equal(spec.version, 3);
     assert.equal(spec.scoring, "consecutive-correct");
-    assert.equal(spec.boardKey, "ranking:" + subjectId + ":streak:v2");
+    assert.equal(spec.boardKey, "ranking:" + subjectId + ":streak:v3");
     assert.equal("questionCount" in spec, false);
     assert.equal("timeLimitMs" in spec, false);
     assert.ok(questions.length >= 2, subjectId + " needs at least two ranking questions");
     assert.equal(new Set(questions.map((question) => question.id)).size, questions.length);
-    assert.equal(config.officialRankingSpecFromBoardKey("ranking:" + subjectId + ":v1"), null);
+    assert.equal(config.officialRankingSpecFromBoardKey("ranking:" + subjectId + ":streak:v2"), null);
 
     for (const question of questions) {
       assert.ok(question.options.length >= 2, question.id);
@@ -45,6 +46,10 @@ test("official ranking v2 is an endless server-scored streak for every subject",
     assert.equal("explanation" in publicQuestion, false);
   }
 
+  const networkQuestions = questionsModule.getOfficialRankingQuestions("network");
+  const expectedNetworkIds = protocolsModule.DEFAULT_CARDS.map((card) => `rapid-${card.id}`);
+  assert.equal(expectedNetworkIds.length, 50);
+  assert.deepEqual(networkQuestions.map((question) => question.id), expectedNetworkIds);
   assert.deepEqual(questionsModule.updateOfficialRankingStreak(4, 9, true), {
     currentStreak: 5,
     bestStreak: 9,

@@ -37,7 +37,7 @@ test("mechanical, thermal, and material confirmation pools contain only exam-lev
       label: "material",
       pool: material.MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS,
       topics: material.MATERIAL_MECHANICS_TOPICS.map((topic) => topic.id),
-      minimum: 26,
+      minimum: 24,
       diagrams: true,
     },
   ];
@@ -101,13 +101,21 @@ test("statistics and applied mathematics practice use complete major-question ch
 
   const expectedAppliedCount = applied.APPLIED_MATH_EXPECTED_EXAMS
     .reduce((sum, exam) => sum + exam.sections.length, 0);
-  assert.equal(applied.APPLIED_MATH_PRINT_LEVEL_QUESTIONS.length, expectedAppliedCount);
+  assert.equal(
+    applied.APPLIED_MATH_PRINT_LEVEL_QUESTIONS.length,
+    expectedAppliedCount + applied.APPLIED_MATH_RANGE2_PRINT_LEVEL_QUESTIONS.length,
+  );
+  assert.equal(applied.APPLIED_MATH_RANGE2_PRINT_LEVEL_QUESTIONS.length, 4);
   for (const question of applied.APPLIED_MATH_PRINT_LEVEL_QUESTIONS) {
     assert.equal(question.difficulty, 3, `${question.id} difficulty`);
     assert.ok(question.steps.length >= 3, `${question.id} linked work`);
     assert.ok(question.context?.length >= 10, `${question.id} standalone givens`);
-    assert.match(question.prompt, /次の大問を最初から解き/u, `${question.id} full major prompt`);
-    assert.match(question.prompt, /最終設問/u, `${question.id} final graded target`);
+    if (question.id.startsWith("am-range2-print-")) {
+      assert.match(question.prompt, /順に計算|途中式|解答欄/u, `${question.id} complete added-range major`);
+    } else {
+      assert.match(question.prompt, /次の大問を最初から解き/u, `${question.id} full major prompt`);
+      assert.match(question.prompt, /最終設問/u, `${question.id} final graded target`);
+    }
     assert.ok(question.answer.trim(), `${question.id} solved`);
   }
 
@@ -123,7 +131,7 @@ test("timed confirmation pages use and restore the exam-level pools", async () =
   for (const [subject, token] of [
     ["subject-3", "MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS"],
     ["subject-4", "THERMODYNAMICS_PRINT_LEVEL_QUESTIONS"],
-    ["subject-5", "MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS"],
+    ["subject-5", "MATERIAL_MECHANICS_PRACTICE_QUESTIONS"],
   ]) {
     const source = await readFile(new URL(`../app/subjects/${subject}/page.tsx`, import.meta.url), "utf8");
     assert.match(source, new RegExp(`\\(\\) => ${token}\\.filter`), `${subject} candidates`);

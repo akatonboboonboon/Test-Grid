@@ -17,7 +17,7 @@ test("all nine subjects expose complete print-level questions to rapid, ranking,
   const rapid = await server.ssrLoadModule("/app/rapid-quiz-data.ts");
   const seconds = {
     "subject-2": 90,
-    network: 90,
+    network: 8,
     "subject-3": 300,
     "subject-4": 300,
     "subject-5": 300,
@@ -39,14 +39,16 @@ test("all nine subjects expose complete print-level questions to rapid, ranking,
 
     for (const [label, pool] of [["static", staticPool], ["comprehensive", comprehensivePool]]) {
       assert.equal(new Set(pool.map((question) => question.id)).size, pool.length, `${subjectId}/${label}: unique IDs`);
+      assert.ok(pool.some((question) => question.difficulty === 3), `${subjectId}/${label}: includes exam-level challenge`);
       for (const question of pool) {
         assert.equal(question.subjectId, subjectId, question.id);
-        assert.equal(question.difficulty, 3, `${question.id}: difficulty`);
+        assert.ok([1, 2, 3].includes(question.difficulty), `${question.id}: difficulty`);
         assert.equal(question.recommendedSeconds, seconds[subjectId], `${question.id}: fair time`);
         assert.ok(question.prompt.trim().length >= 8, `${question.id}: prompt`);
         assert.ok(question.explanation.trim().length >= 12, `${question.id}: explanation`);
         assert.ok(question.steps.length >= 2, `${question.id}: solving path`);
-        assert.ok(question.options.length >= 2 && question.options.length <= 4, `${question.id}: choices`);
+        const maxChoices = subjectId === "network" ? 7 : 4;
+        assert.ok(question.options.length >= 2 && question.options.length <= maxChoices, `${question.id}: choices`);
         assert.ok(question.options.some((option) => question.acceptedOptions.includes(option)), `${question.id}: selectable answer`);
         assert.equal(question.id.startsWith("rapid-card-"), false, `${question.id}: no formula-card leakage`);
         if (question.requiresVisual) assert.ok(question.visual, `${question.id}: required figure`);

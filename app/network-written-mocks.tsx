@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   NETWORK_WRITTEN_MOCKS,
+  NETWORK_WRITTEN_SOURCE,
   NETWORK_WRITTEN_TERMS,
   evaluateNetworkWrittenAnswer,
   networkWrittenCharacterCount,
@@ -107,7 +108,7 @@ export default function NetworkWrittenMocks() {
       <div className={styles.sectionHeading}>
         <span>EXAM / 50 MINUTES</span>
         <h2 id="network-written-mock-title">層＋20文字記述模試</h2>
-        <p>10語を各10点で採点します。全層から出題し、解答後に正しい層・正式名称・模範説明を確認できます。</p>
+        <p>{NETWORK_WRITTEN_SOURCE}の正式50語から、全掲載層を含む10語を各10点で採点します。解答後に正式名称・層例外・模範説明を確認できます。</p>
       </div>
 
       {phase === "setup" && (
@@ -167,12 +168,13 @@ export default function NetworkWrittenMocks() {
               <div className={styles.checks}>
                 <div data-ok={evaluation.enoughCharacters}><b>{evaluation.enoughCharacters ? "✓" : "×"}</b><span>20文字</span><small>{evaluation.characterCount}文字</small></div>
                 <div data-ok={evaluation.layerCorrect}><b>{evaluation.layerCorrect ? "✓" : "×"}</b><span>層</span><small>{evaluation.layerCorrect ? "一致" : "誤層は最大3点"}</small></div>
-                <div data-ok={evaluation.detailMatched}><b>{evaluation.detailMatched ? "✓" : "×"}</b><span>必須観点</span><small>{evaluation.matchedRubricItems.length} / {evaluation.requiredRubricItems}</small></div>
-                <div data-ok={evaluation.actionMatched}><b>{evaluation.actionMatched ? "✓" : "×"}</b><span>具体的動作</span><small>{evaluation.actionMatched ? "あり" : "不足"}</small></div>
+                <div data-ok={evaluation.matchedDimensions.includes("対象")}><b>{evaluation.matchedDimensions.includes("対象") ? "✓" : "×"}</b><span>対象</span><small>何を扱うか</small></div>
+                <div data-ok={evaluation.matchedDimensions.includes("動作")}><b>{evaluation.matchedDimensions.includes("動作") ? "✓" : "×"}</b><span>動作</span><small>何をどうするか</small></div>
+                <div data-ok={evaluation.matchedDimensions.includes("固有特徴")}><b>{evaluation.matchedDimensions.includes("固有特徴") ? "✓" : "×"}</b><span>固有特徴</span><small>{evaluation.matchedRubricItems.length} / {evaluation.requiredRubricItems}</small></div>
                 <div data-ok={evaluation.contradictions.length === 0}><b>{evaluation.contradictions.length === 0 ? "✓" : "×"}</b><span>矛盾</span><small>{evaluation.contradictions.join("・") || "なし"}</small></div>
               </div>
               <div className={styles.answerGuide}>
-                <section><span>正しい層</span><h3>{current.layerLabel}</h3><p>{current.layerReason}</p></section>
+                <section><span>正しい層</span><h3>{current.layerLabel}</h3><p>{current.layerReason}</p>{current.layerExceptionReason && <p><b>PDFの括弧内層：</b>{current.layerExceptionReason}</p>}</section>
                 <section><span>模範解答</span>{current.fullName && <p><b>正式名称：</b>{current.fullName}</p>}<p className={styles.modelAnswer}>{current.modelAnswer}</p></section>
               </div>
               <div className={styles.feedbackActions}><button type="button" onClick={nextQuestion}>{position + 1 === paper.termIds.length ? "結果を見る" : "次の問題へ →"}</button></div>

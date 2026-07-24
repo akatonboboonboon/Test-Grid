@@ -184,7 +184,7 @@ function materialFormulaCardsToSearchCards(): RapidQuestion[] {
   return formulaCardsToSearchCards(
     "subject-5",
     MATERIAL_MECHANICS_FORMULAS,
-    "材料力学範囲ZIP13ページ / 暗記・公式カード",
+    "材料力学範囲資料15枚 / 暗記・公式カード",
   );
 }
 

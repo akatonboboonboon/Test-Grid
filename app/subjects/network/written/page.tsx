@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   NETWORK_WRITTEN_CATEGORIES,
+  NETWORK_WRITTEN_SOURCE,
   NETWORK_WRITTEN_TERMS,
   evaluateNetworkWrittenAnswer,
   networkWrittenCategoryMatches,
@@ -24,6 +25,7 @@ type WrittenProgress = {
 };
 
 const STORAGE_KEY = "test-grid:network-written:v1";
+const OFFICIAL_TERM_IDS = new Set(NETWORK_WRITTEN_TERMS.map((term) => term.id));
 const DEFAULT_TERM_ID = NETWORK_WRITTEN_TERMS[0]?.id ?? "";
 const EMPTY_PROGRESS: WrittenProgress = {
   attempts: 0,
@@ -46,10 +48,10 @@ function normalizeProgress(value: unknown): WrittenProgress {
   if (!value || typeof value !== "object") return EMPTY_PROGRESS;
   const saved = value as Partial<WrittenProgress>;
   const completedIds = Array.isArray(saved.completedIds)
-    ? [...new Set(saved.completedIds.filter((id): id is string => typeof id === "string" && NETWORK_WRITTEN_TERMS.some((term) => term.id === id)))]
+    ? [...new Set(saved.completedIds.filter((id): id is string => typeof id === "string" && OFFICIAL_TERM_IDS.has(id)))]
     : [];
   const number = (item: unknown) => typeof item === "number" && Number.isFinite(item) ? Math.max(0, Math.floor(item)) : 0;
-  const lastTermId = typeof saved.lastTermId === "string" && NETWORK_WRITTEN_TERMS.some((term) => term.id === saved.lastTermId)
+  const lastTermId = typeof saved.lastTermId === "string" && OFFICIAL_TERM_IDS.has(saved.lastTermId)
     ? saved.lastTermId
     : EMPTY_PROGRESS.lastTermId;
   return {
@@ -97,7 +99,7 @@ export default function NetworkWrittenPracticePage() {
       const categoryMatches = networkWrittenCategoryMatches(term, category);
       if (!categoryMatches) return false;
       if (!needle) return true;
-      return [term.term, term.category, term.keywords.join(" "), term.modelAnswer]
+      return [term.term, term.fullName, term.category, term.keywords.join(" "), term.modelAnswer]
         .join(" ")
         .normalize("NFKC")
         .toLocaleLowerCase("ja-JP")
@@ -174,7 +176,7 @@ export default function NetworkWrittenPracticePage() {
               <li>「何を・どうする」を具体的な動作として書く</li>
               <li>別プロトコルとの混同や中心的な矛盾を含めない</li>
             </ol>
-            <small>添付の「ネットワーク形式1・2」は20文字記述という形式だけを参照し、印字された用語は今回の範囲へ追加していません。</small>
+            <small>出題元は{NETWORK_WRITTEN_SOURCE}に掲載された50語だけです。掲載層と括弧内に示された層のどちらも正解にします。</small>
           </div>
         </section>
 
@@ -191,7 +193,7 @@ export default function NetworkWrittenPracticePage() {
           <div className={styles.sectionHeading}>
             <span>01 / SELECT</span>
             <h2 id="term-picker-title">説明するプロトコルを選ぶ</h2>
-            <p>最初の層別写真から読み込んだ既存96プロトコルだけを出題します。</p>
+            <p>{NETWORK_WRITTEN_SOURCE}の正式50語だけを出題します。</p>
           </div>
           <div className={styles.pickerControls}>
             <label>
@@ -221,7 +223,7 @@ export default function NetworkWrittenPracticePage() {
         <form className={styles.practice} onSubmit={submitAnswer}>
           <article className={styles.termCard}>
             <div>
-              <span>元写真の出題範囲</span>
+              <span>正式PDF・50語の出題範囲</span>
               <small>層は解答後に表示</small>
             </div>
             <h2>{current.term}</h2>
@@ -232,7 +234,7 @@ export default function NetworkWrittenPracticePage() {
             <div className={styles.sectionHeading}>
               <span>02 / LAYER</span>
               <h2 id="layer-answer-title">該当する層を選ぶ</h2>
-              <p>複数層の用語は、該当する層のどれか一つで正解です。</p>
+              <p>PDFの掲載層、または括弧内に併記された層のどちらでも正解です。</p>
             </div>
             <div className={styles.layerGrid} role="radiogroup" aria-label="OSI層">
               {LAYER_CHOICES.map((choice) => {
@@ -294,13 +296,14 @@ export default function NetworkWrittenPracticePage() {
               <span>AUTO CHECK</span>
               <strong>{evaluation.estimatedScore}<small> / 10点目安</small></strong>
               <h2 id="written-feedback-title">{evaluation.qualified ? "過去問の満点基準クリア" : "部分点です・答案を修正"}</h2>
-              <p>20文字だけでは満点になりません。過去問と同じく、層・働きの核・具体性・矛盾を0／3／5／8／10点で判定します。</p>
+              <p>20文字未満・用語違い・中心的矛盾は0点。対象・動作・固有特徴の1／2／3観点一致を5／8／10点で判定し、誤層は最大3点です。</p>
             </div>
             <div className={styles.checks}>
               <div data-ok={evaluation.enoughCharacters}><b>{evaluation.enoughCharacters ? "✓" : "×"}</b><span>最低20文字</span><small>{evaluation.characterCount}文字・未満は0点</small></div>
               <div data-ok={evaluation.layerCorrect}><b>{evaluation.layerCorrect ? "✓" : "×"}</b><span>層の選択</span><small>{evaluation.layerCorrect ? "一致" : "誤層は最大3点"}</small></div>
-              <div data-ok={evaluation.detailMatched}><b>{evaluation.detailMatched ? "✓" : "×"}</b><span>必須観点</span><small>{evaluation.matchedRubricItems.length} / {evaluation.requiredRubricItems}：{evaluation.matchedRubricItems.join("・") || "該当なし"}</small></div>
-              <div data-ok={evaluation.actionMatched}><b>{evaluation.actionMatched ? "✓" : "×"}</b><span>具体的な動作</span><small>{evaluation.actionMatched ? "何を・どうするが明確" : "汎用説明だけでは不足"}</small></div>
+              <div data-ok={evaluation.matchedDimensions.includes("対象")}><b>{evaluation.matchedDimensions.includes("対象") ? "✓" : "×"}</b><span>対象</span><small>何を扱うか</small></div>
+              <div data-ok={evaluation.matchedDimensions.includes("動作")}><b>{evaluation.matchedDimensions.includes("動作") ? "✓" : "×"}</b><span>動作</span><small>何をどうするか</small></div>
+              <div data-ok={evaluation.matchedDimensions.includes("固有特徴")}><b>{evaluation.matchedDimensions.includes("固有特徴") ? "✓" : "×"}</b><span>固有特徴</span><small>{evaluation.matchedRubricItems.length} / {evaluation.requiredRubricItems}観点：{evaluation.matchedRubricItems.join("・") || "該当なし"}</small></div>
               <div data-ok={evaluation.contradictions.length === 0}><b>{evaluation.contradictions.length === 0 ? "✓" : "×"}</b><span>矛盾・混同</span><small>{evaluation.contradictions.length ? evaluation.contradictions.join("・") : "検出なし"}</small></div>
             </div>
             <div className={styles.answerGuide}>
@@ -308,6 +311,7 @@ export default function NetworkWrittenPracticePage() {
                 <span>正しい層</span>
                 <h3>{current.layerLabel}</h3>
                 <p>{current.layerReason}</p>
+                {current.layerExceptionReason && <p><b>PDFの括弧内層：</b>{current.layerExceptionReason}</p>}
               </section>
               <section>
                 <span>模範解答</span>

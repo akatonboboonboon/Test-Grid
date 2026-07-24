@@ -123,22 +123,16 @@ test("six expected papers mirror the seven-major, thirteen-field, all-topic cont
 
 test("all six expected papers keep the four-print difficulty with multi-stage calculations and figure reading", async () => {
   const { MECHANICAL_DYNAMICS_EXPECTED_EXAMS: exams } = await loadData();
-  const requiredDiagrams = new Set([
-    "spring-network",
-    "cantilever-mass",
-    "damped-spring-mass",
-    "amplitude-decay",
-    "pinned-beam",
-    "spring-rigid-rod",
-  ]);
+  const commonDiagrams = ["spring-network", "damped-spring-mass", "amplitude-decay", "pinned-beam", "spring-rigid-rod"];
+  const structuralDiagrams = ["cantilever-mass", "torsional-shaft-disk", "axial-bar-mass", "cantilever-mass", "torsional-shaft-disk", "axial-bar-mass"];
 
-  for (const exam of exams) {
+  for (const [examIndex, exam] of exams.entries()) {
     assert.match(exam.subtitle, /範囲プリント4枚と同等難度/, `${exam.id} difficulty label`);
     assert.match(exam.officialConditionsNote, /モデル化・多段階計算・図読解/, `${exam.id} conditions`);
     assert.ok(exam.questions.every((question) => question.difficulty >= 2), `${exam.id} has no recall-only item`);
     assert.ok(exam.questions.filter((question) => question.difficulty === 3).length >= 9, `${exam.id} advanced fields`);
     assert.ok(exam.questions.filter((question) => question.steps.length >= 3).length >= 8, `${exam.id} multi-stage fields`);
-    assert.deepEqual(new Set(exam.questions.map((question) => question.diagram).filter(Boolean)), requiredDiagrams, `${exam.id} figure families`);
+    assert.deepEqual(new Set(exam.questions.map((question) => question.diagram).filter(Boolean)), new Set([...commonDiagrams, structuralDiagrams[examIndex]]), `${exam.id} figure families`);
 
     const citedPages = new Set(
       exam.questions.flatMap((question) => question.sourceRefs)
@@ -148,12 +142,43 @@ test("all six expected papers keep the four-print difficulty with multi-stage ca
     for (const page of [12, 13, 14, 15]) assert.ok(citedPages.has(page), `${exam.id} print page ${page}`);
 
     assert.match(byId(exam, `${exam.id}-m1-s1`).formula, /k_\{eq\}.*7k/, `${exam.id} spring reduction`);
-    assert.match(byId(exam, `${exam.id}-m2-s1`).formula, /3EI.*\\omega_n/s, `${exam.id} beam chain`);
+    assert.match(byId(exam, `${exam.id}-m2-s1`).formula, /3EI|GJ_p|EA/, `${exam.id} structural frequency chain`);
     assert.match(byId(exam, `${exam.id}-m3-s3`).formula, /C_2.*v_0.*\\omega_d/s, `${exam.id} initial condition`);
     assert.match(byId(exam, `${exam.id}-m4-s1`).formula, /\\delta.*\\zeta/s, `${exam.id} exact decrement`);
+    assert.match(byId(exam, `${exam.id}-m4-s1`).printedFormula, /2-69[\s\S]*2-71/, `${exam.id} printed decrement formulas`);
+    assert.match(byId(exam, `${exam.id}-m4-s1`).steps.join(" "), /n=6/, `${exam.id} counts six waveform cycles`);
     assert.match(byId(exam, `${exam.id}-m5-s1`).formula, /s\(s\+a\)\(s\+b\)/, `${exam.id} step response`);
     assert.match(byId(exam, `${exam.id}-m7-s1`).formula, /K_\\theta.*J/s, `${exam.id} rigid rod`);
   }
+});
+test("teacher supplement is explicit in cards, practice, expected papers, and source policy", async () => {
+  const data = await loadData();
+  const formulaIds = new Set(data.MECHANICAL_DYNAMICS_FORMULAS.map((card) => card.id));
+  for (const id of ["md-f-bending-natural", "md-f-torsional-shaft", "md-f-axial-natural", "md-f-p28-2-50-52"]) {
+    assert.ok(formulaIds.has(id), `missing ${id}`);
+  }
+  const questionIds = new Set(data.MECHANICAL_DYNAMICS_QUESTIONS.map((question) => question.id));
+  for (const id of ["md-q-s8", "md-q-r8", "md-q-s9", "md-q-g8"]) assert.ok(questionIds.has(id), `missing ${id}`);
+
+  const supplement = data.MECHANICAL_DYNAMICS_TEACHER_SUPPLEMENT;
+  assert.deepEqual(supplement.print1NaturalFrequency, ["曲げ（モーメント）", "ねじり", "引張"]);
+  assert.deepEqual(supplement.textbookPage28FormulaNumbers, ["2-50", "2-51", "2-52"]);
+  assert.deepEqual(supplement.printedDecrementFormulaNumbers, { exact: "2-69", simplified: "2-71" });
+  assert.equal(supplement.nearCertainQuestion.question, 10);
+  assert.match(supplement.nearCertainQuestion.task, /周期数を数え/);
+  assert.equal(supplement.secondPrintAllInRange, true);
+
+  const structuralGenres = data.MECHANICAL_DYNAMICS_EXPECTED_EXAMS.map((exam) => byId(exam, `${exam.id}-m2-s1`).genre);
+  assert.deepEqual(structuralGenres, [
+    "曲げ（モーメント）・固有振動数",
+    "ねじり・固有振動数",
+    "引張・固有振動数",
+    "曲げ（モーメント）・固有振動数",
+    "ねじり・固有振動数",
+    "引張・固有振動数",
+  ]);
+  assert.ok(data.MECHANICAL_DYNAMICS_EXPECTED_EXAMS.every((exam) => byId(exam, `${exam.id}-m4-s1`).diagram === "amplitude-decay"));
+  assert.match(data.MECHANICAL_DYNAMICS_SOURCE_POLICY.included.join(" "), /教員補足/);
 });
 test("range, source policy, and practice-only timing stay explicit", async () => {
   const data = await loadData();

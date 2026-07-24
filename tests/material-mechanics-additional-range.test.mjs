@@ -11,15 +11,17 @@ async function load(name) {
 }
 const pages = (item) => item.sourceRefs.filter((ref) => ref.kind === "range-zip").map((ref) => ref.page);
 
-test("additional pages and six bending formulas are exact", async () => {
+test("additional pages, four designated terms, and bending formulas are exact", async () => {
   const data = await load("material-mechanics-data.ts");
   assert.deepEqual(data.MATERIAL_MECHANICS_RANGE_PAGES.slice(9).map((p) => [p.number, p.filename]), [
     [10, "PXL_20260722_061249575.MP.jpg"],
     [11, "PXL_20260722_061315221.MP.jpg"],
     [12, "PXL_20260722_061318328.MP.jpg"],
     [13, "PXL_20260722_061322324.MP.jpg"],
+    [14, "材力範囲プリント1.jpg"],
+    [15, "材力範囲プリント2.jpg"],
   ]);
-  assert.equal(data.MATERIAL_MECHANICS_FORMULAS.length, 24);
+  assert.equal(data.MATERIAL_MECHANICS_FORMULAS.length, 28);
   const f = new Map(data.MATERIAL_MECHANICS_FORMULAS.map((card) => [card.id, card.formula]));
   const ids = ["mm-f-bending-stress", "mm-f-rectangle-bending", "mm-f-hollow-bending", "mm-f-simple-point-general", "mm-f-cantilever-tip", "mm-f-cantilever-udl-free"];
   assert.ok(ids.every((id) => f.has(id)));
@@ -32,7 +34,7 @@ test("additional pages and six bending formulas are exact", async () => {
   for (const id of ids) assert.doesNotMatch(f.get(id), /I_p|Z_p/);
 });
 
-test("twelve exact practices keep diagrams, normalized values, and pages 10-13", async () => {
+test("twelve exact practices keep diagrams, normalized values, and pages 10-14", async () => {
   const data = await load("material-mechanics-data.ts");
   const q = new Map(data.MATERIAL_MECHANICS_QUESTIONS.filter((x) => x.id.startsWith("mm-q-add-")).map((x) => [x.id, x]));
   assert.equal(q.size, 12);
@@ -40,7 +42,7 @@ test("twelve exact practices keep diagrams, normalized values, and pages 10-13",
   for (const [c, diagram] of Object.entries(diagrams)) for (const suffix of ["reactions", "mmax", "stress"]) {
     const item = q.get("mm-q-add-" + c + "-" + suffix);
     assert.equal(item.diagram, diagram);
-    assert.deepEqual(pages(item), [10, 11, 12, 13]);
+    assert.deepEqual(pages(item), [10, 11, 12, 13, 14]);
   }
   assert.match(q.get("mm-q-add-c1-reactions").answer, /3\.0[\s\S]*5\.0/);
   assert.match(q.get("mm-q-add-c2-reactions").answer, /24\.0[\s\S]*12\.0/);
@@ -55,7 +57,7 @@ test("twelve exact practices keep diagrams, normalized values, and pages 10-13",
   assert.deepEqual(["c1", "c2", "c3", "c4"].map((c) => q.get("mm-q-add-" + c + "-stress").numericAnswer), [62.5, 100, 138.02, 38.82]);
 });
 
-test("six mock chains cover four new families and use pages 10-13", async () => {
+test("six mock chains cover four new families and use pages 10-14", async () => {
   const data = await load("material-mechanics-data.ts");
   const diagrams = ["additional-simple-point-rect", "additional-simple-udl-rect", "additional-cantilever-tip-hollow", "additional-cantilever-udl-hollow", "additional-simple-point-rect", "additional-cantilever-udl-hollow"];
   const stresses = [62.5, 100, 138.02, 38.82];
@@ -67,7 +69,7 @@ test("six mock chains cover four new families and use pages 10-13", async () => 
     assert.deepEqual(beam.questions[1].dependsOn, [beam.questions[0].id]);
     assert.deepEqual(beam.questions[2].dependsOn, [beam.questions[1].id]);
     for (const item of beam.questions) {
-      assert.deepEqual(pages(item), [10, 11, 12, 13]);
+      assert.deepEqual(pages(item), [10, 11, 12, 13, 14]);
       assert.ok(item.sourceRefs.every((ref) => ref.kind === "range-zip"));
       assert.doesNotMatch(item.formula, /\//);
     }
@@ -76,10 +78,25 @@ test("six mock chains cover four new families and use pages 10-13", async () => 
   assert.equal(new Set(diagrams).size, 4);
 });
 
+test("supplement sheet contributes only designated questions 2, 5, 7, and 10", async () => {
+  const data = await load("material-mechanics-data.ts");
+  const ids = data.MATERIAL_MECHANICS_SUPPLEMENT_QUESTIONS.map((question) => question.id);
+  assert.deepEqual(ids, [
+    "mm-q-supplement-q2-straight-beam",
+    "mm-q-supplement-q5-pin-support",
+    "mm-q-supplement-q7-concentrated-load",
+    "mm-q-supplement-q10-cantilever-wording",
+  ]);
+  assert.ok(data.MATERIAL_MECHANICS_SUPPLEMENT_QUESTIONS.every((question) => question.sourceRefs.length === 1 && question.sourceRefs[0].page === 15));
+  assert.match(data.MATERIAL_MECHANICS_SUPPLEMENT_QUESTIONS.find((question) => question.id.includes("q7"))?.prompt ?? "", /文章で説明/);
+  assert.match(data.MATERIAL_MECHANICS_SUPPLEMENT_QUESTIONS.find((question) => question.id.includes("q10"))?.prompt ?? "", /名称を答え.*文章で説明/);
+  const undesignated = data.MATERIAL_MECHANICS_QUESTIONS.filter((question) => question.sourceRefs.some((ref) => ref.page === 15) && !ids.includes(question.id));
+  assert.deepEqual(undesignated, []);
+});
 test("eight generators include four page-10 bending families and hollow formulas", async () => {
   const gen = await load("material-mechanics-generator-data.ts");
   assert.equal(gen.MATERIAL_MECHANICS_GENERATOR_TEMPLATES.length, 8);
-  const expected = { "material-simple-beam-point-rect": [10, 11], "material-simple-beam-udl-rect": [10, 11], "material-cantilever-tip-hollow": [10, 12], "material-cantilever-udl-hollow": [10, 13] };
+  const expected = { "material-simple-beam-point-rect": [10, 11, 14], "material-simple-beam-udl-rect": [10, 11, 14], "material-cantilever-tip-hollow": [10, 12, 14], "material-cantilever-udl-hollow": [10, 13, 14] };
   const random = { int: (a, b) => Math.floor((a + b) / 2) };
   for (const [id, sourcePages] of Object.entries(expected)) {
     const spec = gen.buildMaterialMechanicsGeneratedSpec(id, random);
@@ -98,11 +115,11 @@ test("eight generators include four page-10 bending families and hollow formulas
 test("rapid, comprehensive, generated, and ranking pools include the range", async () => {
   const names = ["rapid-quiz-data.ts", "official-ranking-config.ts", "official-ranking-question-ids.ts", "generated-practice-engine.ts"];
   const [rapid, ranking, ids, engine] = await Promise.all(names.map((name) => readFile(new URL(name, APP), "utf8")));
-  assert.match(rapid, /MATERIAL_MECHANICS_RAPID = examLevelPool\([\s\S]*MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS/);
+  assert.match(rapid, /MATERIAL_MECHANICS_RAPID = examLevelPool\([\s\S]*MATERIAL_MECHANICS_PRACTICE_QUESTIONS/);
   assert.match(rapid, /"subject-5": MATERIAL_MECHANICS_RAPID/);
   assert.match(rapid, /getOfficialRankingEligiblePool[\s\S]*getStaticRapidPool\(subjectId\)\.filter/);
   assert.match(ranking, /"subject-5"/);
-  assert.match(ids, /"subject-5":[\s\S]*rapid-exam-mm-e[1-6]-5-1/);
+  assert.match(ids, /"subject-5":[\s\S]*rapid-exam-mm-q-supplement-q(2|5|7|10)/);
   for (const id of ["material-simple-beam-point-rect", "material-simple-beam-udl-rect", "material-cantilever-tip-hollow", "material-cantilever-udl-hollow"]) assert.ok(engine.includes('"' + id + '"'));
 });
 

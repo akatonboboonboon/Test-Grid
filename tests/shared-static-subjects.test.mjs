@@ -14,10 +14,9 @@ test("routes every subject through its print-level non-generated pool", async ()
 
   for (const source of [
     "ENGLISH_PRINT_LEVEL_QUESTIONS",
-    "NETWORK_EXAM_LEVEL_QUESTIONS",
     "MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS",
     "THERMODYNAMICS_PRINT_LEVEL_QUESTIONS",
-    "MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS",
+    "MATERIAL_MECHANICS_PRACTICE_QUESTIONS",
     "SMART_CONTROL_PRINT_LEVEL_QUESTIONS",
     "STATISTICS_PRINT_LEVEL_QUESTIONS",
     "APPLIED_MATH_PRINT_LEVEL_QUESTIONS",
@@ -40,10 +39,9 @@ test("routes every subject through its print-level non-generated pool", async ()
 
   for (const [constant, source] of [
     ["ENGLISH_RAPID", "ENGLISH_PRINT_LEVEL_QUESTIONS"],
-    ["NETWORK_RAPID", "NETWORK_EXAM_LEVEL_QUESTIONS"],
     ["MECHANICAL_RAPID", "MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS"],
     ["THERMODYNAMICS_RAPID", "THERMODYNAMICS_PRINT_LEVEL_QUESTIONS"],
-    ["MATERIAL_MECHANICS_RAPID", "MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS"],
+    ["MATERIAL_MECHANICS_RAPID", "MATERIAL_MECHANICS_PRACTICE_QUESTIONS"],
     ["SMART_CONTROL_RAPID", "SMART_CONTROL_PRINT_LEVEL_QUESTIONS"],
     ["STATISTICS_RAPID", "STATISTICS_PRINT_LEVEL_QUESTIONS"],
     ["APPLIED_MATH_RAPID", "APPLIED_MATH_PRINT_LEVEL_QUESTIONS"],
@@ -56,9 +54,10 @@ test("routes every subject through its print-level non-generated pool", async ()
 
   assert.ok(rapid.includes("const COMPREHENSIVE_POOLS"));
   assert.ok(rapid.includes("ENGLISH_CH18_ACTUAL_QUIZ_QUESTIONS"));
+  assert.ok(rapid.includes("const NETWORK_RAPID = networkCardsToRapid(DEFAULT_CARDS)"));
   assert.ok(rapid.includes("network: NETWORK_RAPID"));
   assert.equal(rapid.includes("network: networkCardsToRapid"), false);
-  assert.equal(rapid.includes("networkCardsToRapid(DEFAULT_CARDS)"), false);
+  assert.equal(rapid.includes("NETWORK_EXAM_LEVEL_QUESTIONS"), false);
   assert.equal(rapid.includes("function formulaCardPool"), false);
   assert.equal(rapid.includes("rapid-card-"), false);
   assert.equal(rapid.includes("combineRapidPools"), false);
@@ -135,6 +134,6 @@ test("reports real home progress and migrates saved placeholder memos", async ()
 
   assert.match(data, /wasOldMaterialMechanicsPlaceholder/);
   assert.match(data, /wasOldDigitalCircuitsPlaceholder/);
-  assert.match(data, /範囲ZIP13ページ/);
+  assert.match(data, /範囲資料15枚/);
   assert.match(data, /追加範囲PDF7ページ/);
 });

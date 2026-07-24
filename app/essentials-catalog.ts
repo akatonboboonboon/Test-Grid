@@ -37,7 +37,7 @@ export const ESSENTIAL_SUBJECTS: EssentialSubject[] = [
     accent: "#55dde0",
     examDate: "2026-07-28",
     examDateLabel: "7/28",
-    description: "手書き資料の①〜⑦を基準に、層・正式名称・働きを同時に即答するための最重要プロトコル群。",
+    description: "2026-07-24正式範囲PDFの全50項目から、層・正式名称・働きをまとめて覚える最重要プロトコル群。",
     items: NETWORK_ESSENTIALS,
   },
   {
@@ -70,7 +70,7 @@ export const ESSENTIAL_SUBJECTS: EssentialSubject[] = [
     accent: "#ffd65c",
     examDate: "2026-07-30",
     examDateLabel: "7/30",
-    description: "範囲ZIP13ページの丸軸ねじり・軸設計・コイルばね・はり反力・SFD・BMDに加え、曲げ応力、長方形・中空円断面のI・Z、単純支持・片持ちばりの標準荷重パターンを整理。EIによるたわみ、曲率、カスティリアーノの定理は対象外。",
+    description: "範囲資料15枚（ZIP13枚＋補足2枚）の丸軸ねじり・軸設計・コイルばね・はり反力・SFD・BMD、曲げ応力、断面量に加え、補足指定問2・5・7・10を整理。補足プリントの他設問と、EIたわみ・曲率・カスティリアーノの定理は対象外。",
     items: MATERIAL_ESSENTIALS,
   },
   {

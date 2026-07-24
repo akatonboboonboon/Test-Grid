@@ -23,6 +23,7 @@ type ExpectedQuestion = {
   keywords?: string[];
   minKeywords?: number;
   formula?: string;
+  printedFormula?: string;
   steps: string[];
   explanation: string;
   sourcePages?: number[];
@@ -434,6 +435,7 @@ function MechanicalDynamicsExpectedExamLab({ firstExam }: { firstExam: ExpectedE
                   <article className={styles.paperQuestion} key={question.id}>
                     <header className={styles.questionHeader}><span>（{question.sub}）</span><strong>{question.genre}</strong><b>〔{question.points}点〕</b></header>
                     <p className={styles.prompt}><RichMathText text={question.prompt} /></p>
+                    {question.printedFormula && <div className={styles.printedFormula}><span>試験用紙に記載される式</span><DisplayMath tex={question.printedFormula} ariaLabel={`${question.genre}で問題用紙に記載される式`} /></div>}
                     {question.diagram && <MechanicalDynamicsDiagram className={styles.diagram} kind={question.diagram} title={`${question.genre}：解答用線図`} />}
                     <p className={styles.paperAnswerCue}>解答・途中式・単位は別紙の専用解答欄へ記入</p>
                   </article>

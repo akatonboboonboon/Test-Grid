@@ -60,7 +60,7 @@ test("named leaderboards only accept server-scored official streak attempts", as
   assert.doesNotMatch(route, /Response\.json\([^)]*userKey/);
   assert.doesNotMatch(route, /body\.correctCount|body\.bestStreak|body\.durationMs/);
   assert.match(config, /OFFICIAL_RANKING_MODE = "official-ranking-streak"/);
-  assert.match(config, /OFFICIAL_RANKING_VERSION = 2/);
+  assert.match(config, /OFFICIAL_RANKING_VERSION = 3/);
   assert.match(config, /streak:v/);
   assert.match(client, /sessionId: session\.sessionId/);
   assert.match(client, /attemptId: session\.attemptId/);

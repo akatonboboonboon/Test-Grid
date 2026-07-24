@@ -28,7 +28,7 @@ test("official rankings use one shared endless-streak UI while free rapid practi
 
   for (const token of [
     'OFFICIAL_RANKING_MODE = "official-ranking-streak"',
-    "OFFICIAL_RANKING_VERSION = 2",
+    "OFFICIAL_RANKING_VERSION = 3",
     'OFFICIAL_RANKING_SCORING = "consecutive-correct"',
     "streak:v",
   ]) assert.ok(config.includes(token), token);

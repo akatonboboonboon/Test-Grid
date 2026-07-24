@@ -14,236 +14,145 @@ export type ProtocolCard = {
   enabled: boolean;
 };
 
+type OfficialProtocolSeed = {
+  id: string;
+  label: string;
+  layer: Layer;
+  layers?: Layer[];
+};
+
 export const ALL_LAYERS: Layer[] = [1, 2, 3, 4, 5, 6, 7];
 
+/** 正式な「ネットワーク範囲.pdf」に掲載された50項目の正式名称。 */
 export const PROTOCOL_FORMAL_NAMES: Record<string, string> = {
-  "イーサネット": "Ethernet（有線LAN規格。略語ではない）",
-  "10BASE-T": "10 Mbps Baseband Ethernet over Twisted-Pair Cable",
-  "IEEE 802.11": "Institute of Electrical and Electronics Engineers 802.11 — Wireless LAN MAC/PHY Standard",
-  "Bluetooth": "Bluetooth（近距離無線通信規格。略語ではない）",
-  "Zigbee": "Zigbee（低消費電力・近距離メッシュ無線通信規格。略語ではない）",
-  "IEEE 802.1X": "Institute of Electrical and Electronics Engineers 802.1X — Port-Based Network Access Control",
-  "EAP": "Extensible Authentication Protocol",
-  "EAPoL": "Extensible Authentication Protocol over LANs (EAPOL)",
-  "RADIUS": "Remote Authentication Dial-In User Service",
-  "EAP-TLS": "Extensible Authentication Protocol – Transport Layer Security",
-  "PEAP": "Protected Extensible Authentication Protocol",
-  "EAP-SIM/AKA": "Extensible Authentication Protocol – Subscriber Identity Module / Authentication and Key Agreement",
-  "WEP": "Wired Equivalent Privacy",
-  "WPA": "Wi-Fi Protected Access",
-  "WPA2": "Wi-Fi Protected Access 2",
-  "WPA3": "Wi-Fi Protected Access 3",
-  "RC4": "Rivest Cipher 4",
-  "TKIP": "Temporal Key Integrity Protocol",
-  "AES": "Advanced Encryption Standard",
-  "AES256": "Advanced Encryption Standard（256-bit Key）",
+  "1000BASE-T": "1000BASE-T Gigabit Ethernet over Twisted-Pair Cable",
+  "IEEE 802.11ax": "Institute of Electrical and Electronics Engineers 802.11ax High-Efficiency Wireless LAN Standard",
+  "Bluetooth": "Bluetooth",
+  "Zigbee": "Zigbee",
+  "ツイストペアケーブル": "Twisted-Pair Cable",
+  "光ファイバー": "Optical Fiber",
   "ARP": "Address Resolution Protocol",
-  "GARP": "Gratuitous ARP",
+  "GARP": "Gratuitous Address Resolution Protocol",
   "PPP": "Point-to-Point Protocol",
   "PAP": "Password Authentication Protocol",
   "CHAP": "Challenge-Handshake Authentication Protocol",
   "PPPoE": "Point-to-Point Protocol over Ethernet",
-  "IPoE": "Internet Protocol over Ethernet",
-  "PPTP": "Point-to-Point Tunneling Protocol",
-  "GRE": "Generic Routing Encapsulation",
+  "RADIUS": "Remote Authentication Dial-In User Service",
   "L2TP": "Layer 2 Tunneling Protocol",
-  "L2TP over IPsec": "Layer 2 Tunneling Protocol over Internet Protocol Security",
-  "CDP": "Cisco Discovery Protocol",
-  "LLDP": "Link Layer Discovery Protocol",
-  "STP": "Spanning Tree Protocol",
-  "RSTP": "Rapid Spanning Tree Protocol",
-  "MSTP": "Multiple Spanning Tree Protocol",
   "IPv4": "Internet Protocol version 4",
   "IPv6": "Internet Protocol version 6",
-  "IGP": "Interior Gateway Protocol",
-  "EGP": "Exterior Gateway Protocol",
-  "RIP": "Routing Information Protocol",
-  "RIPv2": "Routing Information Protocol version 2",
-  "RIPng": "Routing Information Protocol next generation",
-  "OSPF": "Open Shortest Path First",
-  "OSPFv2": "Open Shortest Path First version 2",
-  "OSPFv3": "Open Shortest Path First version 3",
-  "EIGRP": "Enhanced Interior Gateway Routing Protocol",
-  "EIGRP for IPv6": "Enhanced Interior Gateway Routing Protocol for IPv6",
-  "BGP": "Border Gateway Protocol",
-  "DHCP": "Dynamic Host Configuration Protocol",
-  "DHCPv4": "Dynamic Host Configuration Protocol for IPv4",
   "ICMP": "Internet Control Message Protocol",
-  "ICMPv4": "Internet Control Message Protocol for IPv4",
-  "ICMPv6": "Internet Control Message Protocol for IPv6",
   "NDP": "Neighbor Discovery Protocol",
+  "DHCP": "Dynamic Host Configuration Protocol",
+  "RIP": "Routing Information Protocol",
+  "OSPF": "Open Shortest Path First",
+  "EIGRP": "Enhanced Interior Gateway Routing Protocol",
+  "BGP": "Border Gateway Protocol",
   "IPsec": "Internet Protocol Security",
-  "IKE": "Internet Key Exchange",
-  "ESP": "Encapsulating Security Payload",
-  "AH": "Authentication Header",
-  "IKEv1": "Internet Key Exchange version 1",
-  "IKEv2": "Internet Key Exchange version 2",
-  "FHRP": "First Hop Redundancy Protocol",
-  "HSRP": "Hot Standby Router Protocol",
-  "VRRP": "Virtual Router Redundancy Protocol",
-  "UDP": "User Datagram Protocol",
+  "PPTP": "Point-to-Point Tunneling Protocol",
+  "OpenFlow": "OpenFlow",
   "TCP": "Transmission Control Protocol",
-  "QUIC": "QUIC（旧称: Quick UDP Internet Connections。現在は略語ではない正式名称）",
-  "SSH": "Secure Shell",
-  "TLS": "Transport Layer Security",
-  "SSL2.0": "Secure Sockets Layer version 2.0",
-  "SSL3.0": "Secure Sockets Layer version 3.0",
-  "TLS1.0": "Transport Layer Security version 1.0",
-  "TLS1.1": "Transport Layer Security version 1.1",
-  "TLS1.2": "Transport Layer Security version 1.2",
-  "TLS1.3": "Transport Layer Security version 1.3",
-  "SSL": "Secure Sockets Layer",
+  "UDP": "User Datagram Protocol",
+  "SIP": "Session Initiation Protocol",
+  "RTSP": "Real-Time Streaming Protocol",
+  "SSL/TLS": "Secure Sockets Layer / Transport Layer Security",
+  "ALPN": "Application-Layer Protocol Negotiation",
+  "QUIC": "QUIC (the formal name is no longer treated as an acronym)",
   "HTTP": "Hypertext Transfer Protocol",
-  "HTTP/0.9": "Hypertext Transfer Protocol version 0.9",
-  "HTTP/1.0": "Hypertext Transfer Protocol version 1.0",
-  "HTTP/1.1": "Hypertext Transfer Protocol version 1.1",
-  "HTTP/2": "Hypertext Transfer Protocol version 2",
-  "HTTP/3": "Hypertext Transfer Protocol version 3",
+  "HTTPS": "Hypertext Transfer Protocol Secure",
   "DNS": "Domain Name System",
   "SMTP": "Simple Mail Transfer Protocol",
   "POP3": "Post Office Protocol version 3",
-  "IMAP": "Internet Message Access Protocol",
-  "Telnet": "Telnet Protocol（遠隔端末接続プロトコル。略語ではない）",
-  "SCP": "Secure Copy Protocol",
-  "SFTP": "SSH File Transfer Protocol",
-  "NTP": "Network Time Protocol",
-  "SNMP": "Simple Network Management Protocol",
-  "Syslog": "The Syslog Protocol（イベントログ転送方式。略語ではない）",
+  "IMAP4": "Internet Message Access Protocol version 4",
+  "SSH": "Secure Shell",
+  "Telnet": "Telnet",
   "FTP": "File Transfer Protocol",
   "TFTP": "Trivial File Transfer Protocol",
-  "SIP": "Session Initiation Protocol",
-  "RTP": "Real-time Transport Protocol",
+  "SNMP": "Simple Network Management Protocol",
+  "NTP": "Network Time Protocol",
+  "CDP": "Cisco Discovery Protocol",
+  "LLDP": "Link Layer Discovery Protocol",
+  "STP": "Spanning Tree Protocol",
+  "VRRP": "Virtual Router Redundancy Protocol",
+  "HSRP": "Hot Standby Router Protocol",
 };
 
-function cardId(label: string, layer: Layer) {
-  const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  return `l${layer}-${slug}`;
-}
+const OFFICIAL_PROTOCOL_SEEDS: OfficialProtocolSeed[] = [
+  { id: "l1-1000base-t", label: "1000BASE-T", layer: 1 },
+  { id: "l1-ieee-802-11ax", label: "IEEE 802.11ax", layer: 1 },
+  { id: "l1-bluetooth", label: "Bluetooth", layer: 1, layers: [1, 2] },
+  { id: "l1-zigbee", label: "Zigbee", layer: 1, layers: [1, 2] },
+  { id: "l1-twisted-pair-cable", label: "ツイストペアケーブル", layer: 1 },
+  { id: "l1-optical-fiber", label: "光ファイバー", layer: 1 },
 
-function makeCards(labels: string[], layer: Layer, source: 1 | 2): ProtocolCard[] {
-  return labels.map((label) => ({
-    id: cardId(label, layer),
-    label,
-    fullName: PROTOCOL_FORMAL_NAMES[label],
-    description: PROTOCOL_DESCRIPTIONS[label],
-    layer,
-    source,
-    enabled: true,
-  }));
-}
+  { id: "l2-arp", label: "ARP", layer: 2 },
+  { id: "l2-garp", label: "GARP", layer: 2 },
+  { id: "l2-ppp", label: "PPP", layer: 2 },
+  { id: "l2-pap", label: "PAP", layer: 2 },
+  { id: "l2-chap", label: "CHAP", layer: 2 },
+  { id: "l2-pppoe", label: "PPPoE", layer: 2 },
+  { id: "l2-radius", label: "RADIUS", layer: 2, layers: [2, 7] },
+  { id: "l2-l2tp", label: "L2TP", layer: 2, layers: [2, 3] },
 
-export const DEFAULT_CARDS: ProtocolCard[] = [
-  {
-    id: "l1-ethernet",
-    label: "イーサネット",
-    fullName: PROTOCOL_FORMAL_NAMES["イーサネット"],
-    description: PROTOCOL_DESCRIPTIONS["イーサネット"],
-    layer: 1,
-    layers: [1, 2],
-    source: 1,
-    note: "写真では第1層と第2層の両方に記載",
-    enabled: true,
-  },
-  ...makeCards(["10BASE-T", "IEEE 802.11", "Bluetooth", "Zigbee"], 1, 1),
-  ...makeCards([
-    "IEEE 802.1X",
-    "EAP",
-    "EAPoL",
-    "RADIUS",
-    "EAP-TLS",
-    "PEAP",
-    "EAP-SIM/AKA",
-    "WEP",
-    "WPA",
-    "WPA2",
-    "WPA3",
-    "RC4",
-    "TKIP",
-    "AES",
-    "AES256",
-    "ARP",
-    "GARP",
-    "PPP",
-    "PAP",
-    "CHAP",
-    "PPPoE",
-    "IPoE",
-    "PPTP",
-    "GRE",
-    "L2TP",
-    "L2TP over IPsec",
-    "CDP",
-    "LLDP",
-    "STP",
-    "RSTP",
-    "MSTP",
-  ], 2, 1),
-  ...makeCards([
-    "IPv4",
-    "IPv6",
-    "IGP",
-    "EGP",
-    "RIP",
-    "RIPv2",
-    "RIPng",
-    "OSPF",
-    "OSPFv2",
-    "OSPFv3",
-    "EIGRP",
-    "EIGRP for IPv6",
-    "BGP",
-    "DHCP",
-    "DHCPv4",
-    "ICMP",
-    "ICMPv4",
-    "ICMPv6",
-    "NDP",
-    "IPsec",
-    "IKE",
-    "ESP",
-    "AH",
-    "IKEv1",
-    "IKEv2",
-    "FHRP",
-    "HSRP",
-    "VRRP",
-  ], 3, 2),
-  ...makeCards(["UDP", "TCP", "QUIC"], 4, 2),
-  {
-    ...makeCards(["SSH"], 5, 2)[0],
-    layers: [5, 7],
-    note: "写真では第5層と第7層の両方に記載",
-  },
-  {
-    ...makeCards(["TLS"], 5, 2)[0],
-    layers: [5, 6],
-    note: "写真では第5層と第6層の両方に記載",
-  },
-  ...makeCards(["SSL2.0", "SSL3.0", "TLS1.0", "TLS1.1", "TLS1.2", "TLS1.3"], 5, 2),
-  ...makeCards(["SSL"], 6, 2),
-  ...makeCards([
-    "HTTP",
-    "HTTP/0.9",
-    "HTTP/1.0",
-    "HTTP/1.1",
-    "HTTP/2",
-    "HTTP/3",
-    "DNS",
-    "SMTP",
-    "POP3",
-    "IMAP",
-    "Telnet",
-    "SCP",
-    "SFTP",
-    "NTP",
-    "SNMP",
-    "Syslog",
-    "FTP",
-    "TFTP",
-    "SIP",
-    "RTP",
-  ], 7, 2),
+  { id: "l3-ipv4", label: "IPv4", layer: 3 },
+  { id: "l3-ipv6", label: "IPv6", layer: 3 },
+  { id: "l3-icmp", label: "ICMP", layer: 3 },
+  { id: "l3-ndp", label: "NDP", layer: 3 },
+  { id: "l3-dhcp", label: "DHCP", layer: 3, layers: [3, 7] },
+  { id: "l3-rip", label: "RIP", layer: 3 },
+  { id: "l3-ospf", label: "OSPF", layer: 3 },
+  { id: "l3-eigrp", label: "EIGRP", layer: 3 },
+  { id: "l3-bgp", label: "BGP", layer: 3 },
+  { id: "l3-ipsec", label: "IPsec", layer: 3 },
+  { id: "l3-pptp", label: "PPTP", layer: 3, layers: [3, 2] },
+  { id: "l3-openflow", label: "OpenFlow", layer: 3, layers: [3, 7] },
+
+  { id: "l4-tcp", label: "TCP", layer: 4 },
+  { id: "l4-udp", label: "UDP", layer: 4 },
+
+  { id: "l5-sip", label: "SIP", layer: 5 },
+  { id: "l5-rtsp", label: "RTSP", layer: 5 },
+
+  { id: "l6-ssl-tls", label: "SSL/TLS", layer: 6 },
+  { id: "l6-alpn", label: "ALPN", layer: 6 },
+  { id: "l6-quic", label: "QUIC", layer: 6, layers: [6, 4] },
+
+  { id: "l7-http", label: "HTTP", layer: 7 },
+  { id: "l7-https", label: "HTTPS", layer: 7 },
+  { id: "l7-dns", label: "DNS", layer: 7 },
+  { id: "l7-smtp", label: "SMTP", layer: 7 },
+  { id: "l7-pop3", label: "POP3", layer: 7 },
+  { id: "l7-imap4", label: "IMAP4", layer: 7 },
+  { id: "l7-ssh", label: "SSH", layer: 7 },
+  { id: "l7-telnet", label: "Telnet", layer: 7 },
+  { id: "l7-ftp", label: "FTP", layer: 7 },
+  { id: "l7-tftp", label: "TFTP", layer: 7 },
+  { id: "l7-snmp", label: "SNMP", layer: 7 },
+  { id: "l7-ntp", label: "NTP", layer: 7 },
+  { id: "l7-cdp", label: "CDP", layer: 7, layers: [7, 2] },
+  { id: "l7-lldp", label: "LLDP", layer: 7, layers: [7, 2] },
+  { id: "l7-stp", label: "STP", layer: 7, layers: [7, 2] },
+  { id: "l7-vrrp", label: "VRRP", layer: 7, layers: [7, 3] },
+  { id: "l7-hsrp", label: "HSRP", layer: 7, layers: [7, 3] },
 ];
+
+function officialLayerNote(seed: OfficialProtocolSeed) {
+  if (!seed.layers || seed.layers.length < 2) return undefined;
+  const secondary = seed.layers.filter((layer) => layer !== seed.layer);
+  return `正式PDFではL${seed.layer}に掲載。括弧内の${secondary.map((layer) => `L${layer}`).join("・")}でも正解です。`;
+}
+
+export const DEFAULT_CARDS: ProtocolCard[] = OFFICIAL_PROTOCOL_SEEDS.map((seed) => ({
+  id: seed.id,
+  label: seed.label,
+  fullName: PROTOCOL_FORMAL_NAMES[seed.label],
+  description: PROTOCOL_DESCRIPTIONS[seed.label],
+  layer: seed.layer,
+  layers: seed.layers,
+  source: seed.layer <= 2 ? 1 : 2,
+  note: officialLayerNote(seed),
+  enabled: true,
+}));
 
 export function shuffle<T>(items: T[]) {
   const copy = [...items];
@@ -286,13 +195,16 @@ export function cardLayerLabel(card: ProtocolCard) {
 
 export function normalizeCards(value: unknown): ProtocolCard[] {
   if (!Array.isArray(value)) return DEFAULT_CARDS;
+
   const normalized = value.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
     const candidate = item as Partial<ProtocolCard>;
     if (typeof candidate.id !== "string" || typeof candidate.label !== "string" || !isLayer(candidate.layer)) return [];
     const label = candidate.label.trim();
     if (!label) return [];
-    const source = candidate.source === 1 || candidate.source === 2 || candidate.source === "custom" ? candidate.source : "custom";
+    const source = candidate.source === 1 || candidate.source === 2 || candidate.source === "custom"
+      ? candidate.source
+      : "custom";
     const fullName = typeof candidate.fullName === "string" && candidate.fullName.trim()
       ? candidate.fullName.trim()
       : undefined;
@@ -314,21 +226,17 @@ export function normalizeCards(value: unknown): ProtocolCard[] {
       enabled: candidate.enabled !== false,
     } satisfies ProtocolCard];
   });
+
   const savedById = new Map(normalized.map((card) => [card.id, card]));
-  const defaultIds = new Set(DEFAULT_CARDS.map((card) => card.id));
-  const mergedDefaults = DEFAULT_CARDS.map((fallback) => {
-    const saved = savedById.get(fallback.id);
-    if (!saved) return fallback;
-    return {
-      ...fallback,
-      ...saved,
-      fullName: saved.fullName ?? (saved.label === fallback.label ? fallback.fullName : undefined),
-      description: saved.description ?? (saved.label === fallback.label ? fallback.description : undefined),
-      layers: saved.layers ?? (saved.layer === fallback.layer ? fallback.layers : undefined),
-      note: saved.note ?? fallback.note,
-      source: fallback.source,
-    };
-  });
-  const customCards = normalized.filter((card) => card.source === "custom" && !defaultIds.has(card.id));
-  return [...mergedDefaults, ...customCards];
+  const officialIds = new Set(DEFAULT_CARDS.map((card) => card.id));
+
+  // 正式IDに一致する項目だけON/OFF状態を引き継ぐ。名称・層・説明は正本を優先する。
+  const officialCards = DEFAULT_CARDS.map((fallback) => ({
+    ...fallback,
+    enabled: savedById.get(fallback.id)?.enabled !== false,
+  }));
+
+  // 利用者が明示的に追加したカードは維持するが、旧96項目の既定カードは復活させない。
+  const customCards = normalized.filter((card) => card.source === "custom" && !officialIds.has(card.id));
+  return [...officialCards, ...customCards];
 }

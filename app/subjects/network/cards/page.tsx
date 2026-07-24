@@ -8,7 +8,6 @@ import {
   cardLayers,
   cardLayerLabel,
   DEFAULT_CARDS,
-  normalizeCards,
   shuffle,
   storageRead,
   storageWrite,
@@ -155,8 +154,7 @@ export default function CardsPage() {
   /* Device-local cards and progress are restored after mount. */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    const usableCards = normalizeCards(storageRead<unknown>("layer-sum-cards-v1", DEFAULT_CARDS))
-      .filter((card) => card.enabled && card.label.trim());
+    const usableCards = DEFAULT_CARDS.filter((card) => card.enabled && card.label.trim());
     const savedLayers = normalizeLayerFilter(storageRead<unknown>(LAYER_FILTER_STORAGE_KEY, "all"));
     setCards(usableCards);
     setSelectedLayers(savedLayers);
@@ -394,7 +392,7 @@ export default function CardsPage() {
         <div className="header-actions">
           <span className="card-count-label"><i aria-hidden="true" /> {selectedLayers.length === 0 ? cards.length : `${filteredCards.length} / ${cards.length}`} CARDS</span>
           <Link className="outline-button header-link memory-open-button" href="/subjects/network/written">本試験・20文字記述へ</Link>
-          <Link className="outline-button header-link" href="/subjects/network">追試用・暗算へ</Link>
+          <Link className="outline-button header-link" href="/subjects/network">追試用・旧フラッシュ暗算へ</Link>
         </div>
       </header>
 
@@ -404,7 +402,7 @@ export default function CardsPage() {
             <p className="eyebrow"><span>MEMORY MODE</span><span>FRONT → BACK</span></p>
             <h1>まず覚える。<br /><em>それから、足す。</em></h1>
           </div>
-          <p>表の略語を見て層番号と正式名称を思い出し、カードをめくって確認。覚えたカードと復習カードは、この端末に記録されます。</p>
+          <p>2026-07-24正式範囲PDF・全50項目が正本です。表の用語を見て層・正式名称・働きを思い出し、カードをめくって確認します。旧写真由来の対象外項目は入りません。</p>
         </section>
 
         <section className="memory-search" aria-labelledby="memory-search-title">
@@ -477,7 +475,7 @@ export default function CardsPage() {
           <div className="memory-layer-filter-copy">
             <span>FILTER DECK</span>
             <h2 id="memory-layer-filter-title">レイヤーで絞り込み</h2>
-            <p>複数選択できます。選んだ層のどれかに属するカードをシャッフル・復習し、複数層カードも1枚だけ表示します。</p>
+            <p>複数選択できます。正式PDFの括弧付き用語はリスト層と括弧内層の両方へ表示し、カード自体は1枚だけ収録します。</p>
           </div>
           <div className="memory-layer-filter-buttons" role="group" aria-label="出題するレイヤー（複数選択可）">
             <button
@@ -618,7 +616,7 @@ export default function CardsPage() {
           </section>
         ) : (
           <section className="memory-empty">
-            <span>EMPTY DECK</span><h2>{selectedLayers.length === 0 ? "出題できるカードがありません。" : `${selectedLayerLabel}のいずれにも出題できるカードがありません。`}</h2><p>別のレイヤーを選ぶか、暗算ページの「カードを編集」で出題するカードをONにしてください。</p><Link href="/subjects/network">暗算ページへ戻る</Link>
+            <span>EMPTY DECK</span><h2>{selectedLayers.length === 0 ? "出題できるカードがありません。" : `${selectedLayerLabel}のいずれにも出題できるカードがありません。`}</h2><p>別のレイヤーを選ぶか、検索条件を解除して正式範囲50項目を表示してください。</p><Link href="/subjects/network">暗算ページへ戻る</Link>
             {searchQuery && <button type="button" onClick={() => updateSearch("")}>検索を解除して選択中のカードを表示</button>}
           </section>
         )}

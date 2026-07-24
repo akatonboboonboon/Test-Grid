@@ -72,7 +72,7 @@ test("on-demand generation metadata exposes only subjects with source-backed gen
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "network"), false);
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-5"), true);
   assert.equal(engine.GENERATED_PRACTICE_SUBJECTS.some((subject) => subject.id === "subject-9"), true);
-  assert.equal(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.length, 48);
+  assert.equal(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.length, 51);
   assert.deepEqual(
     [...new Set(engine.GENERATED_PRACTICE_TEMPLATE_METADATA.map((template) => template.subjectId))],
     SUBJECT_IDS,
@@ -458,7 +458,7 @@ test("statistics and applied-math generators keep numeric work exact and sign-sa
   const templates = engine.GENERATED_PRACTICE_TEMPLATE_METADATA.filter((template) =>
     ["subject-7", "subject-8"].includes(template.subjectId),
   );
-  assert.equal(templates.length, 11);
+  assert.equal(templates.length, 14);
 
   for (const template of templates) {
     for (let seed = 0; seed < 100; seed += 1) {
@@ -481,6 +481,9 @@ test("statistics and applied-math generators keep numeric work exact and sign-sa
         case "applied-divergence-point": expected = p.scale * (2 * p.a * p.x + 2 * p.b * p.y + 2 * p.c * p.z); break;
         case "applied-triangle-area": expected = Math.sqrt(p.normSquared) / 2; break;
         case "applied-green-rectangle": expected = p.d * p.a ** 2 * p.b + p.c * p.a * p.b ** 2; break;
+        case "applied-scalar-line-integral": expected = p.radius * (p.alpha * p.radius ** 2 / 2 + p.beta * p.height); break;
+        case "applied-vector-line-integral": expected = 2 * p.q / 5 + 2 * p.q * p.p / 3 + p.q ** 2 * p.c / 2; break;
+        case "applied-paraboloid-area": expected = Math.PI * (p.radicand ** 1.5 - 1) / (6 * p.coefficient ** 2); break;
         default: throw new Error(`Unhandled template ${template.id}`);
       }
       assert.ok(Math.abs(question.evaluation.numericAnswer - expected) <= 1e-10, `${template.id}:${seed}`);

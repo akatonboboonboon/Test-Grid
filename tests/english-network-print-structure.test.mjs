@@ -71,6 +71,8 @@ test("network print-level choices judge layer and function together", async (con
   const data = await server.ssrLoadModule("/app/network-written-data.ts");
   const mockComponent = await server.ssrLoadModule("/app/network-written-mocks.tsx");
   assert.equal(typeof mockComponent.default, "function");
+  assert.equal(data.NETWORK_WRITTEN_TERMS.length, 50);
+  assert.equal(data.NETWORK_WRITTEN_SOURCE, "ネットワーク範囲.pdf（2026-07-24）");
   assert.equal(data.NETWORK_EXAM_LEVEL_QUESTIONS.length, data.NETWORK_WRITTEN_TERMS.length);
   assert.equal(data.NETWORK_WRITTEN_MOCKS.length, 6);
 
@@ -83,7 +85,7 @@ test("network print-level choices judge layer and function together", async (con
     assert.ok(question.options.every((option) => /^L[1-7]\s/u.test(option) && [...option.replace(/\s/gu, "")].length >= 20), question.id);
     assert.match(question.prompt, /層と働きの両方/u, question.id);
     assert.match(question.explanation, /正しい層/u, question.id);
-    assert.match(question.sourceBasis, /96プロトコル/u, question.id);
+    assert.equal(question.sourceBasis, "ネットワーク範囲.pdf（2026-07-24）", question.id);
   }
 
   const termsById = new Map(data.NETWORK_WRITTEN_TERMS.map((term) => [term.id, term]));
@@ -93,7 +95,7 @@ test("network print-level choices judge layer and function together", async (con
     assert.equal(mock.pointsPerQuestion, 10, mock.id);
     assert.equal(mock.termIds.length, 10, mock.id);
     assert.equal(new Set(mock.termIds).size, 10, mock.id);
-    const coveredLayers = new Set(mock.termIds.flatMap((id) => termsById.get(id).expectedLayers));
+    const coveredLayers = new Set(mock.termIds.map((id) => termsById.get(id).listedLayer));
     assert.deepEqual(coveredLayers, new Set([1, 2, 3, 4, 5, 6, 7]), mock.id);
   }
 

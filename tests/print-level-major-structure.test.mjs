@@ -50,17 +50,17 @@ test("thermodynamics normal pool is thirty autonomous print-level majors", async
   assert.ok(added.every((question) => /冷凍能力.*必要動力/.test(question.prompt)));
 });
 
-test("material mechanics normal pool is twenty-six autonomous design majors", async () => {
+test("material mechanics keeps twenty-four autonomous design majors plus four designated prose questions", async () => {
   const data = await load("material-mechanics-data.ts");
   const pool = data.MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS;
-  assert.equal(pool.length, 26);
-  assert.equal(new Set(pool.map((question) => question.id)).size, 26);
+  assert.equal(pool.length, 24);
+  assert.equal(new Set(pool.map((question) => question.id)).size, 24);
   assert.deepEqual(
     Object.fromEntries(data.MATERIAL_MECHANICS_TOPICS.map((topic) => [
       topic.id,
       pool.filter((question) => question.topic === topic.id).length,
     ])),
-    { torsion: 6, "shaft-design": 6, "coil-spring": 6, "beam-statics": 8 },
+    { torsion: 6, "shaft-design": 6, "coil-spring": 6, "beam-statics": 6 },
   );
 
   for (const question of pool) {
@@ -81,31 +81,37 @@ test("material mechanics normal pool is twenty-six autonomous design majors", as
 
   const added = pool.filter((question) => question.major === 5);
   assert.equal(added.length, 6);
-  assert.ok(added.every((question) => [10, 11, 12, 13].every((page) =>
+  assert.ok(added.every((question) => [10, 11, 12, 13, 14].every((page) =>
     question.sourceRefs.some((source) => source.kind === "range-zip" && source.page === page),
   )));
   assert.ok(added.every((question) => /反力[\s\S]*SFD\/BMD[\s\S]*最大曲げ応力/.test(question.prompt)));
+  assert.equal(pool.filter((question) => question.sourceRefs.some((source) => source.kind === "format-2-overlap")).length, 0);
 
-  const format2 = pool.filter((question) => question.sourceRefs.some((source) => source.kind === "format-2-overlap"));
-  assert.equal(format2.length, 2);
-  assert.ok(format2.every((question) => question.format === "number" && Number.isFinite(question.numericAnswer)));
+  const supplement = data.MATERIAL_MECHANICS_SUPPLEMENT_QUESTIONS;
+  assert.equal(supplement.length, 4);
+  assert.deepEqual(supplement.map((question) => question.id), [
+    "mm-q-supplement-q2-straight-beam",
+    "mm-q-supplement-q5-pin-support",
+    "mm-q-supplement-q7-concentrated-load",
+    "mm-q-supplement-q10-cantilever-wording",
+  ]);
+  assert.ok(supplement.every((question) => question.format === "text"));
+  assert.ok(supplement.every((question) => question.sourceRefs.length === 1 && question.sourceRefs[0].page === 15));
+  assert.deepEqual(data.MATERIAL_MECHANICS_PRACTICE_QUESTIONS, [...pool, ...supplement]);
 });
-
-test("both subject pages route practice and timed tests through print-level pools", async () => {
+test("thermal uses print-level majors while material mixes print-level majors with the four official prose prompts", async () => {
   const [thermalPage, materialPage] = await Promise.all([
     readFile(new URL("subjects/subject-4/page.tsx", APP), "utf8"),
     readFile(new URL("subjects/subject-5/page.tsx", APP), "utf8"),
   ]);
 
-  for (const [source, pool] of [
-    [thermalPage, "THERMODYNAMICS_PRINT_LEVEL_QUESTIONS"],
-    [materialPage, "MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS"],
-  ]) {
-    assert.match(source, new RegExp("useState\\(\\[\\.\\.\\." + pool + "\\]\\)"));
-    assert.match(source, new RegExp("\\(\\) => " + pool + "\\.filter"));
-    assert.match(source, new RegExp("randomize\\(" + pool + "\\.filter"));
-    assert.match(source, new RegExp(pool + "\\.length} PRINT-LEVEL MAJORS"));
-    assert.ok(source.includes("const KNOWN_QUESTION_IDS = new Set(" + pool + ".map"));
-    assert.ok(!source.includes(pool + ".find((question) => question.id === id) ??"));
-  }
+  assert.match(thermalPage, /useState\(\[\.\.\.THERMODYNAMICS_PRINT_LEVEL_QUESTIONS\]\)/);
+  assert.match(thermalPage, /THERMODYNAMICS_PRINT_LEVEL_QUESTIONS\.filter/);
+  assert.match(thermalPage, /THERMODYNAMICS_PRINT_LEVEL_QUESTIONS\.length} PRINT-LEVEL MAJORS/);
+
+  assert.match(materialPage, /useState\(\(\) => MATERIAL_MECHANICS_PRACTICE_QUESTIONS\.filter/);
+  assert.match(materialPage, /randomize\(MATERIAL_MECHANICS_PRACTICE_QUESTIONS\.filter/);
+  assert.match(materialPage, /MATERIAL_MECHANICS_PRACTICE_QUESTIONS\.length} PRACTICE QUESTIONS/);
+  assert.ok(materialPage.includes("const KNOWN_QUESTION_IDS = new Set(MATERIAL_MECHANICS_PRACTICE_QUESTIONS.map"));
+  assert.ok(!materialPage.includes("MATERIAL_MECHANICS_PRACTICE_QUESTIONS.find((question) => question.id === id) ??"));
 });

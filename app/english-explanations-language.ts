@@ -219,6 +219,8 @@ const VOCAB_ORIGIN_NOTES: Record<string, string> = {
   "be founded": "found はラテン語 fundus「底・基礎」と同系で、土台を据えることから「設立する」。be founded はその受動態で「創業される」です。",
   "a decade": "decade はギリシャ語 deka「10」に由来するため、時間について使えば「10年間」です。",
   legend: "ラテン語 legenda「読まれるべきもの」に由来し、語り継がれる物語、さらに語り継がれるほど有名な人物・存在へ意味が広がりました。",
+  intersection: "inter-「間で」+ section「切ること」。線が互いに切り合う場所から「交差点」、分野同士が交わる場合は「交差する領域」です。",
+  involve: "in-「中へ」+ ラテン語 volvere「巻く」と同系。物事の中へ巻き込むイメージから「含む・伴う・関与させる」です。",
   "at the intersection of a and b": "intersection は inter-「間で」+ section「切ること」。二本の線が互いに切り合う交点から、二分野が交わる領域を表します。",
   "genetic engineering": "genetic は gene「遺伝子」+ -ic、engineering は設計・操作の技術。遺伝子を設計・操作する技術という複合語です。",
   swap: "古くから「一つを別の物と取り替える・交換する」ことを表す語で、一方を出してもう一方を得る相互交換のイメージが中心です。",

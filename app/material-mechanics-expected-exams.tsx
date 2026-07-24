@@ -168,7 +168,7 @@ function sourceLabel(question: ExpectedQuestion) {
     source.kind === "range-zip" && typeof source.page === "number" ? [source.page] : []
   )) ?? question.sourcePages ?? [];
   const pages = Array.from(new Set(sourcePages)).sort((left, right) => left - right);
-  return pages.length ? `範囲ZIP13枚 p.${pages.join("・")}` : "範囲ZIP13枚";
+  return pages.length ? `範囲資料15枚（ZIP13枚＋補足2枚） p.${pages.join("・")}` : "範囲資料15枚（ZIP13枚＋補足2枚）";
 }
 function parseStoredExam(raw: string | null): StoredMaterialMechanicsExam | null {
   if (!raw) return null;
@@ -356,7 +356,7 @@ function MaterialMechanicsExpectedExamLab({ firstExam }: { firstExam: ExpectedEx
           <div><span>SCORE</span><strong>100</strong><small>点換算</small></div>
           <div><span>PASS</span><strong>60</strong><small>練習用</small></div>
         </div>
-        <aside className={styles.scopeWarning}><strong>範囲境界</strong><p><b>範囲ZIP13枚だけが今回範囲の正本です。</b> ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを採用します。形式2は形式のみ参照し、問題内容・数値は使用していません。EIによるたわみ、曲率、カスティリアーノの定理は出題しません。</p></aside>
+        <aside className={styles.scopeWarning}><strong>範囲境界</strong><p><b>範囲資料15枚（ZIP13枚＋補足2枚）だけが今回範囲の正本です。</b> ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを採用します。形式2は形式のみ参照し、問題内容・数値は使用していません。EIによるたわみ、曲率、カスティリアーノの定理は出題しません。</p></aside>
 
         {savedExam && (
           <aside className={styles.savedCard} aria-label="保存された想定試験">

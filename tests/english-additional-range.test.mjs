@@ -25,8 +25,8 @@ test("English additional-range transcription and counts match the supplied sheet
 
   assert.deepEqual(data.ENGLISH_UNITS.map((unit) => unit.id), ACTIVE_UNITS);
   assert.equal(data.ENGLISH_PASSAGES.length, 6);
-  assert.equal(data.ENGLISH_VOCAB.length, 171);
-  assert.equal(data.ENGLISH_QUESTIONS.length, 539);
+  assert.equal(data.ENGLISH_VOCAB.length, 173);
+  assert.equal(data.ENGLISH_QUESTIONS.length, 554);
 
   const battery = data.ENGLISH_PASSAGES.find((passage) => passage.id === "passage-big-battery");
   assert.ok(battery);

@@ -38,15 +38,15 @@ function assertSourceRefs(items) {
     assert.ok(item.sourceRefs.length > 0, `${item.id} has a source`);
     for (const ref of item.sourceRefs) {
       assert.equal(ref.kind, "range-zip", `${item.id} uses range ZIP only`);
-      assert.ok(Number.isInteger(ref.page) && ref.page >= 1 && ref.page <= 13, `${item.id} range page`);
+      assert.ok(Number.isInteger(ref.page) && ref.page >= 1 && ref.page <= 15, `${item.id} range page`);
       assert.match(ref.filename, /\.(?:jpg|jpeg)$/i, `${item.id} range filename`);
     }
   }
 }
 
-test("material-mechanics range truth is thirteen pages across four documented topics", async () => {
+test("material-mechanics range truth is fifteen pages across four documented topics", async () => {
   const data = await loadModule(DATA_URL);
-  assert.deepEqual(data.MATERIAL_MECHANICS_RANGE_PAGES.map((page) => page.number), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+  assert.deepEqual(data.MATERIAL_MECHANICS_RANGE_PAGES.map((page) => page.number), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
   assert.deepEqual(
     data.MATERIAL_MECHANICS_TOPICS.map((topic) => topic.id),
     ["torsion", "shaft-design", "coil-spring", "beam-statics"],
@@ -59,7 +59,7 @@ test("material-mechanics range truth is thirteen pages across four documented to
   assert.equal(data.MATERIAL_MECHANICS_EXAM_SPEC.totalPoints, 100);
   assert.equal(data.MATERIAL_MECHANICS_EXAM_SPEC.passPoints, 60);
   assert.equal(data.MATERIAL_MECHANICS_EXAM_SPEC.paper, "A4 portrait");
-  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.included.join(" "), /合計13枚/);
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.included.join(" "), /合計15枚/);
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.formatOnly.join(" "), /形式2.*数値/);
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /過去問固有/);
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /Wahl/);
@@ -68,7 +68,7 @@ test("material-mechanics range truth is thirteen pages across four documented to
 test("material-mechanics cards and practice are source-backed, solved, diagrammed, and valid TeX", async () => {
   const data = await loadModule(DATA_URL);
   const katex = await import(new URL("../app/vendor/katex/katex.mjs", import.meta.url));
-  assert.equal(data.MATERIAL_MECHANICS_FORMULAS.length, 24);
+  assert.equal(data.MATERIAL_MECHANICS_FORMULAS.length, 28);
   assert.ok(data.MATERIAL_MECHANICS_QUESTIONS.length >= 32);
   assert.equal(new Set(data.MATERIAL_MECHANICS_FORMULAS.map((item) => item.id)).size, data.MATERIAL_MECHANICS_FORMULAS.length);
   assert.equal(new Set(data.MATERIAL_MECHANICS_QUESTIONS.map((item) => item.id)).size, data.MATERIAL_MECHANICS_QUESTIONS.length);
@@ -99,7 +99,15 @@ test("material-mechanics cards and practice are source-backed, solved, diagramme
   assert.equal(byId.get("mm-q-spring-deflection").numericAnswer, 235.7);
   for (const excludedId of ["mm-q-overhang-format2", "mm-q-overhang-sfd", "mm-q-udl-overhang-reactions", "mm-q-udl-mmax-location", "mm-q-udl-mmax"]) {
     assert.equal(byId.has(excludedId), false, `${excludedId} past-paper copy is excluded`);
-  }
+  }  const supplementIds = [
+    "mm-q-supplement-q2-straight-beam",
+    "mm-q-supplement-q5-pin-support",
+    "mm-q-supplement-q7-concentrated-load",
+    "mm-q-supplement-q10-cantilever-wording",
+  ];
+  assert.deepEqual(data.MATERIAL_MECHANICS_SUPPLEMENT_QUESTIONS.map((item) => item.id), supplementIds);
+  assert.ok(data.MATERIAL_MECHANICS_SUPPLEMENT_QUESTIONS.every((item) => item.sourceRefs.length === 1 && item.sourceRefs[0].page === 15));
+  assert.ok(data.MATERIAL_MECHANICS_PRACTICE_QUESTIONS.every((item) => supplementIds.includes(item.id) || item.id.startsWith("material-print-")));
 });
 
 test("six expected A4 exams are 100-point, 60-pass, 5-major, all-topic solved papers", async () => {
@@ -164,9 +172,9 @@ test("material-mechanics UI provides searchable cards, timed drill, persistence,
   }
   assert.match(page, /type SourceFilter = "range-zip"/);
   assert.doesNotMatch(page, /SourceFilterControl|形式2・範囲一致部/);
-  assert.match(page, /範囲ZIP13枚だけが今回範囲の正本/);
+  assert.match(page, /範囲資料15枚（ZIP13枚＋補足2枚）だけが今回範囲の正本/);
   assert.match(page, /形式2は形式のみ参照し、問題内容・数値は使用していません/);
-  assert.match(exams, /範囲ZIP13枚 p\./);
+  assert.match(exams, /範囲資料15枚（ZIP13枚＋補足2枚） p\./);
   assert.doesNotMatch(exams, /形式2確認済み重複|形式2の確認済み範囲重複/);
   assert.match(page, /<CardDeckSearch/);
   assert.match(page, /href="\/rapid\/subject-5"/);

@@ -179,8 +179,8 @@ export const GENERATED_PRACTICE_SUBJECTS = [
     id: "subject-8",
     name: "応用数学",
     shortName: "応用数学",
-    description: "ベクトル・勾配・発散・外積・グリーンの定理の数値問題を生成します。",
-    sourceLabel: "応用数学範囲22枚＋追加範囲",
+    description: "ベクトル・勾配・発散・外積に加え、線積分・曲面積・グリーンの定理の数値問題を生成します。",
+    sourceLabel: "応用数学範囲・追加範囲 全27枚",
   },
   {
     id: "subject-9",
@@ -314,6 +314,9 @@ export const GENERATED_PRACTICE_SOURCE_REFERENCES = {
   "applied-divergence-point": ["am-divergence", "am-div-curl-linearity"],
   "applied-triangle-area": ["am-triangle-area"],
   "applied-green-rectangle": ["am-green-theorem"],
+  "applied-scalar-line-integral": ["am-scalar-line-integral", "am-component-line-integral"],
+  "applied-vector-line-integral": ["am-vector-line-integral"],
+  "applied-paraboloid-area": ["am-surface-area-element", "am-surface-area"],
 } as const satisfies Record<string, readonly string[]>;
 
 type NumericSeed = {
@@ -1725,6 +1728,99 @@ function appliedGreen(seedKey: string, rng: SeededRandom) {
     sourceBasis: ["応用数学追加範囲・グリーンの定理", "形式資料・途中式付き線積分"],
   });
 }
+function appliedScalarLineIntegral(seedKey: string, rng: SeededRandom) {
+  const radius = rng.int(1, 4);
+  const height = rng.int(1, 4);
+  const alpha = rng.int(1, 3);
+  const beta = rng.int(1, 3);
+  const coefficient = radius * (alpha * radius ** 2 / 2 + beta * height);
+  return numericQuestion(seedKey, {
+    subjectId: "subject-8",
+    templateId: "applied-scalar-line-integral",
+    category: "第13回・スカラー線積分",
+    title: "半円に沿うds型線積分",
+    prompt: String.raw`曲線 \(C:\mathbf r(t)=(${radius}\cos t,${radius}\sin t,${height})\)、\(0\le t\le\pi\) に沿う \(\int_C(${alpha}x^2+${beta}z)\,ds\) を求めよ。解答欄には \(\pi\) の係数を入力すること。`,
+    answerValue: coefficient,
+    digits: 5,
+    tolerance: 0.002,
+    formula: String.raw`\int_C\phi\,ds=\int_a^b\phi(\mathbf r(t))|\mathbf r'(t)|\,dt`,
+    steps: [
+      String.raw`\(\mathbf r'(t)=(-${radius}\sin t,${radius}\cos t,0)\) より \(|\mathbf r'(t)|=${radius}\)。`,
+      String.raw`曲線上で \(${alpha}x^2+${beta}z=${alpha * radius ** 2}\cos^2t+${beta * height}\)。`,
+      String.raw`\(\int_0^\pi(${alpha * radius ** 2}\cos^2t+${beta * height})${radius}\,dt\)。`,
+      String.raw`\(\cos^2t\) の積分は \(\frac{\pi}{2}\) なので、答えは \(${formatNumber(coefficient, 5)}\pi\)。`,
+    ],
+    reason: "追加範囲2の第13回演習と同じく、場の代入と速さの計算を分けてからds型線積分へまとめます。",
+    explanation: "ds型ではx'(t)ではなく速さ|r'(t)|を掛けます。半円上のcos²の積分を使い、最後にπの係数だけを答えます。",
+    source: rangeSource("応用数学追加範囲2 p.1・第13回線積分演習", [23, 27]),
+    parameters: { radius, height, alpha, beta, coefficient },
+    safety: baseSafety({ finiteValues: [radius, height, alpha, beta, coefficient], notes: ["半径は正", "積分区間は有限"] }),
+    difficulty: 3,
+    subpartCount: 4,
+    sourceBasis: ["応用数学追加範囲2・第13回スカラー線積分", "前期末基本問題7"],
+  });
+}
+function appliedVectorLineIntegral(seedKey: string, rng: SeededRandom) {
+  const p = rng.int(1, 3);
+  const q = rng.int(1, 4);
+  const c = rng.int(1, 3);
+  const result = 2 * q / 5 + 2 * q * p / 3 + q ** 2 * c / 2;
+  return numericQuestion(seedKey, {
+    subjectId: "subject-8",
+    templateId: "applied-vector-line-integral",
+    category: "第13回・ベクトル線積分",
+    title: "場の代入と内積を伴う線積分",
+    prompt: String.raw`曲線 \(C:\mathbf r(t)=(t^2+${p},${q}t,${c})\)、\(0\le t\le1\) とベクトル場 \(\mathbf a=(xy,yz,zx)\) に対し、\(\int_C\mathbf a\cdot d\mathbf r\) を求めよ。`,
+    answerValue: result,
+    digits: 6,
+    tolerance: 0.002,
+    formula: String.raw`\int_C\mathbf a\cdot d\mathbf r=\int_a^b\mathbf a(\mathbf r(t))\cdot\mathbf r'(t)\,dt`,
+    steps: [
+      String.raw`\(\mathbf a(\mathbf r(t))=(${q}t(t^2+${p}),${q * c}t,${c}(t^2+${p}))\)。`,
+      String.raw`\(\mathbf r'(t)=(2t,${q},0)\)。`,
+      String.raw`内積は \(${2 * q}t^4+${2 * q * p}t^2+${q ** 2 * c}t\)。`,
+      String.raw`\(\int_0^1(${2 * q}t^4+${2 * q * p}t^2+${q ** 2 * c}t)dt=${formatNumber(result, 6)}\)。`,
+    ],
+    reason: "追加範囲2の第13回演習3と同型で、場へ曲線を代入し、接ベクトルとの内積を作ってから積分します。",
+    explanation: "a(r(t))とr'(t)を別々に書いてから内積を取ると、成分の掛け忘れを防げます。",
+    source: rangeSource("応用数学追加範囲2 p.2・第13回ベクトル線積分演習", [24, 27]),
+    parameters: { p, q, c, result },
+    safety: baseSafety({ finiteValues: [p, q, c, result], denominators: [2, 3, 5], notes: ["積分区間は有限"] }),
+    difficulty: 3,
+    subpartCount: 4,
+    sourceBasis: ["応用数学追加範囲2・第13回ベクトル線積分", "前期末基本問題9"],
+  });
+}
+function appliedParaboloidArea(seedKey: string, rng: SeededRandom) {
+  const coefficient = rng.int(1, 3);
+  const radicand = 4 * coefficient ** 2 + 1;
+  const area = Math.PI * (radicand ** 1.5 - 1) / (6 * coefficient ** 2);
+  return numericQuestion(seedKey, {
+    subjectId: "subject-8",
+    templateId: "applied-paraboloid-area",
+    category: "基本問題問4・パラメータ曲面",
+    title: "回転放物面の曲面積",
+    prompt: String.raw`\(\mathbf r(u,v)=(u\cos v,u\sin v,${coefficient}u^2)\)、\(0\le u\le1,0\le v\le2\pi\) が表す曲面について、\(\mathbf r_u\)、\(\mathbf r_v\)、外積の大きさを求めた後、曲面積を計算せよ。`,
+    answerValue: area,
+    digits: 6,
+    tolerance: 0.004,
+    formula: String.raw`S=\iint_D|\mathbf r_u\times\mathbf r_v|\,du\,dv`,
+    steps: [
+      String.raw`\(\mathbf r_u=(\cos v,\sin v,${2 * coefficient}u)\)、\(\mathbf r_v=(-u\sin v,u\cos v,0)\)。`,
+      String.raw`\(\mathbf r_u\times\mathbf r_v=(-${2 * coefficient}u^2\cos v,-${2 * coefficient}u^2\sin v,u)\)。`,
+      String.raw`\(|\mathbf r_u\times\mathbf r_v|=u\sqrt{${4 * coefficient ** 2}u^2+1}\)。`,
+      String.raw`\(2\pi\int_0^1u\sqrt{${4 * coefficient ** 2}u^2+1}\,du\approx${formatNumber(area, 6)}\)。`,
+    ],
+    reason: "高画質の前期末基本問題問4で第三成分がu²型と確認できたため、その係数を変えた範囲内の曲面積問題です。",
+    explanation: "uが0以上なので外積の大きさで|u|はuになります。置換積分まで行い、最後にv方向の長さ2πを掛けます。",
+    source: rangeSource("応用数学追加範囲2 p.5・前期末基本問題4", [27]),
+    parameters: { coefficient, radicand, area },
+    safety: baseSafety({ finiteValues: [coefficient, radicand, area], denominators: [6 * coefficient ** 2], radicands: [radicand], notes: ["係数は正", "0≤u≤1"] }),
+    difficulty: 3,
+    subpartCount: 4,
+    sourceBasis: ["応用数学追加範囲2・前期末基本問題4", "応用数学範囲・曲面積公式"],
+  });
+}
 const MATERIAL_GENERATED_VISUALS: Record<MaterialMechanicsGeneratorTemplateId, MaterialMechanicsDiagramKind> = {
   "material-solid-shaft-stress": "solid-shaft",
   "material-hollow-shaft-stress": "hollow-shaft",
@@ -1878,6 +1974,9 @@ const TEMPLATES: PracticeTemplate[] = [
   { id: "applied-divergence-point", subjectId: "subject-8", kind: "calculation", title: "発散", build: appliedDivergence },
   { id: "applied-triangle-area", subjectId: "subject-8", kind: "calculation", title: "三角形面積", build: appliedCrossArea },
   { id: "applied-green-rectangle", subjectId: "subject-8", kind: "calculation", title: "グリーンの定理", build: appliedGreen },
+  { id: "applied-scalar-line-integral", subjectId: "subject-8", kind: "calculation", title: "スカラー線積分", build: appliedScalarLineIntegral },
+  { id: "applied-vector-line-integral", subjectId: "subject-8", kind: "calculation", title: "ベクトル線積分", build: appliedVectorLineIntegral },
+  { id: "applied-paraboloid-area", subjectId: "subject-8", kind: "calculation", title: "回転放物面の曲面積", build: appliedParaboloidArea },
   { id: "digital-gate-waveform", subjectId: "subject-9", kind: "logic", title: "AND・ORゲート波形", build: (seedKey) => digitalGenerated(seedKey, "digital-gate-waveform", "AND・ORゲート波形", 0) },
   { id: "digital-d-flipflop-waveform", subjectId: "subject-9", kind: "flipflop", title: "D-FF波形", build: (seedKey) => digitalGenerated(seedKey, "digital-d-flipflop-waveform", "D-FF波形", 1) },
   { id: "digital-jk-flipflop-waveform", subjectId: "subject-9", kind: "flipflop", title: "JK-FF波形", build: (seedKey) => digitalGenerated(seedKey, "digital-jk-flipflop-waveform", "JK-FF波形", 2) },

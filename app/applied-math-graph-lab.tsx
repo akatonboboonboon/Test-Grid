@@ -551,11 +551,11 @@ const PRESETS: Preset[] = [
   },
   {
     id: "handout-v-square",
-    title: "v² 資料不一致版",
+    title: "v² 比較曲面（テスト外）",
     category: "GRAPH-ONLY ODDITY",
     formula: "r(u,v) = (u cos v, u sin v, cv²)",
-    description: "講義10演習にだけ現れる表記を、採点問題ではなく形の観察に限定して描きます。",
-    warning: "資料間で不一致：講義10は v²、講義11演習・テスト対策は u²。これは成績対象外の観察専用です。",
+    description: "自由入力と同じテスト外の比較用曲面です。採点範囲の基本問題問4にはu²版を使います。",
+    note: "高画質版で試験範囲の基本問題問4はu²と確定済み。このv²曲面は休憩所の比較専用です。",
     fields: [
       { key: "radius", label: "u の上限 R", hint: "0.2〜3", defaultValue: 1, min: 0.2, max: 3, step: 0.1 },
       { key: "c", label: "高さ係数 c", hint: "-2〜2", defaultValue: 0.08, min: -2, max: 2, step: 0.02 },
@@ -563,8 +563,8 @@ const PRESETS: Preset[] = [
     ],
     build: ({ radius, c, vMax }) => ({
       kind: "surface-3d",
-      title: "v² 資料不一致版",
-      description: "講義10資料の表記を形だけ観察",
+      title: "v² 比較曲面（テスト外）",
+      description: "テスト外のv²曲面を形だけ観察",
       hue: 30,
       uMin: 0,
       uMax: radius,

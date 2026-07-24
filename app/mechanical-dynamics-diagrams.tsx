@@ -10,6 +10,8 @@ export type MechanicalDynamicsDiagramKind =
   | "static-deflection"
   | "amplitude-decay"
   | "cantilever-mass"
+  | "torsional-shaft-disk"
+  | "axial-bar-mass"
   | "spring-rigid-rod";
 
 type DiagramProps = {
@@ -29,6 +31,8 @@ const KNOWN_KINDS = new Set<MechanicalDynamicsDiagramKind>([
   "static-deflection",
   "amplitude-decay",
   "cantilever-mass",
+  "torsional-shaft-disk",
+  "axial-bar-mass",
   "spring-rigid-rod",
 ]);
 
@@ -136,6 +140,41 @@ function CantileverMass({ arrowId }: { arrowId: string }) {
   );
 }
 
+function TorsionalShaftDisk({ arrowId }: { arrowId: string }) {
+  return (
+    <svg viewBox="0 0 380 240" role="img" aria-label="ねじり軸の先端に円板を取り付けた回転振動系">
+      <ArrowMarker id={arrowId} />
+      <path d="M85 25 H295" stroke="currentColor" strokeWidth="5" />
+      {Array.from({ length: 9 }, (_, index) => <path key={index} d={`M${100 + index * 22} 25 l-13 -13`} stroke="currentColor" opacity="0.45" />)}
+      <path d="M190 28 V158" stroke="currentColor" strokeWidth="9" />
+      <text x="207" y="92" fontWeight="700">GJₚ</text>
+      <path d="M150 39 V154" markerStart={`url(#${arrowId})`} markerEnd={`url(#${arrowId})`} stroke="currentColor" />
+      <text x="136" y="101" fontWeight="700">l</text>
+      <ellipse cx="190" cy="174" rx="74" ry="26" fill="#fff" stroke="currentColor" strokeWidth="3" />
+      <text x="190" y="181" textAnchor="middle" fontWeight="700">Iθ</text>
+      <path d="M123 190 A78 38 0 0 0 267 190" fill="none" stroke="currentColor" strokeWidth="2.5" markerEnd={`url(#${arrowId})`} />
+      <text x="279" y="198" fontWeight="700">θ</text>
+    </svg>
+  );
+}
+
+function AxialBarMass({ arrowId }: { arrowId: string }) {
+  return (
+    <svg viewBox="0 0 380 240" role="img" aria-label="引張棒の先端に質量を取り付けた軸方向振動系">
+      <ArrowMarker id={arrowId} />
+      <path d="M48 24 H332" stroke="currentColor" strokeWidth="5" />
+      {Array.from({ length: 12 }, (_, index) => <path key={index} d={`M${62 + index * 23} 24 l-13 -13`} stroke="currentColor" opacity="0.45" />)}
+      <rect x="172" y="28" width="36" height="122" fill="#fff" stroke="currentColor" strokeWidth="3" />
+      <text x="222" y="84" fontWeight="700">E, A</text>
+      <path d="M142 35 V145" markerStart={`url(#${arrowId})`} markerEnd={`url(#${arrowId})`} stroke="currentColor" />
+      <text x="126" y="94" fontWeight="700">l</text>
+      <rect x="132" y="150" width="116" height="54" rx="4" fill="#fff" stroke="currentColor" strokeWidth="3" />
+      <text x="190" y="184" textAnchor="middle" fontSize="20" fontWeight="700">m</text>
+      <path d="M278 154 V202" markerEnd={`url(#${arrowId})`} stroke="currentColor" strokeWidth="2.5" />
+      <text x="290" y="184" fontWeight="700">x</text>
+    </svg>
+  );
+}
 function SpringRigidRod({ arrowId }: { arrowId: string }) {
   return (
     <svg viewBox="0 0 390 255" role="img" aria-label="上端支持の一様剛体棒に水平ばねを取り付けた振動系">
@@ -190,23 +229,51 @@ function Pendulum({ arrowId }: { arrowId: string }) {
 }
 
 function AmplitudeDecay({ solution, arrowId }: { solution: boolean; arrowId: string }) {
-  const wave: ReactNode = <path d="M38 104 C52 31 67 31 82 104 S111 165 126 104 S155 55 170 104 S199 143 214 104 S243 72 258 104 S287 129 302 104" fill="none" stroke="currentColor" strokeWidth="3" />;
+  const cycleCount = 6;
+  const left = 42;
+  const right = 318;
+  const centerY = 102;
+  const samples = 240;
+  const wavePath = Array.from({ length: samples + 1 }, (_, index) => {
+    const phase = cycleCount * 2 * Math.PI * index / samples;
+    const x = left + (right - left) * index / samples;
+    const amplitude = 58 * Math.exp(-0.045 * phase);
+    const y = centerY - amplitude * Math.cos(phase);
+    return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+  }).join(" ");
+  const upperEnvelope = Array.from({ length: 81 }, (_, index) => {
+    const phase = cycleCount * 2 * Math.PI * index / 80;
+    const x = left + (right - left) * index / 80;
+    const y = centerY - 58 * Math.exp(-0.045 * phase);
+    return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+  }).join(" ");
+  const lowerEnvelope = Array.from({ length: 81 }, (_, index) => {
+    const phase = cycleCount * 2 * Math.PI * index / 80;
+    const x = left + (right - left) * index / 80;
+    const y = centerY + 58 * Math.exp(-0.045 * phase);
+    return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+  }).join(" ");
+  const firstY = centerY - 58;
+  const lastY = centerY - 58 * Math.exp(-0.045 * cycleCount * 2 * Math.PI);
+
   return (
-    <svg viewBox="0 0 340 215" role="img" aria-label={`減衰振動の振幅波形${solution ? "の模範例" : "の解答用座標"}`}>
+    <svg viewBox="0 0 360 225" role="img" aria-label={`同符号ピーク間の周期数を数える減衰振動波形${solution ? "の模範例" : ""}`}>
       <ArrowMarker id={arrowId} />
-      <path d="M28 20 V190 M18 105 H322" stroke="currentColor" strokeWidth="2" />
-      <path d="M35 34 C105 48 195 76 312 97 M35 176 C105 162 195 134 312 113" fill="none" stroke="currentColor" strokeDasharray="6 4" opacity="0.55" />
-      {wave}<text x="10" y="25" fontWeight="700">x</text><text x="317" y="123" fontWeight="700">t</text>
-      {!solution && <>
-        <circle cx="60" cy="50" r="4" fill="currentColor" /><circle cx="258" cy="86" r="4" fill="currentColor" />
-        <text x="43" y="38" fontWeight="700">xᵢ</text><text x="258" y="72" textAnchor="middle" fontWeight="700">xᵢ₊ₙ</text>
-        <path d="M60 181 H258" markerStart={`url(#${arrowId})`} markerEnd={`url(#${arrowId})`} stroke="currentColor" />
-        <text x="159" y="201" textAnchor="middle" fontWeight="700">nT_d</text>
-      </>}
+      <path d="M28 18 V192 M18 102 H338" stroke="currentColor" strokeWidth="2" />
+      <path d={`${upperEnvelope} ${lowerEnvelope}`} fill="none" stroke="currentColor" strokeDasharray="6 4" opacity="0.5" />
+      <path d={wavePath} fill="none" stroke="currentColor" strokeWidth="2.5" />
+      <text x="10" y="24" fontWeight="700">x</text><text x="330" y="121" fontWeight="700">t</text>
+      {Array.from({ length: cycleCount + 1 }, (_, index) => {
+        const x = left + (right - left) * index / cycleCount;
+        return <g key={index}><path d={`M${x} 174 v8`} stroke="currentColor" /><text x={x} y="198" textAnchor="middle" fontSize="11">{index}</text></g>;
+      })}
+      <circle cx={left} cy={firstY} r="4" fill="currentColor" /><circle cx={right} cy={lastY} r="4" fill="currentColor" />
+      <text x={left + 4} y={firstY - 10} fontWeight="700">xᵢ</text><text x={right - 4} y={lastY - 10} textAnchor="end" fontWeight="700">xᵢ₊ₙ</text>
+      <path d={`M${left} 210 H${right}`} markerStart={`url(#${arrowId})`} markerEnd={`url(#${arrowId})`} stroke="currentColor" />
+      <text x={(left + right) / 2} y="221" textAnchor="middle" fontWeight="700">{solution ? "n = 6 周期" : "目盛から n を数える"}</text>
     </svg>
   );
 }
-
 export default function MechanicalDynamicsDiagram({ kind, solution = false, title, className }: DiagramProps) {
   const arrowId = `mechanics-arrow-${useId().replace(/:/g, "")}`;
   if (!KNOWN_KINDS.has(kind as MechanicalDynamicsDiagramKind)) return null;
@@ -215,6 +282,8 @@ export default function MechanicalDynamicsDiagram({ kind, solution = false, titl
   if (safeKind === "spring-network") diagram = <SpringNetwork arrowId={arrowId} />;
   else if (safeKind === "series-parallel-chain") diagram = <SeriesParallelChain arrowId={arrowId} />;
   else if (safeKind === "cantilever-mass") diagram = <CantileverMass arrowId={arrowId} />;
+  else if (safeKind === "torsional-shaft-disk") diagram = <TorsionalShaftDisk arrowId={arrowId} />;
+  else if (safeKind === "axial-bar-mass") diagram = <AxialBarMass arrowId={arrowId} />;
   else if (safeKind === "spring-rigid-rod") diagram = <SpringRigidRod arrowId={arrowId} />;
   else if (safeKind === "pinned-beam") diagram = <PinnedBeam arrowId={arrowId} />;
   else if (safeKind === "simple-pendulum") diagram = <Pendulum arrowId={arrowId} />;

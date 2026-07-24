@@ -3,10 +3,11 @@ import { ENGLISH_CH18_QUIZ_ITEMS } from "./english-ch18-quiz-data";
 import { ENGLISH_PRINT_LEVEL_QUESTIONS } from "./english-expected-exams-data";
 import { APPLIED_MATH_PRINT_LEVEL_QUESTIONS } from "./applied-math-data";
 import { DIGITAL_CIRCUIT_PRINT_LEVEL_QUESTIONS, type DigitalCircuitAnyDiagramKind } from "./digital-circuits-extra-data";
-import { MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS, type MaterialMechanicsDiagramKind } from "./material-mechanics-data";
+import { MATERIAL_MECHANICS_PRACTICE_QUESTIONS, type MaterialMechanicsDiagramKind } from "./material-mechanics-data";
 import { MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS, type MechanicalDynamicsDiagramKind } from "./mechanical-dynamics-data";
-import { NETWORK_EXAM_LEVEL_QUESTIONS } from "./network-written-data";
-import { ALL_LAYERS, cardLayers, type Layer, type ProtocolCard } from "./protocols";
+
+import { OFFICIAL_RANKING_QUESTION_IDS } from "./official-ranking-question-ids";
+import { ALL_LAYERS, DEFAULT_CARDS, cardLayers, type Layer, type ProtocolCard } from "./protocols";
 import { SMART_CONTROL_PRINT_LEVEL_QUESTIONS } from "./smart-control-data";
 
 
@@ -252,9 +253,10 @@ type ExamLevelRapidSource = {
 
 const RAPID_SOURCE_BASIS: Partial<Record<SubjectId, string>> = {
   "subject-2": "英語追加範囲 Ch.14・15・16・18、TOEIC Reading、Housing・Medical語彙（対象外欄・Ch.19は除外）",
+  network: "2026-07-24正式範囲PDF・全50項目（括弧付き用語はリスト層／括弧内層のどちらも正解）",
   "subject-3": "機械力学範囲プリント4枚相当・過去問の連続計算",
   "subject-4": "熱力学範囲ZIP9ページ（追加p.8〜9の冷凍サイクル・逆カルノーCOPを含む）と形式1〜3の複合状態変化",
-  "subject-5": "材料力学範囲ZIP13ページ（ねじり・軸設計・コイルばね・はり反力/SFD/BMD・曲げ応力・長方形/中空円断面I/Z）と形式2 Q1〜3の範囲一致部（Q4は出典除外、EIたわみ・曲率・カスティリアーノは対象外）",
+  "subject-5": "材料力学範囲資料15枚（ZIP13枚＋補足2枚。補足プリント2は指定問2・5・7・10のみ。EIたわみ・曲率・カスティリアーノは対象外）",
   "subject-6": "スマート制御範囲・演習・過去問の計算と図読解",
   "subject-7": "確率統計範囲ZIP・追加範囲5ページ（チェビシェフの不等式を含む）・演習PDF1〜4・過去問形式",
   "subject-8": "応用数学範囲・追加範囲と提供テスト形式",
@@ -459,11 +461,7 @@ const ENGLISH_RAPID = examLevelPool(
   () => true,
   englishVisual,
 );
-const NETWORK_RAPID = examLevelPool(
-  "network",
-  NETWORK_EXAM_LEVEL_QUESTIONS,
-  () => true,
-);
+const NETWORK_RAPID = networkCardsToRapid(DEFAULT_CARDS);
 export function networkCardsToRapid(cards: ProtocolCard[]) {
   return cards.map((card) => {
     const layers = cardLayers(card);
@@ -471,7 +469,7 @@ export function networkCardsToRapid(cards: ProtocolCard[]) {
     return {
       id: `rapid-${card.id}`,
       subjectId: "network" as const,
-      topicLabel: "OSIレイヤー / 本番瞬時判定",
+      topicLabel: "OSIレイヤー / 追試用・瞬時判定",
       prompt: `${card.label} は第何層？`,
       answer: labels.join(" / "),
       acceptedOptions: labels,
@@ -480,8 +478,11 @@ export function networkCardsToRapid(cards: ProtocolCard[]) {
       studyHref: flashcardSearchHref("network", card.label),
       difficulty: 3 as const,
       recommendedSeconds: 8,
-      steps: ["略称を正式名称へ展開する。", "主な働きからOSI参照モデルの層を判定する。"],
-      sourceBasis: "提供されたネットワーク層別一覧（本番の瞬時判定形式）",
+      steps: [
+        "2026-07-24正式範囲PDFのリスト分類を確認する。",
+        "括弧付き用語は、リスト上の層と括弧内の推奨層のどちらでも正解。",
+      ],
+      sourceBasis: RAPID_SOURCE_BASIS.network ?? "2026-07-24正式範囲PDF・全50項目",
     } satisfies RapidQuestion;
   });
 }
@@ -512,7 +513,7 @@ const THERMODYNAMICS_RAPID = examLevelPool(
 );
 const MATERIAL_MECHANICS_RAPID = examLevelPool(
   "subject-5",
-  MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS,
+  MATERIAL_MECHANICS_PRACTICE_QUESTIONS,
   () => true,
   materialMechanicsVisual,
 );
@@ -562,7 +563,15 @@ export function isRankingEligibleRapidQuestion(question: RapidQuestion) {
 }
 
 export function getOfficialRankingEligiblePool(subjectId: SubjectId) {
-  return getStaticRapidPool(subjectId).filter(isRankingEligibleRapidQuestion);
+  const eligible = getStaticRapidPool(subjectId).filter(isRankingEligibleRapidQuestion);
+  if (subjectId !== "network") return eligible;
+
+  const eligibleById = new Map(eligible.map((question) => [question.id, question]));
+  return OFFICIAL_RANKING_QUESTION_IDS.network.map((id) => {
+    const question = eligibleById.get(id);
+    if (!question) throw new Error(`Network official ranking ID is outside the formal 50-item pool: ${id}`);
+    return question;
+  });
 }
 
 const COMPREHENSIVE_POOLS: Record<SubjectId, RapidQuestion[]> = {

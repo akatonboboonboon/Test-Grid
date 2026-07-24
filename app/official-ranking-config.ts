@@ -1,7 +1,7 @@
 import type { SubjectId } from "./study-data";
 
 export const OFFICIAL_RANKING_MODE = "official-ranking-streak" as const;
-export const OFFICIAL_RANKING_VERSION = 2 as const;
+export const OFFICIAL_RANKING_VERSION = 3 as const;
 export const OFFICIAL_RANKING_SCORING = "consecutive-correct" as const;
 
 export type OfficialRankingSpec = {

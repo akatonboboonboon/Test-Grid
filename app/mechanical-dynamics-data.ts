@@ -49,7 +49,7 @@ export type MechanicalDynamicsRangePage = {
   orientation?: "portrait-source" | "landscape-sideways-source";
 };
 
-export type MechanicalDynamicsDiagramKind = "spring-network" | "series-parallel-chain" | "pinned-beam" | "simple-pendulum" | "single-spring-mass" | "damped-spring-mass" | "static-deflection" | "amplitude-decay" | "cantilever-mass" | "spring-rigid-rod";
+export type MechanicalDynamicsDiagramKind = "spring-network" | "series-parallel-chain" | "pinned-beam" | "simple-pendulum" | "single-spring-mass" | "damped-spring-mass" | "static-deflection" | "amplitude-decay" | "cantilever-mass" | "torsional-shaft-disk" | "axial-bar-mass" | "spring-rigid-rod";
 
 export type MechanicalDynamicsFormulaCard = {
   id: string;
@@ -208,6 +208,8 @@ const FORMULA_SEEDS: FormulaSeed[] = [
   { id: "md-f-series", topic: "stiffness", title: "直列ばね", prompt: "2本の直列ばねの等価ばね定数は？", formula: "k_{\\mathrm{eq}}=\\frac{k_1k_2}{k_1+k_2}", explanation: "力が共通で、伸びが加算される。", cue: "逆数を足す", pages: [5] },
   { id: "md-f-composite", topic: "stiffness", title: "直列と並列の複合", prompt: "k1と、並列(k2+k3)が直列なら？", formula: "k_{\\mathrm{eq}}=\\frac{k_1(k_2+k_3)}{k_1+k_2+k_3}", explanation: "先に並列部分をまとめ、直列式へ入れる。", cue: "内側から簡単化", pages: [5] },
   { id: "md-f-cantilever", topic: "stiffness", title: "片持ちはり先端の等価剛性", prompt: "先端荷重P、長さlの片持ちはりは？", formula: "\\begin{aligned}\\delta&=\\frac{Pl^3}{3EI}\\\\ k&=\\frac{3EI}{l^3}\\end{aligned}", explanation: "静たわみ\\(\\delta=\\frac{P}{k}\\)から等価剛性を得る。", cue: "片持ち先端は\\(\\frac{3EI}{l^3}\\)", pages: [4] },
+  { id: "md-f-bending-natural", topic: "stiffness", title: "曲げ（モーメント）から固有振動数", prompt: "片持ちはり先端質量mの固有角振動数は？", formula: "\\begin{aligned}k_b&=\\frac{3EI}{l^3}\\\\ \\omega_n&=\\sqrt{\\frac{3EI}{ml^3}}\\end{aligned}", explanation: "曲げモーメントから得る先端たわみを等価ばねに置き換え、最後に\\(\\sqrt{\\frac{k_b}{m}}\\)へつなぐ。", cue: "モーメント→たわみ→剛性→固有振動数", example: "プリント1枚目の固有振動数3形式のうち、モーメント（曲げ）", pages: [4] },
+  { id: "md-f-axial-natural", topic: "stiffness", title: "引張棒の固有振動数", prompt: "長さl、断面積A、縦弾性係数Eの棒に質量mを付けると？", formula: "\\begin{aligned}k_a&=\\frac{EA}{l}\\\\ \\omega_n&=\\sqrt{\\frac{EA}{ml}}\\end{aligned}", explanation: "引張変形\\(\\delta=\\frac{Pl}{EA}\\)から軸方向剛性を作る。mm²はm²へ換算する。", cue: "引張は\\(\\frac{EA}{l}\\)", example: "プリント1枚目の固有振動数3形式のうち、引張", pages: [3, 4] },
   { id: "md-f-simple-beam", topic: "stiffness", title: "単純支持中央荷重のたわみ", prompt: "中央荷重Pなら最大たわみは？", formula: "\\delta=\\frac{Pl^3}{48EI}", explanation: "片持ちはりとは係数が異なる。", cue: "中央荷重は48", pages: [4] },
   { id: "md-f-utube", topic: "stiffness", title: "U字管液柱の固有角振動数", prompt: "液柱全長lのU字管は？", formula: "\\omega_n=\\sqrt{\\frac{2g}{l}}", explanation: "液面差2xが復元圧力を作り、k=2Aρg、m=Aρlとなる。", cue: "断面積と密度が消える", pages: [5] },
   { id: "md-f-buoyancy", topic: "stiffness", title: "浮力による等価剛性", prompt: "断面積Aの浮体が上下するときは？", formula: "\\begin{aligned}k_b&=\\rho Ag\\\\ \\omega_n&=\\sqrt{\\frac{\\rho Ag}{m}}\\end{aligned}", explanation: "沈み込みxで排除体積がAx増え、浮力がρAgx増える。", cue: "増えた体積×ρg", pages: [4] },
@@ -229,16 +231,18 @@ const FORMULA_SEEDS: FormulaSeed[] = [
   { id: "md-f-wd", topic: "damping", title: "減衰固有角振動数", prompt: "不足減衰の振動角周波数は？", formula: "\\omega_d=\\omega_n\\sqrt{1-\\zeta^2}", explanation: "減衰により非減衰固有角振動数より少し小さくなる。", cue: "ωn×√(1-ζ²)", pages: [10, 11, 14] },
   { id: "md-f-underdamped", topic: "damping", title: "不足減衰の応答", prompt: "0<ζ<1の自由振動解は？", formula: "x=e^{-\\zeta\\omega_nt}\\left(C_1\\cos\\omega_dt+C_2\\sin\\omega_dt\\right)", explanation: "指数包絡線の中で減衰固有角振動数により振動する。", cue: "指数包絡×正弦波", pages: [7, 10] },
   { id: "md-f-damped-initial", topic: "damping", title: "不足減衰の初期条件定数", prompt: "x0、v0からC1、C2は？", formula: "C_1=x_0,\\quad C_2=\\frac{v_0+\\zeta\\omega_nx_0}{\\omega_d}", explanation: "t=0で変位と速度を代入する。", cue: "C2の分子に減衰項", pages: [10] },
+  { id: "md-f-p28-2-50-52", topic: "damping", title: "教科書p.28 式(2-50)〜(2-52)", prompt: "p.28で確認指定された不足減衰の3式を一式で書けるか？", formula: "\\begin{aligned}\\omega_d&=\\omega_n\\sqrt{1-\\zeta^2}\\\\ x(t)&=e^{-\\zeta\\omega_nt}\\left(C_1\\cos\\omega_dt+C_2\\sin\\omega_dt\\right)\\\\ C_1&=x_0,\\quad C_2=\\frac{v_0+\\zeta\\omega_nx_0}{\\omega_d}\\end{aligned}", explanation: "式(2-50)・(2-51)・(2-52)は別々に覚えず、ωdを作る→不足減衰解へ入れる→初期条件でC1・C2を決める順に確認する。", cue: "p.28：ωd・不足減衰解・C₁・C₂", pages: [10] },
 
-  { id: "md-f-logdec", topic: "decrement", title: "対数減衰率", prompt: "隣接する同符号ピークx_i、x_{i+1}からδは？", formula: "\\delta=\\ln\\frac{x_i}{x_{i+1}}=\\frac{2\\pi\\zeta}{\\sqrt{1-\\zeta^2}}", explanation: "1周期の指数包絡線の減少量を対数で測る。", cue: "ピーク比の自然対数", pages: [11, 13] },
+  { id: "md-f-logdec", topic: "decrement", title: "対数減衰率・厳密式(2-69)", prompt: "同符号ピークと式(2-69)からδ・ζを結ぶ式は？", formula: "\\delta=\\ln\\frac{x_i}{x_{i+1}}=\\frac{2\\pi\\zeta}{\\sqrt{1-\\zeta^2}}", explanation: "1周期の指数包絡線の減少量を対数で測る。", cue: "ピーク比の自然対数", pages: [11, 13] },
   { id: "md-f-logdec-n", topic: "decrement", title: "n周期離れたピーク", prompt: "n周期後のピークなら？", formula: "\\delta=\\frac{1}{n}\\ln\\frac{x_i}{x_{i+n}}", explanation: "全減少の対数を周期数nで割る。", cue: "ln比÷周期数", pages: [13, 14] },
   { id: "md-f-zeta-exact", topic: "decrement", title: "δから減衰比（厳密式）", prompt: "対数減衰率δからζへ戻す式は？", formula: "\\zeta=\\frac{\\delta}{\\sqrt{4\\pi^2+\\delta^2}}", explanation: "\\(\\delta=\\frac{2\\pi\\zeta}{\\sqrt{1-\\zeta^2}}\\)を\\(\\zeta\\)について解く。", cue: "分母は4π²+δ²の平方根", pages: [11, 13] },
-  { id: "md-f-zeta-approx", topic: "decrement", title: "小減衰の簡略式", prompt: "ζが小さいときの近似は？", formula: "\\delta\\simeq2\\pi\\zeta,\\quad\\zeta\\simeq\\frac{\\delta}{2\\pi}", explanation: "√(1-ζ²)≈1とみなす。", cue: "δ÷2π", pages: [11, 12, 13, 14] },
+  { id: "md-f-zeta-approx", topic: "decrement", title: "小減衰の簡略式(2-71)", prompt: "試験用紙に記載される式(2-71)の近似は？", formula: "\\delta\\simeq2\\pi\\zeta,\\quad\\zeta\\simeq\\frac{\\delta}{2\\pi}", explanation: "√(1-ζ²)≈1とみなす。", cue: "δ÷2π", pages: [11, 12, 13, 14] },
   { id: "md-f-peak-ratio", topic: "decrement", title: "隣接振幅比", prompt: "δから隣接ピーク比を求める式は？", formula: "\\frac{x_i}{x_{i+1}}=e^\\delta", explanation: "対数減衰率の定義を指数へ戻す。", cue: "比＝eのδ乗", pages: [11, 13, 14] },
 
   { id: "md-f-rotational", topic: "rotational", title: "回転1自由度系の標準形", prompt: "回転系の運動方程式と固有角振動数は？", formula: "\\begin{aligned}J\\ddot{\\theta}+C_\\theta\\dot{\\theta}+K_\\theta\\theta&=0\\\\ \\omega_n&=\\sqrt{\\frac{K_\\theta}{J}}\\end{aligned}", explanation: "並進のm、c、kを回転のJ、Cθ、Kθへ置き換える。", cue: "回転版のm-c-k", pages: [3, 15] },
   { id: "md-f-lever", topic: "rotational", title: "レバー系の換算", prompt: "質点mが腕l、ばねkがl1、ダンパcがl2なら？", formula: "\\begin{aligned}J&=ml^2\\\\ C_\\theta&=cl_2^2\\\\ K_\\theta&=kl_1^2\\end{aligned}", explanation: "微小変位は各作用腕×θとなり、モーメントで腕がもう1回掛かる。", cue: "各係数×腕の二乗", pages: [15] },
   { id: "md-f-disk", topic: "rotational", title: "円板のねじり振動", prompt: "質量m、半径Rの円板とねじりばねktなら？", formula: "\\begin{aligned}J&=\\frac12mR^2\\\\ \\omega_n&=\\sqrt{\\frac{2k_t}{mR^2}}\\end{aligned}", explanation: "円板中心軸まわりの慣性モーメントを使う。", cue: "円板\\(J=\\frac{1}{2}mR^2\\)", pages: [15] },
+  { id: "md-f-torsional-shaft", topic: "rotational", title: "ねじり軸の固有振動数", prompt: "長さl、横弾性係数G、極断面二次モーメントJpの軸に回転慣性Iθを付けると？", formula: "\\begin{aligned}K_\\theta&=\\frac{GJ_p}{l}\\\\ \\omega_n&=\\sqrt{\\frac{GJ_p}{I_\\theta l}}\\end{aligned}", explanation: "軸のねじり剛性を回転ばね定数とし、回転慣性との比の平方根を取る。", cue: "ねじりは\\(\\frac{GJ_p}{l}\\)", example: "プリント1枚目の固有振動数3形式のうち、ねじり", pages: [15] },
   { id: "md-f-inverted", topic: "rotational", title: "ばね付き倒立振り子", prompt: "質点mが高さl、ばね作用腕rなら？", formula: "\\omega_n=\\sqrt{\\frac{kr^2-mgl}{ml^2}}", explanation: "ばねは復元、重力は倒立姿勢を不安定化する。kr²>mglが安定条件。", cue: "ばね剛性−重力剛性", pages: [15] },
   { id: "md-f-rigid-rod", topic: "rotational", title: "ばね付き剛体棒", prompt: "上端支持の一様棒、ばね作用腕hなら？", formula: "\\omega_n=\\sqrt{\\frac{kh^2+\\frac{1}{2}mgl}{\\frac{1}{3}ml^2}}", explanation: "\\(J=\\frac{ml^2}{3}\\)、重心は支点から\\(\\frac{l}{2}\\)にある。", cue: "棒の\\(J\\)は\\(\\frac{ml^2}{3}\\)", pages: [15] },
   { id: "md-f-simple-pendulum", topic: "rotational", title: "単振り子", prompt: "長さlの単振り子の固有角振動数と周期は？", formula: "\\begin{aligned}\\omega_n&=\\sqrt{\\frac{g}{l}}\\\\ T&=2\\pi\\sqrt{\\frac{l}{g}}\\end{aligned}", explanation: "微小角近似sinθ≈θを使う。", cue: "長いほど周期が長い", pages: [4] },
@@ -249,6 +253,9 @@ function formulaDiagram(card: FormulaSeed): MechanicalDynamicsDiagramKind | unde
   if (card.topic === "undamped") return "single-spring-mass";
   if (card.topic === "damping") return "damped-spring-mass";
   if (card.topic === "decrement") return "amplitude-decay";
+  if (card.id === "md-f-bending-natural") return "cantilever-mass";
+  if (card.id === "md-f-axial-natural") return "axial-bar-mass";
+  if (card.id === "md-f-torsional-shaft") return "torsional-shaft-disk";
   if (card.id === "md-f-lever" || card.id === "md-f-rotational") return "pinned-beam";
   if (card.id === "md-f-simple-pendulum") return "simple-pendulum";
   return undefined;
@@ -351,6 +358,8 @@ export const MECHANICAL_DYNAMICS_QUESTIONS: MechanicalDynamicsQuestion[] = [
   question({ id: "md-q-s5", topic: "stiffness", genre: "U字管", difficulty: 2, format: "number", prompt: "液柱全長l=0.800 m、g=9.80 m/s²のU字管の固有角振動数を求めよ。", answer: "4.95 rad/s", numericAnswer: 4.9497, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.02, formula: "\\omega_n=\\sqrt{\\frac{2g}{l}}", steps: ["\\(\\frac{2\\times9.80}{0.800}=24.5\\)", "\\sqrt{24.5}=4.95"], explanation: "断面積と密度は慣性と復元力の両方に含まれ相殺される。", pages: [5] }),
   question({ id: "md-q-s6", topic: "stiffness", genre: "浮力", difficulty: 2, format: "number", prompt: "水中の浮体でρ=1000 kg/m³、A=0.0100 m²、m=5.00 kg、g=9.80 m/s²とする。上下振動の固有角振動数を求めよ。", answer: "4.43 rad/s", numericAnswer: 4.427, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.02, formula: "\\omega_n=\\sqrt{\\frac{\\rho Ag}{m}}", steps: ["ρAg=98.0 N/m", "\\(\\sqrt{\\frac{98}{5}}=4.43\\)"], explanation: "沈み込みに比例して浮力が増える。", pages: [4] }),
   question({ id: "md-q-s7", topic: "stiffness", genre: "式の導出", difficulty: 2, format: "derivation", prompt: "上側に2kとkの並列、下側にkとkの直列が質量mへ接続される。ωnを導出せよ。", answer: "\\(\\omega_n=\\sqrt{\\frac{7k}{2m}}\\)", accepted: ["sqrt(7k/(2m))", "√(7k/2m)"], keywords: ["7k", "2m"], minKeywords: 2, formula: "\\omega_n=\\sqrt{\\frac{k_{eq}}{m}}", steps: ["上側は3k", "下側は\\(\\frac{k}{2}\\)", "\\(k_{eq}=3k+\\frac{k}{2}=\\frac{7k}{2}\\)", "\\(\\omega_n=\\sqrt{\\frac{k_{eq}}{m}}\\)"], explanation: "質量から見て両側の復元力は加算される。", diagram: "spring-network", pages: [5] }),
+  question({ id: "md-q-s8", topic: "stiffness", genre: "曲げ（モーメント）・固有振動数", difficulty: 3, format: "number", prompt: "曲げ剛性EI=1600 N·m²、長さl=2.00 mの片持ちはり先端に質量m=12.0 kgを付ける。モーメントから先端たわみと等価剛性を導き、固有角振動数を求めよ。", answer: "7.07 rad/s", numericAnswer: 7.07107, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.02, formula: "\\omega_n=\\sqrt{\\frac{3EI}{ml^3}}", steps: ["\\(\\delta=\\frac{Pl^3}{3EI}\\)より\\(k_b=\\frac{3EI}{l^3}=600\\ \\mathrm{N/m}\\)", "\\(\\omega_n=\\sqrt{\\frac{600}{12}}=\\sqrt{50}\\)", "\\(\\omega_n=7.071\\ \\mathrm{rad/s}\\)"], explanation: "プリント1枚目で指定された3形式のうち曲げ（モーメント）。たわみ式から剛性へ置き換える段階を省かない。", diagram: "cantilever-mass", pages: [4] }),
+  question({ id: "md-q-s9", topic: "stiffness", genre: "引張・固有振動数", difficulty: 3, format: "number", prompt: "長さl=2.00 m、断面積A=100 mm²、縦弾性係数E=200 GPaの引張棒の先端に質量m=100 kgを付ける。軸方向固有角振動数を求めよ。", answer: "316 rad/s", numericAnswer: 316.22777, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.5, formula: "\\omega_n=\\sqrt{\\frac{EA}{ml}}", steps: ["\\(A=100\\ \\mathrm{mm^2}=1.00\\times10^{-4}\\ \\mathrm{m^2}\\)", "\\(k_a=\\frac{EA}{l}=1.00\\times10^7\\ \\mathrm{N/m}\\)", "\\(\\omega_n=\\sqrt{\\frac{10^7}{100}}=316.228\\ \\mathrm{rad/s}\\)"], explanation: "プリント1枚目で指定された3形式のうち引張。断面積とGPaのSI換算が採点点になる。", diagram: "axial-bar-mass", pages: [3, 4] }),
 
   question({ id: "md-q-l1", topic: "laplace", genre: "基本変換", difficulty: 1, format: "choice", prompt: "単位ステップ1のラプラス変換を選べ。", answer: "\\(\\frac{1}{s}\\)", options: ["\\(\\frac{1}{s}\\)", "1", "s", "e^{-s}"], steps: ["\\(\\int_0^\\infty e^{-st}\\,dt=\\frac{1}{s}\\)"], explanation: "インパルス\\(\\delta(t)\\)は1、単位ステップは\\(\\frac{1}{s}\\)。", pages: [8] }),
   question({ id: "md-q-l2", topic: "laplace", genre: "一次遅れ", difficulty: 1, format: "text", prompt: "\\(\\frac{1}{s+3}\\)を逆ラプラス変換せよ。", answer: "\\(e^{-3t}\\)", accepted: ["e^-3t", "e^{-3t}"], keywords: ["-3t"], minKeywords: 1, formula: "\\mathcal L^{-1}\\!\\left\\{\\frac{1}{s+a}\\right\\}=e^{-at}", steps: ["a=3を読む"], explanation: "極s=-3に対応する指数減衰。", pages: [8] }),
@@ -375,6 +384,7 @@ export const MECHANICAL_DYNAMICS_QUESTIONS: MechanicalDynamicsQuestion[] = [
   question({ id: "md-q-g5", topic: "decrement", genre: "実験波形", difficulty: 2, format: "number", prompt: "8.00 sに4周期の振動を行う。減衰固有角振動数をπ=3.14で求めよ。", answer: "3.14 rad/s", numericAnswer: 3.14, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.01, formula: "\\omega_d=\\frac{2\\pi}{T_d}", steps: ["\\(T_d=\\frac{8}{4}=2.00\\ \\mathrm s\\)", "\\(\\omega_d=\\frac{6.28}{2}=3.14\\)"], explanation: "まずグラフの時間幅から周期を求める。", diagram: "amplitude-decay", pages: [14] }),
   question({ id: "md-q-g6", topic: "decrement", genre: "実験波形", difficulty: 2, format: "number", prompt: "10周期で振幅が15.0 mmから0.500 mmになった。δを求めよ。", answer: "0.340", numericAnswer: 0.34012, tolerance: 0.001, formula: "\\delta=\\frac{1}{10}\\ln\\!\\left(\\frac{15}{0.5}\\right)", steps: ["\\(\\frac{15}{0.5}=30\\)", "\\(\\frac{\\ln30}{10}=0.340\\)"], explanation: "n周期離れたピークの式を使う。", diagram: "amplitude-decay", pages: [14] }),
   question({ id: "md-q-g7", topic: "decrement", genre: "厳密式", difficulty: 2, format: "number", prompt: "ζ=0.477のとき対数減衰率δを厳密式で求めよ。", answer: "3.41", numericAnswer: 3.409, tolerance: 0.02, formula: "\\delta=\\frac{2\\pi\\zeta}{\\sqrt{1-\\zeta^2}}", steps: ["分母√(1−0.477²)=0.879", "分子=2×3.14×0.477", "δ≈3.41"], explanation: "ζが大きめなのでδ≈2πζの近似誤差が大きい。", pages: [13] }),
+  question({ id: "md-q-g8", topic: "decrement", genre: "問10候補・波形から周期数を数える", difficulty: 3, format: "number", prompt: "図の最初と最後の同符号ピーク間の周期数nを数える。振幅が100 mmから25.0 mmになったとき、式(2-71)の簡略式と式(2-69)の厳密式で減衰比ζを求め、解答欄には厳密値を記せ。", answer: "0.0368（n=6、簡略値0.0368）", numericAnswer: 0.03677, tolerance: 0.00005, printedFormula: "\\begin{aligned}\\text{式(2-69)：}\\quad&\\delta=\\frac{2\\pi\\zeta}{\\sqrt{1-\\zeta^2}}\\\\ \\text{式(2-71)：}\\quad&\\delta\\simeq2\\pi\\zeta\\end{aligned}", formula: "\\begin{aligned}\\delta&=\\frac{1}{n}\\ln\\frac{x_i}{x_{i+n}}\\\\ \\zeta_{\\rm simple}&=\\frac{\\delta}{2\\pi}\\\\ \\zeta_{\\rm exact}&=\\frac{\\delta}{\\sqrt{4\\pi^2+\\delta^2}}\\end{aligned}", steps: ["波形の正ピーク間を数えて\\(n=6\\)と読む", "\\(\\delta=\\frac{1}{6}\\ln\\!\\left(\\frac{100}{25}\\right)=0.23105\\)", "簡略式では\\(\\zeta=\\frac{0.23105}{2\\times3.14}=0.03679\\)", "厳密式では\\(\\zeta=\\frac{0.23105}{\\sqrt{4\\times3.14^2+0.23105^2}}=0.03677\\)"], explanation: "プリント1枚目の問10はほぼ出題候補。問題文にnを与えず、波形の同符号ピーク間を自分で数えてから両式へ入れる。", diagram: "amplitude-decay", pages: [13, 14] }),
 
   question({ id: "md-q-r1", topic: "rotational", genre: "ねじり振動", difficulty: 2, format: "number", prompt: "m=4.00 kg、R=0.500 mの円板をkt=50.0 N·m/radのねじりばねで支持する。ωnを求めよ。", answer: "10.0 rad/s", numericAnswer: 10, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.02, formula: "\\omega_n=\\sqrt{\\frac{2k_t}{mR^2}}", steps: ["mR²=1.00", "\\(\\frac{2k_t}{mR^2}=100\\)", "√100=10"], explanation: "円板の慣性モーメントは\\(mR^2\\)ではなく\\(\\frac{mR^2}{2}\\)。", pages: [15] }),
   question({ id: "md-q-r2", topic: "rotational", genre: "レバー換算", difficulty: 1, format: "choice", prompt: "質量mが支点から距離lにあるときの回転慣性を選べ。", answer: "ml²", options: ["ml²", "ml", "\\(\\frac{m}{l^2}\\)", "m+l"], steps: ["速度v=lθdot", "運動エネルギーは\\(\\frac{ml^2\\dot\\theta^2}{2}\\)"], explanation: "点質量の支点まわり慣性モーメント。", pages: [15] }),
@@ -383,6 +393,7 @@ export const MECHANICAL_DYNAMICS_QUESTIONS: MechanicalDynamicsQuestion[] = [
   question({ id: "md-q-r5", topic: "rotational", genre: "倒立振り子", difficulty: 2, format: "derivation", prompt: "ばね付き倒立振り子が微小振動できる安定条件を示せ。", answer: "\\(kr^2>mgl\\)", accepted: ["kr^2>mgl", "kr²＞mgl"], keywords: ["kr", "mgl"], minKeywords: 2, formula: "J\\ddot\\theta+(kr^2-mgl)\\theta=0", steps: ["ばねは復元モーメントkr²θ", "重力は不安定化モーメントmglθ", "合成回転剛性を正にする"], explanation: "固有角振動数の二乗が正になる条件。", pages: [15] }),
   question({ id: "md-q-r6", topic: "rotational", genre: "単振り子", difficulty: 1, format: "number", prompt: "周期2.00 sの単振り子の長さを、g=9.80 m/s²、π=3.14として求めよ。", answer: "0.994 m", numericAnswer: 0.993955, expectedUnit: "m", acceptedUnits: { m: 1, cm: 0.01, mm: 0.001 }, requiresUnit: true, tolerance: 0.002, formula: "l=\\frac{gT^2}{4\\pi^2}", steps: ["\\(\\frac{9.80\\times2^2}{4\\times3.14^2}\\)", "l=0.993955"], explanation: "過去問の指定どおりπ=3.14を使う。", diagram: "simple-pendulum", pages: [4] }),
   question({ id: "md-q-r7", topic: "rotational", genre: "平行軸", difficulty: 2, format: "number", prompt: "重心まわりJG=0.200 kg·m²、m=3.00 kg、支点までd=0.400 mの剛体について支点まわりJを求めよ。", answer: "0.680 kg·m²", numericAnswer: 0.68, expectedUnit: "kg m^2", acceptedUnits: { "kg m^2": 1, "kg m²": 1, "kg·m²": 1, "kg·m^2": 1, "kg・m^2": 1 }, requiresUnit: true, tolerance: 0.002, formula: "J=J_G+md^2", steps: ["md²=3×0.16=0.48", "0.20+0.48=0.68"], explanation: "回転軸が重心から離れるほど慣性モーメントは増える。", pages: [4] }),
+  question({ id: "md-q-r8", topic: "rotational", genre: "ねじり・固有振動数", difficulty: 3, format: "number", prompt: "長さl=1.00 m、G=80.0 GPa、極断面二次モーメントJp=2.50×10⁻⁸ m⁴の軸に回転慣性Iθ=5.00 kg·m²の円板を付ける。ねじり固有角振動数を求めよ。", answer: "20.0 rad/s", numericAnswer: 20, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.05, formula: "\\omega_n=\\sqrt{\\frac{GJ_p}{I_\\theta l}}", steps: ["\\(G=80.0\\times10^9\\ \\mathrm{Pa}\\)", "\\(K_\\theta=\\frac{GJ_p}{l}=2000\\ \\mathrm{N\\,m/rad}\\)", "\\(\\omega_n=\\sqrt{\\frac{2000}{5}}=20.0\\ \\mathrm{rad/s}\\)"], explanation: "プリント1枚目で指定された3形式のうちねじり。極断面二次モーメントJpと質量慣性モーメントIθを混同しない。", diagram: "torsional-shaft-disk", pages: [15] }),
 ];
 
 function examQuestion(
@@ -590,7 +601,24 @@ function buildExpectedExam(variant: number): MechanicalDynamicsExam {
   const beamLength = [1.2, 1.4, 1.6, 1.8, 2, 2.2][index];
   const beamMass = [6, 8, 10, 12, 14, 16][index];
   const beamStiffness = (3 * beamEI) / beamLength ** 3;
+  // 教員補足：プリント1枚目の固有振動数は、曲げ（モーメント）・ねじり・引張の3形式を巡回する。
+  const structuralMode = index % 3;
   const beamAngular = Math.sqrt(beamStiffness / beamMass);
+
+  const torsionG = 80e9;
+  const torsionPolar = [1.8e-8, 2e-8, 2.2e-8, 2.5e-8, 2.8e-8, 3e-8][index];
+  const torsionLength = [0.8, 0.9, 1, 1.1, 1.2, 1.3][index];
+  const torsionInertia = [3, 3.5, 4, 4.5, 5, 5.5][index];
+  const torsionStiffness = torsionG * torsionPolar / torsionLength;
+  const torsionAngular = Math.sqrt(torsionStiffness / torsionInertia);
+
+  const axialE = 200e9;
+  const axialAreaMm2 = [80, 100, 120, 140, 160, 180][index];
+  const axialArea = axialAreaMm2 * 1e-6;
+  const axialLength = [1.2, 1.4, 1.6, 1.8, 2, 2.2][index];
+  const axialMass = [60, 75, 90, 105, 120, 135][index];
+  const axialStiffness = axialE * axialArea / axialLength;
+  const axialAngular = Math.sqrt(axialStiffness / axialMass);
 
   const dampedMass = 4 + variant;
   const dampedNaturalAngular = 18 + 2 * variant;
@@ -605,12 +633,14 @@ function buildExpectedExam(variant: number): MechanicalDynamicsExam {
   const dampedSineCoefficient =
     (initialVelocity + dampingRatio * dampedNaturalAngular * initialDisplacement) / dampedAngular;
 
-  const cycles = 2 + variant;
+  // 問10候補は波形から周期数を自分で数える。図は最初から最後まで6周期。
+  const cycles = 6;
   const firstPeakMm = [100, 80, 120, 90, 75, 60][index];
   const remaining = [0.45, 0.32, 0.25, 0.18, 0.12, 0.08][index];
   const laterPeakMm = firstPeakMm * remaining;
   const logarithmicDecrement = Math.log(firstPeakMm / laterPeakMm) / cycles;
   const exactDampingRatio = logarithmicDecrement / Math.sqrt(4 * PI ** 2 + logarithmicDecrement ** 2);
+  const approximateDampingRatio = logarithmicDecrement / (2 * PI);
 
   const poleA = variant;
   const poleB = variant + 2;
@@ -652,16 +682,21 @@ function buildExpectedExam(variant: number): MechanicalDynamicsExam {
     },
     {
       number: 2,
-      title: "片持ちはりを等価ばねに置き換える",
-      topic: "stiffness",
-      topicIds: ["stiffness", "undamped"],
+      title: structuralMode === 0 ? "曲げ（モーメント）から固有振動数" : structuralMode === 1 ? "ねじり軸の固有振動数" : "引張棒の固有振動数",
+      topic: structuralMode === 1 ? "rotational" : "stiffness",
+      topicIds: structuralMode === 1 ? ["rotational"] : ["stiffness", "undamped"],
       points: 10,
-      context: "図2の片持ちはり先端に質量m=" + beamMass.toFixed(2) + " kgを取り付ける。曲げ剛性EI=" + beamEI.toFixed(0) + " N·m²、長さl=" + beamLength.toFixed(2) + " m。はり自体の質量は無視する。",
-      questions: [
-        expectedQuestion(id, 2, 1, 10, { topic: "stiffness", genre: "片持ちはり・等価剛性", difficulty: 3, format: "number", prompt: "静たわみ式から等価剛性を導き、系の固有角振動数ωnを求めよ。", answer: rounded(beamAngular, 3) + " rad/s", numericAnswer: beamAngular, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\begin{aligned}\\delta&=\\frac{Pl^3}{3EI}\\\\ k_b&=\\frac{P}{\\delta}=\\frac{3EI}{l^3}\\\\ \\omega_n&=\\sqrt{\\frac{k_b}{m}}\\end{aligned}", steps: ["片持ちはりの先端たわみを等価ばねの変位とみなす", "\\(k_b=\\frac{3\\times" + beamEI.toFixed(0) + "}{" + beamLength.toFixed(2) + "^3}\\approx" + rounded(beamStiffness, 5) + "\\ \\mathrm{N/m}\\)", "\\(\\omega_n=\\sqrt{\\frac{" + rounded(beamStiffness, 5) + "}{" + beamMass.toFixed(2) + "}}\\approx" + rounded(beamAngular, 5) + "\\ \\mathrm{rad/s}\\)"], explanation: "プリントと同様に、たわみ式から等価剛性を作ってから一自由度系の公式へつなぐ二段階計算。", diagram: "cantilever-mass" }),
-      ],
-    },
-    {
+      context: structuralMode === 0
+        ? "図2の片持ちはり先端に質量m=" + beamMass.toFixed(2) + " kgを取り付ける。曲げ剛性EI=" + beamEI.toFixed(0) + " N·m²、長さl=" + beamLength.toFixed(2) + " m。はり自体の質量は無視する。"
+        : structuralMode === 1
+          ? "図2のねじり軸はG=80.0 GPa、極断面二次モーメントJp=" + torsionPolar.toExponential(2) + " m⁴、長さl=" + torsionLength.toFixed(2) + " m。先端円板の回転慣性はIθ=" + torsionInertia.toFixed(2) + " kg·m²。軸の質量は無視する。"
+          : "図2の引張棒はE=200 GPa、断面積A=" + axialAreaMm2.toFixed(0) + " mm²、長さl=" + axialLength.toFixed(2) + " m。先端質量m=" + axialMass.toFixed(1) + " kg、棒の質量は無視する。",
+      questions: structuralMode === 0
+        ? [expectedQuestion(id, 2, 1, 10, { topic: "stiffness", genre: "曲げ（モーメント）・固有振動数", difficulty: 3, format: "number", prompt: "曲げモーメントから静たわみ式を作り、等価剛性と固有角振動数ωnを求めよ。", answer: rounded(beamAngular, 3) + " rad/s", numericAnswer: beamAngular, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\begin{aligned}\\delta&=\\frac{Pl^3}{3EI}\\\\ k_b&=\\frac{3EI}{l^3}\\\\ \\omega_n&=\\sqrt{\\frac{3EI}{ml^3}}\\end{aligned}", steps: ["曲げモーメントを積分して得る先端たわみを等価ばねの変位とみなす", "\\(k_b=\\frac{3\\times" + beamEI.toFixed(0) + "}{" + beamLength.toFixed(2) + "^3}\\approx" + rounded(beamStiffness, 5) + "\\ \\mathrm{N/m}\\)", "\\(\\omega_n=\\sqrt{\\frac{" + rounded(beamStiffness, 5) + "}{" + beamMass.toFixed(2) + "}}\\approx" + rounded(beamAngular, 5) + "\\ \\mathrm{rad/s}\\)"], explanation: "プリント1枚目の指定形式『モーメント』。たわみ→等価剛性→固有振動数の3段階で示す。", diagram: "cantilever-mass" })]
+        : structuralMode === 1
+          ? [expectedQuestion(id, 2, 1, 10, { topic: "rotational", genre: "ねじり・固有振動数", difficulty: 3, format: "number", prompt: "軸のねじり剛性Kθを求め、円板の固有角振動数ωnを計算せよ。", answer: rounded(torsionAngular, 3) + " rad/s", numericAnswer: torsionAngular, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.1, formula: "\\begin{aligned}K_\\theta&=\\frac{GJ_p}{l}\\\\ \\omega_n&=\\sqrt{\\frac{GJ_p}{I_\\theta l}}\\end{aligned}", steps: ["GPaをPaへ直し、極断面二次モーメントJpと長さからねじり剛性を作る", "\\(K_\\theta=\\frac{80.0\\times10^9\\times" + torsionPolar.toExponential(2) + "}{" + torsionLength.toFixed(2) + "}\\approx" + rounded(torsionStiffness, 6) + "\\ \\mathrm{N\\,m/rad}\\)", "\\(\\omega_n=\\sqrt{\\frac{" + rounded(torsionStiffness, 6) + "}{" + torsionInertia.toFixed(2) + "}}\\approx" + rounded(torsionAngular, 6) + "\\ \\mathrm{rad/s}\\)"], explanation: "プリント1枚目の指定形式『ねじり』。Jpは断面特性、Iθは質量慣性モーメントなので混同しない。", diagram: "torsional-shaft-disk" })]
+          : [expectedQuestion(id, 2, 1, 10, { topic: "stiffness", genre: "引張・固有振動数", difficulty: 3, format: "number", prompt: "棒の軸方向剛性kaを求め、固有角振動数ωnを計算せよ。", answer: rounded(axialAngular, 3) + " rad/s", numericAnswer: axialAngular, expectedUnit: "rad/s", acceptedUnits: units.angular, requiresUnit: true, tolerance: 0.5, formula: "\\begin{aligned}k_a&=\\frac{EA}{l}\\\\ \\omega_n&=\\sqrt{\\frac{EA}{ml}}\\end{aligned}", steps: ["断面積をmm²からm²へ直す：\\(A=" + axialArea.toExponential(3) + "\\ \\mathrm{m^2}\\)", "\\(k_a=\\frac{200\\times10^9\\times" + axialArea.toExponential(3) + "}{" + axialLength.toFixed(2) + "}\\approx" + rounded(axialStiffness, 6) + "\\ \\mathrm{N/m}\\)", "\\(\\omega_n=\\sqrt{\\frac{" + rounded(axialStiffness, 6) + "}{" + axialMass.toFixed(1) + "}}\\approx" + rounded(axialAngular, 6) + "\\ \\mathrm{rad/s}\\)"], explanation: "プリント1枚目の指定形式『引張』。\\(\\frac{EA}{l}\\)を等価ばね定数として扱う。", diagram: "axial-bar-mass" })],
+    },    {
       number: 3,
       title: "不足減衰系のパラメータと初期値応答",
       topic: "damping",
@@ -676,16 +711,15 @@ function buildExpectedExam(variant: number): MechanicalDynamicsExam {
     },
     {
       number: 4,
-      title: "減衰波形の同符号ピークを読む",
+      title: "最重要：波形から周期数を数える対数減衰率",
       topic: "decrement",
       topicIds: ["decrement", "damping"],
       points: 10,
-      context: "図4の同じ向きのピークを読むと、x_i=" + firstPeakMm.toFixed(2) + " mm、" + cycles + "周期後のx_{i+n}=" + laterPeakMm.toFixed(2) + " mmであった。π=3.14。",
+      context: "図4の丸印は同符号ピークで、最初のx_i=" + firstPeakMm.toFixed(2) + " mm、最後のx_{i+n}=" + laterPeakMm.toFixed(2) + " mmである。周期数nは与えないので、横軸の目盛とピークを数えて求める。π=3.14。式(2-69)と式(2-71)は試験用紙に記載される。",
       questions: [
-        expectedQuestion(id, 4, 1, 10, { topic: "decrement", genre: "波形読解・厳密減衰比", difficulty: 3, format: "number", prompt: "1周期当たりの対数減衰率δを求め、厳密式から減衰比ζを求めよ。解答欄にはζを記せ。", answer: rounded(exactDampingRatio, 5).toString(), numericAnswer: exactDampingRatio, tolerance: 0.0001, formula: "\\begin{aligned}\\delta&=\\frac{1}{n}\\ln\\!\\left(\\frac{x_i}{x_{i+n}}\\right)\\\\ \\zeta&=\\frac{\\delta}{\\sqrt{4\\pi^2+\\delta^2}}\\end{aligned}", steps: ["正負が異なる山ではなく同符号ピークを選ぶ", "\\(\\delta=\\frac{1}{" + cycles + "}\\ln\\!\\left(\\frac{" + firstPeakMm.toFixed(2) + "}{" + laterPeakMm.toFixed(2) + "}\\right)\\approx" + rounded(logarithmicDecrement, 6) + "\\)", "\\(\\zeta=\\frac{" + rounded(logarithmicDecrement, 6) + "}{\\sqrt{4\\times3.14^2+" + rounded(logarithmicDecrement, 6) + "^2}}\\approx" + rounded(exactDampingRatio, 7) + "\\)"], explanation: "近似式だけで終えず、波形からδを作って厳密式へ入れる二段階問題。振幅の単位は比で消える。", diagram: "amplitude-decay" }),
+        expectedQuestion(id, 4, 1, 10, { topic: "decrement", genre: "問10候補・波形計数・簡略式／厳密式", difficulty: 3, format: "number", prompt: "波形から周期数nを数え、1周期当たりの対数減衰率δを求めよ。続いて簡略式と厳密式の両方で減衰比ζを求め、解答欄には厳密値を記せ。", answer: rounded(exactDampingRatio, 5) + "（n=" + cycles + "、簡略値" + rounded(approximateDampingRatio, 5) + "）", numericAnswer: exactDampingRatio, tolerance: 0.0001, printedFormula: "\\begin{aligned}\\text{式(2-69)：}\\quad&\\delta=\\frac{2\\pi\\zeta}{\\sqrt{1-\\zeta^2}}\\\\ \\text{式(2-71)：}\\quad&\\delta\\simeq2\\pi\\zeta\\end{aligned}", formula: "\\begin{aligned}\\delta&=\\frac{1}{n}\\ln\\!\\left(\\frac{x_i}{x_{i+n}}\\right)\\\\ \\zeta_{\\rm simple}&=\\frac{\\delta}{2\\pi}\\\\ \\zeta_{\\rm exact}&=\\frac{\\delta}{\\sqrt{4\\pi^2+\\delta^2}}\\end{aligned}", steps: ["波形の同符号ピーク間を数え、\\(n=" + cycles + "\\)と読む", "\\(\\delta=\\frac{1}{" + cycles + "}\\ln\\!\\left(\\frac{" + firstPeakMm.toFixed(2) + "}{" + laterPeakMm.toFixed(2) + "}\\right)\\approx" + rounded(logarithmicDecrement, 6) + "\\)", "式(2-71)の簡略式：\\(\\zeta\\approx\\frac{" + rounded(logarithmicDecrement, 6) + "}{2\\times3.14}=" + rounded(approximateDampingRatio, 7) + "\\)", "式(2-69)の厳密式：\\(\\zeta=\\frac{" + rounded(logarithmicDecrement, 6) + "}{\\sqrt{4\\times3.14^2+" + rounded(logarithmicDecrement, 6) + "^2}}=" + rounded(exactDampingRatio, 7) + "\\)"], explanation: "プリント1枚目の問10はほぼ出題候補。波形からnを数える工程そのものを採点対象とし、問題用紙に印刷された簡略式・厳密式をそれぞれ使う。", diagram: "amplitude-decay" }),
       ],
-    },
-    {
+    },    {
       number: 5,
       title: "伝達関数の単位ステップ応答",
       topic: "laplace",
@@ -737,7 +771,7 @@ function buildExpectedExam(variant: number): MechanicalDynamicsExam {
     kind: "expected",
     number: variant,
     title: "全範囲想定試験 " + String(variant).padStart(2, "0"),
-    subtitle: "範囲プリント4枚と同等難度・7大問／13解答欄／100点",
+    subtitle: "範囲プリント4枚と同等難度・教員補足反映・7大問／13解答欄／100点",
     variant,
     defaultMinutes: 50,
     userAdjustable: true,
@@ -746,7 +780,7 @@ function buildExpectedExam(variant: number): MechanicalDynamicsExam {
     scoreLabel: "練習用100点",
     passPercent: 60,
     paper: "A4 portrait",
-    officialConditionsNote: "範囲プリント4枚と同等のモデル化・多段階計算・図読解で構成。50分は変更可能な練習用初期値。g=9.80 m/s²、π=3.14、有効数字は3桁、単位必須。",
+    officialConditionsNote: "範囲プリント同等のモデル化・多段階計算・図読解で構成。曲げ（モーメント）・ねじり・引張を巡回し、問10候補の減衰波形は周期数を数える。式(2-69)・(2-71)は問題用紙に記載。50分は変更可能な練習用初期値。g=9.80 m/s²、π=3.14、有効数字は3桁、単位必須。",
     sections,
     questions,
   };
@@ -832,7 +866,39 @@ export const MECHANICAL_DYNAMICS_PRINT_LEVEL_QUESTIONS: MechanicalDynamicsQuesti
     ),
   ),
 ];
+export const MECHANICAL_DYNAMICS_TEACHER_SUPPLEMENT = {
+  print1NaturalFrequency: ["曲げ（モーメント）", "ねじり", "引張"],
+  textbookPage28FormulaNumbers: ["2-50", "2-51", "2-52"],
+  printedDecrementFormulaNumbers: { exact: "2-69", simplified: "2-71" },
+  nearCertainQuestion: { print: 1, question: 10, task: "減衰波形から同符号ピーク間の周期数を数え、簡略式と厳密式で求める" },
+  secondPrintAllInRange: true,
+} as const;
+
 export const MECHANICAL_DYNAMICS_EXAM_FORMATS = [
+  {
+    id: "teacher-supplement-priority",
+    title: "教員補足：最優先の出題候補",
+    description: "プリント1枚目では、固有振動数を曲げ（モーメント）・ねじり・引張の3形式で求める。問10の対数減衰率はほぼ出題予定。",
+    strategy: "3形式とも『変形式→等価剛性→ωn』の順で途中式を書く。問10は式へ入れる前に波形上の同符号ピーク間を数えてnを確定する。",
+  },
+  {
+    id: "textbook-page-28",
+    title: "教科書p.28：式(2-50)・(2-51)・(2-52)",
+    description: "減衰固有角振動数、不足減衰解、初期条件定数C1・C2を一まとまりで確認する。",
+    strategy: "ωdを計算し、不足減衰解へ入れ、最後にx(0)・v(0)からC1・C2を決める順を固定する。",
+  },
+  {
+    id: "printed-decrement-formulas",
+    title: "式(2-69)・式(2-71)は問題用紙に記載",
+    description: "対数減衰率の厳密式と小減衰の簡略式は暗記だけでなく、同じ波形に両方を適用して比較する。",
+    strategy: "nを数える→δを求める→式(2-71)で簡略値→式(2-69)で厳密値、の順に解く。",
+  },
+  {
+    id: "second-print-all",
+    title: "プリント2枚目は全範囲",
+    description: "プリント2枚目にある設問は選別せず全て出題対象。減衰波形も出題範囲のまま維持する。",
+    strategy: "通常演習だけでなく、6回分の想定試験で全単元を必ず横断する。",
+  },
   {
     id: "actual-layout",
     title: "実物過去問：7大問・13解答欄・100点",
@@ -857,12 +923,13 @@ export const MECHANICAL_DYNAMICS_SOURCE_POLICY = {
   included: [
     "機械力学範囲ZIPの全15画像",
     "機械力学過去問.pdfの全7大問・13解答欄",
+    "教員補足：プリント1枚目の固有振動数3形式、問10の波形計数、教科書p.28の指定式、プリント2枚目全体",
   ],
   excluded: [
     "資料にない強制振動・共振・周波数応答",
     "判読できない薄い個別寸法を推測した自動採点問題",
   ],
-  note: "過去問は形式参照だけでなく今回の試験範囲。すべてのカード・通常演習・想定試験に範囲根拠を付ける。",
+  note: "過去問は形式参照だけでなく今回の試験範囲。教員補足も公式カード・通常演習・想定試験へ反映し、減衰波形は出題範囲として維持する。",
 } as const;
 
 export const MECHANICAL_DYNAMICS_EXAM_SPEC = {
