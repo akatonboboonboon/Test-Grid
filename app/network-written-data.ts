@@ -1,4 +1,5 @@
 import { DEFAULT_CARDS, cardLayers, type Layer } from "./protocols";
+import { gradeNetworkWrittenContent } from "./network-written-grading";
 
 export type NetworkWrittenLayerChoice = Layer;
 
@@ -21,6 +22,12 @@ export type NetworkWrittenEvaluation = {
   layerCorrect: boolean;
   matchedKeywords: string[];
   contentMatched: boolean;
+  matchedRubricItems: string[];
+  expectedRubricItems: string[];
+  requiredRubricItems: number;
+  detailMatched: boolean;
+  actionMatched: boolean;
+  contradictions: string[];
   qualified: boolean;
   estimatedScore: 0 | 3 | 5 | 8 | 10;
 };
@@ -153,20 +160,41 @@ export function evaluateNetworkWrittenAnswer(
     : normalizedAnswer;
   const matchedKeywords = term.keywords.filter((keyword) => answerWithoutRepeatedTerm.includes(normalizeForMatch(keyword)));
   const contentMatched = matchedKeywords.length > 0;
-  const passedChecks = [enoughCharacters, layerCorrect, contentMatched].filter(Boolean).length;
+  const strictContent = gradeNetworkWrittenContent(term, answer);
+  const fullyQualified = (
+    enoughCharacters
+    && layerCorrect
+    && strictContent.detailMatched
+    && strictContent.actionMatched
+    && strictContent.contradictions.length === 0
+  );
+  const nearlyComplete = (
+    enoughCharacters
+    && layerCorrect
+    && strictContent.actionMatched
+    && strictContent.matchedItems.length >= Math.max(2, strictContent.requiredItems - 1)
+  );
   const estimatedScore: NetworkWrittenEvaluation["estimatedScore"] =
-    enoughCharacters && layerCorrect && contentMatched ? 10
-      : enoughCharacters && layerCorrect ? 8
-        : passedChecks >= 2 ? 5
-          : passedChecks === 1 ? 3
-            : 0;
+    !enoughCharacters ? 0
+      : strictContent.contradictions.length > 0 ? 0
+        : !layerCorrect ? (strictContent.detailMatched && strictContent.actionMatched ? 3 : 0)
+          : fullyQualified ? 10
+            : nearlyComplete ? 8
+              : strictContent.matchedItems.length > 0 && strictContent.actionMatched ? 5
+                : 3;
   return {
     characterCount,
     enoughCharacters,
     layerCorrect,
     matchedKeywords,
     contentMatched,
-    qualified: enoughCharacters && layerCorrect && contentMatched,
+    matchedRubricItems: strictContent.matchedItems,
+    expectedRubricItems: strictContent.expectedItems,
+    requiredRubricItems: strictContent.requiredItems,
+    detailMatched: strictContent.detailMatched,
+    actionMatched: strictContent.actionMatched,
+    contradictions: strictContent.contradictions,
+    qualified: fullyQualified,
     estimatedScore,
   };
 }

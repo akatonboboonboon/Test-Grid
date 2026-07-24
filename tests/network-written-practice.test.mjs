@@ -14,9 +14,10 @@ function compile(source) {
 const dataUrl = (source) => `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
 
 async function loadWrittenData() {
-  const [descriptionsSource, protocolsSource, writtenSource] = await Promise.all([
+  const [descriptionsSource, protocolsSource, gradingSource, writtenSource] = await Promise.all([
     readFile(new URL("protocol-descriptions.ts", appUrl), "utf8"),
     readFile(new URL("protocols.ts", appUrl), "utf8"),
+    readFile(new URL("network-written-grading.ts", appUrl), "utf8"),
     readFile(new URL("network-written-data.ts", appUrl), "utf8"),
   ]);
   const descriptionsUrl = dataUrl(compile(descriptionsSource));
@@ -24,10 +25,13 @@ async function loadWrittenData() {
     'from "./protocol-descriptions";',
     `from "${descriptionsUrl}";`,
   ));
-  return import(dataUrl(compile(writtenSource).replace(
+  const gradingUrl = dataUrl(compile(gradingSource).replace(
     'from "./protocols";',
     `from "${protocolsUrl}";`,
-  )));
+  ));
+  return import(dataUrl(compile(writtenSource)
+    .replace('from "./protocols";', `from "${protocolsUrl}";`)
+    .replace('from "./network-written-grading";', `from "${gradingUrl}";`)));
 }
 
 test("network written bank is derived only from the original 96 protocol cards", async () => {
@@ -42,33 +46,52 @@ test("network written bank is derived only from the original 96 protocol cards",
   }
 });
 
-test("written answers require length, a correct layer, and matched content", async () => {
+test("written answers use the strict past-paper 0/3/5/8/10 rubric", async () => {
   const data = await readFile(new URL("network-written-data.ts", appUrl), "utf8");
-  assert.match(data, /replace\(\/\\s\/gu, ""\)/);
+  const grading = await readFile(new URL("network-written-grading.ts", appUrl), "utf8");
   assert.match(data, /characterCount >= 20/);
-  assert.match(data, /term\.expectedLayers\.includes\(choice\)/);
-  assert.match(data, /qualified: enoughCharacters && layerCorrect && contentMatched/);
-  assert.match(data, /contentMatched/);
-  assert.match(data, /estimatedScore/);
-  assert.doesNotMatch(data, /choice === "cross"/);
-  assert.doesNotMatch(data, /const candidates: string\[\] = \[term\]/);
-  assert.match(data, /answerWithoutRepeatedTerm/);
-  assert.match(data, /normalizedAnswer\.split\(normalizedTerm\)\.join\(""\)/);
+  assert.match(data, /!enoughCharacters \? 0/);
+  assert.match(data, /!layerCorrect \? \(strictContent\.detailMatched/);
+  assert.match(data, /qualified: fullyQualified/);
+  assert.match(grading, /STRICT_RUBRICS/);
+  assert.match(grading, /contradictions/);
+  assert.match(grading, /requiredItems/);
 
   const written = await loadWrittenData();
-  const term = written.NETWORK_WRITTEN_TERMS.find((item) => item.keywords.length > 0);
-  assert.ok(term);
-  const correctLayer = term.expectedLayers[0];
-  const wrongLayer = [1, 2, 3, 4, 5, 6, 7].find((layer) => !term.expectedLayers.includes(layer));
-  assert.ok(wrongLayer);
-  const contentAnswer = `${term.keywords[0]}を使ってネットワーク上の必要な処理を正しく実現する方式です`;
+  const tcp = written.NETWORK_WRITTEN_TERMS.find((item) => item.term === "TCP");
+  assert.ok(tcp);
 
-  assert.equal(written.evaluateNetworkWrittenAnswer(term, "あ".repeat(20), correctLayer).qualified, false);
-  assert.equal(written.evaluateNetworkWrittenAnswer(term, contentAnswer, wrongLayer).qualified, false);
-  assert.equal(written.evaluateNetworkWrittenAnswer(term, term.keywords[0], correctLayer).qualified, false);
-  assert.equal(written.evaluateNetworkWrittenAnswer(term, contentAnswer, correctLayer).qualified, true);
+  const generic = written.evaluateNetworkWrittenAnswer(
+    tcp,
+    "TCPはネットワークでデータ通信を行う便利なプロトコルです。",
+    4,
+  );
+  assert.equal(generic.estimatedScore, 3);
+  assert.equal(generic.qualified, false);
+
+  const partial = written.evaluateNetworkWrittenAnswer(
+    tcp,
+    "TCPは接続を確立し、確認応答を用いてデータを転送する。",
+    4,
+  );
+  assert.equal(partial.estimatedScore, 8);
+  assert.equal(partial.qualified, false);
+
+  const fullAnswer = "TCPは接続確立後、番号付け・確認応答・再送を行い、順序どおり信頼性あるバイト列を届ける。";
+  const full = written.evaluateNetworkWrittenAnswer(tcp, fullAnswer, 4);
+  assert.equal(full.estimatedScore, 10);
+  assert.equal(full.qualified, true);
+  assert.equal(written.evaluateNetworkWrittenAnswer(tcp, fullAnswer, 3).estimatedScore, 3);
+  assert.equal(written.evaluateNetworkWrittenAnswer(tcp, "接続して再送する。", 4).estimatedScore, 0);
+
+  const contradiction = written.evaluateNetworkWrittenAnswer(
+    tcp,
+    "TCPは接続を確立せず、確認応答や再送も行わず、高速なデータグラムを送る。",
+    4,
+  );
+  assert.equal(contradiction.estimatedScore, 0);
+  assert.ok(contradiction.contradictions.length > 0);
 });
-
 test("network written route identifies format-only sheets and never offers their terms", async () => {
   const [page, css, networkHub, cardsPage] = await Promise.all([
     readFile(new URL("subjects/network/written/page.tsx", appUrl), "utf8"),
@@ -78,9 +101,9 @@ test("network written route identifies format-only sheets and never offers their
   ]);
   assert.match(page, /好きなプロトコルを選び/);
   assert.match(page, /空白を除き20文字以上/);
-  assert.match(page, /内容キーワードを1つ以上含める/);
-  assert.match(page, /evaluation\.contentMatched \? "✓" : "×"/);
-  assert.match(page, /3条件クリア/);
+  assert.match(page, /対象・動作・固有の特徴/);
+  assert.match(page, /evaluation\.detailMatched/);
+  assert.match(page, /過去問相当の10点基準/);
   assert.match(page, /既存96プロトコルだけを出題/);
   assert.match(page, /形式だけを参照/);
   assert.match(page, /印字された用語は今回の範囲へ追加していません/);

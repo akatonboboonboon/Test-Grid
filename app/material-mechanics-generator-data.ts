@@ -57,21 +57,21 @@ export const MATERIAL_MECHANICS_GENERATOR_TEMPLATES = [
   },
   {
     id: "material-coil-spring-deflection",
-    title: "密巻コイルばねのたわみ",
+    title: "密巻コイルばねの許容荷重とたわみ",
     category: "コイルばね",
-    parameterRange: "G=76〜82 GPa、d=12〜22 mm、D=100〜220 mm、n=5〜12、τal=350〜600 MPa、δal=20〜100 mm",
-    formula: "\\delta=\\frac{8nPD^3}{Gd^4}",
-    sourceReferenceIds: ["mm-f-spring-rate", "mm-f-spring-deflection"],
+    parameterRange: "G=76〜82 GPa、d=12〜22 mm、D=100〜220 mm、n=5〜12、τal=350〜600 MPa",
+    formula: "P_{max}=\\frac{\\tau_{al}\\pi d^3}{8D},\\quad \\delta_{max}=\\frac{P_{max}}{k}",
+    sourceReferenceIds: ["mm-f-spring-rate", "mm-f-spring-stress", "mm-f-spring-deflection"],
     sourceLabel: "材料力学範囲ZIP p.4・9",
   },
   {
     id: "material-simple-beam-udl",
-    title: "等分布荷重を受ける単純支持ばり",
-    category: "はり・反力・BMD",
-    parameterRange: "L=2.0〜6.0 m、w=1.5〜6.0 kN/m、d=50〜120 mm",
-    formula: "R_A=R_B=\\frac{wL}{2},\\quad M_{max}=\\frac{wL^2}{8}",
-    sourceReferenceIds: ["mm-f-resultant", "mm-f-equilibrium", "mm-f-simple-udl", "mm-f-beam-diff"],
-    sourceLabel: "材料力学範囲ZIP p.5〜8＋形式2範囲一致部",
+    title: "等分布荷重を受ける長方形断面単純支持ばり",
+    category: "はり・曲げ応力",
+    parameterRange: "L=2.0〜6.0 m、w=1.5〜6.0 kN/m、b=60〜180 mm、h=120〜260 mm",
+    formula: "R_A=R_B=\\frac{wL}{2},\\quad M_{max}=\\frac{wL^2}{8},\\quad \\sigma_{max}=\\frac{M_{max}}{bh^2/6}",
+    sourceReferenceIds: ["mm-f-resultant", "mm-f-equilibrium", "mm-f-simple-udl", "mm-f-beam-diff", "mm-f-bending-stress", "mm-f-rectangle-bending"],
+    sourceLabel: "材料力学範囲ZIP p.5〜8・10・11",
   },
   {
     id: "material-simple-beam-point-rect",
@@ -173,39 +173,36 @@ export function buildMaterialMechanicsGeneratedSpec(
     const torqueNmm = torqueNm * 1000;
     const sectionFactor = 1 - ratio ** 4;
     const outer = Math.cbrt(16 * torqueNmm / (Math.PI * tauAllow * sectionFactor));
-    const inner = ratio * outer;
-    const solid = Math.cbrt(16 * torqueNmm / (Math.PI * tauAllow));
-    const areaRatio = (outer ** 2 - inner ** 2) / solid ** 2;
     return {
       templateId,
       category: "中空軸設計",
       title: "動力から中空軸の必要外径を設計",
-      prompt: "動力から伝達トルクを求め、許容せん断応力を満たす必要外径doを設計せよ。さらに内径と同条件の中実軸径を照査する。解答欄にはdoを入力する。",
+      prompt: "動力から伝達トルクを求め、許容せん断応力を満たす中空軸の必要外径doを設計せよ。解答欄にはdoを入力する。",
       context: `P=${powerKw} kW、N=${rpm} rpm、許容せん断応力τal=${tauAllow} MPa、内外径比n=di/do=${ratio.toFixed(2)}。`,
       answer: `${rounded(outer, 2)} mm`,
       numericAnswer: rounded(outer, 6),
       tolerance: Math.max(0.2, outer * 0.005),
       expectedUnit: "mm",
       acceptedUnitScales: { mm: 1, m: 1000 },
-      formula: "\\begin{aligned}T&=\\frac{P}{\\frac{2\\pi N}{60}}\\\\d_o&=\\sqrt[3]{\\frac{16T}{\\pi\\tau_{al}(1-n^4)}}\\\\d_i&=nd_o\\end{aligned}",
+      formula: "\\begin{aligned}T&=\\frac{P}{\\frac{2\\pi N}{60}}\\\\d_o&=\\sqrt[3]{\\frac{16T}{\\pi\\tau_{al}(1-n^4)}}\\end{aligned}",
       steps: [
-        `\\(\\omega=\\frac{2\\pi(${rpm})}{60}=${rounded(omega, 5)}\\,\\mathrm{rad/s}\\)、\\(T=\\frac{${powerKw * 1000}}{${rounded(omega, 5)}}=${rounded(torqueNm, 2)}\\,\\mathrm{N\\,m}\\)。`,
+        `\\(\\omega=\\frac{2\\pi(${rpm})}{60}=${rounded(omega, 5)}\\,\\mathrm{rad/s}\\)。`,
+        `\\(T=\\frac{${powerKw * 1000}}{${rounded(omega, 5)}}=${rounded(torqueNm, 2)}\\,\\mathrm{N\\,m}\\)。`,
         `\\(1-n^4=1-${ratio.toFixed(2)}^4=${rounded(sectionFactor, 5)}\\)。`,
-        `\\(d_o=\\sqrt[3]{\\frac{16(${rounded(torqueNmm, 0)})}{\\pi(${tauAllow})(${rounded(sectionFactor, 5)})}}=${rounded(outer, 2)}\\,\\mathrm{mm}\\)、\\(d_i=${rounded(inner, 2)}\\,\\mathrm{mm}\\)。`,
-        `同じT・τalの中実軸は \\(d_s=${rounded(solid, 2)}\\,\\mathrm{mm}\\)、断面積比は \\(A_h/A_s=${rounded(areaRatio, 3)}\\)。`,
+        `\\(d_o=\\sqrt[3]{\\frac{16(${rounded(torqueNmm, 0)})}{\\pi(${tauAllow})(${rounded(sectionFactor, 5)})}}=${rounded(outer, 2)}\\,\\mathrm{mm}\\)。`,
       ],
-      reason: "範囲プリントの動力問題と内外径比による中空軸設計を一つの連続問題へ結合する。",
-      explanation: `必要外径は${rounded(outer, 2)} mm、内径は${rounded(inner, 2)} mm。rpmの単位変換を落とすと後続の径がすべて誤るため、角速度を最初に明記する。`,
-      parameters: { powerKw, rpm, ratio, tauAllow, omega, torqueNm, torqueNmm, sectionFactor, outer, inner, solid, areaRatio },
+      reason: "範囲プリントの動力問題と内外径比による中空軸設計を、一つの連続問題として扱う。",
+      explanation: `必要外径は${rounded(outer, 2)} mm。rpmを角速度へ変換してトルクを求め、内外径比を含む最大せん断応力式から外径を逆算する。`,
+      parameters: { powerKw, rpm, ratio, tauAllow, omega, torqueNm, torqueNmm, sectionFactor, outer },
       sourceLabel: "材料力学範囲ZIP p.2・3・9",
       sourcePages: [2, 3, 9],
       sourceReferenceIds: ["mm-f-power", "mm-f-hollow-ratio", "mm-f-tau-max"],
-      finiteValues: [powerKw, rpm, ratio, tauAllow, omega, torqueNm, torqueNmm, sectionFactor, outer, inner, solid, areaRatio],
-      denominators: [60, omega, Math.PI * tauAllow * sectionFactor, Math.PI * tauAllow, solid ** 2],
-      radicands: [16 * torqueNmm / (Math.PI * tauAllow * sectionFactor), 16 * torqueNmm / (Math.PI * tauAllow)],
+      finiteValues: [powerKw, rpm, ratio, tauAllow, omega, torqueNm, torqueNmm, sectionFactor, outer],
+      denominators: [60, omega, Math.PI * tauAllow * sectionFactor],
+      radicands: [16 * torqueNmm / (Math.PI * tauAllow * sectionFactor)],
       difficulty: 3,
       subpartCount: 4,
-      sourceBasis: ["範囲ZIP p.9の200 kW・120 rpm中空軸まとめ演習", "範囲ZIP p.2・3の中空断面量"],
+      sourceBasis: ["範囲ZIP p.2・3の中空丸軸断面量と最大せん断応力", "範囲ZIP p.9の動力から中空軸径を求めるまとめ演習"],
     };
   }
 
@@ -215,42 +212,39 @@ export function buildMaterialMechanicsGeneratedSpec(
     const diameter = random.int(10, 22) * 10;
     const turns = random.int(5, 12);
     const tauAllow = random.int(35, 60) * 10;
-    const deflectionAllow = random.int(4, 20) * 5;
     const stiffness = g * 1000 * d ** 4 / (8 * turns * diameter ** 3);
-    const stressLoad = tauAllow * Math.PI * d ** 3 / (8 * diameter);
-    const deflectionLoad = stiffness * deflectionAllow;
-    const allowable = Math.min(stressLoad, deflectionLoad);
-    const governing = stressLoad <= deflectionLoad ? "せん断応力条件" : "たわみ条件";
+    const allowableLoad = tauAllow * Math.PI * d ** 3 / (8 * diameter);
+    const maxDeflection = allowableLoad / stiffness;
     return {
       templateId,
       category: "コイルばね",
-      title: "応力・たわみ二条件による許容荷重",
-      prompt: "ばね定数k、せん断応力条件の上限Pτ、たわみ条件の上限Pδを求め、両条件を満たす許容荷重を決定せよ。",
-      context: `G=${g} GPa、線径d=${d} mm、平均直径D=${diameter} mm、有効巻数n=${turns}、τal=${tauAllow} MPa、δal=${deflectionAllow} mm。Wahl係数と直接せん断補正は用いない。`,
-      answer: `${rounded(allowable, 1)} N`,
-      numericAnswer: rounded(allowable, 6),
-      tolerance: Math.max(2, allowable * 0.005),
-      expectedUnit: "N",
-      acceptedUnitScales: { N: 1, kN: 1000 },
-      formula: "\\begin{aligned}k&=\\frac{Gd^4}{8nD^3}\\\\P_\\tau&=\\frac{\\tau_{al}\\pi d^3}{8D}\\\\P_\\delta&=k\\delta_{al}\\\\P_{al}&=\\min(P_\\tau,P_\\delta)\\end{aligned}",
+      title: "許容荷重から最大たわみまで",
+      prompt: "ばね定数kと、許容せん断応力を満たす最大荷重Pmaxを求め、その荷重での最大たわみδmaxを求めよ。解答欄にはδmaxを入力する。",
+      context: `G=${g} GPa、線径d=${d} mm、平均直径D=${diameter} mm、有効巻数n=${turns}、許容せん断応力τal=${tauAllow} MPa。Wahl係数と直接せん断補正は用いない。`,
+      answer: `${rounded(maxDeflection, 2)} mm`,
+      numericAnswer: rounded(maxDeflection, 6),
+      tolerance: Math.max(0.1, maxDeflection * 0.005),
+      expectedUnit: "mm",
+      acceptedUnitScales: { mm: 1, m: 1000 },
+      formula: "\\begin{aligned}k&=\\frac{Gd^4}{8nD^3}\\\\P_{max}&=\\frac{\\tau_{al}\\pi d^3}{8D}\\\\\\delta_{max}&=\\frac{P_{max}}{k}\\end{aligned}",
       steps: [
-        `\\(G=${g * 1000}\\,\\mathrm{N/mm^2}\\)、\\(k=\\frac{${g * 1000}(${d})^4}{8(${turns})(${diameter})^3}=${rounded(stiffness, 4)}\\,\\mathrm{N/mm}\\)。`,
-        `\\(P_\\tau=\\frac{${tauAllow}\\pi(${d})^3}{8(${diameter})}=${rounded(stressLoad, 1)}\\,\\mathrm{N}\\)。`,
-        `\\(P_\\delta=${rounded(stiffness, 4)}(${deflectionAllow})=${rounded(deflectionLoad, 1)}\\,\\mathrm{N}\\)。`,
-        `\\(P_{al}=\\min(${rounded(stressLoad, 1)},${rounded(deflectionLoad, 1)})=${rounded(allowable, 1)}\\,\\mathrm{N}\\)。支配条件は${governing}。`,
+        `\\(G=${g * 1000}\\,\\mathrm{N/mm^2}\\)。`,
+        `\\(k=\\frac{${g * 1000}(${d})^4}{8(${turns})(${diameter})^3}=${rounded(stiffness, 4)}\\,\\mathrm{N/mm}\\)。`,
+        `\\(P_{max}=\\frac{${tauAllow}\\pi(${d})^3}{8(${diameter})}=${rounded(allowableLoad, 1)}\\,\\mathrm{N}\\)。`,
+        `\\(\\delta_{max}=\\frac{${rounded(allowableLoad, 1)}}{${rounded(stiffness, 4)}}=${rounded(maxDeflection, 2)}\\,\\mathrm{mm}\\)。`,
       ],
-      reason: "本番形式と同じく、応力上限と変形上限を別々に計算し、小さい方を安全な荷重として採用する。",
-      explanation: `許容荷重は${rounded(allowable, 1)} Nで、${governing}が支配する。範囲外のWahl係数は使用していない。`,
-      parameters: { g, d, diameter, turns, tauAllow, deflectionAllow, stiffness, stressLoad, deflectionLoad, allowable },
+      reason: "範囲プリントにある最大せん断応力式で許容荷重を決め、その荷重をばねのたわみ式へ接続する。",
+      explanation: `許容せん断応力から得る最大荷重は${rounded(allowableLoad, 1)} N、その荷重での最大たわみは${rounded(maxDeflection, 2)} mm。独立した許容たわみ条件は置かない。`,
+      parameters: { g, d, diameter, turns, tauAllow, stiffness, allowableLoad, maxDeflection },
       sourceLabel: "材料力学範囲ZIP p.4・9",
       sourcePages: [4, 9],
       sourceReferenceIds: ["mm-f-spring-rate", "mm-f-spring-stress", "mm-f-spring-deflection"],
-      finiteValues: [g, d, diameter, turns, tauAllow, deflectionAllow, stiffness, stressLoad, deflectionLoad, allowable],
-      denominators: [8 * turns * diameter ** 3, 8 * diameter],
+      finiteValues: [g, d, diameter, turns, tauAllow, stiffness, allowableLoad, maxDeflection],
+      denominators: [8 * turns * diameter ** 3, 8 * diameter, stiffness],
       radicands: [],
       difficulty: 3,
       subpartCount: 4,
-      sourceBasis: ["範囲ZIP p.4の密巻コイルばね導出", "範囲ZIP p.9の応力・たわみまとめ演習"],
+      sourceBasis: ["範囲ZIP p.4の密巻コイルばねの応力・ばね定数・たわみ", "範囲ZIP p.9の許容応力から荷重とたわみを求めるまとめ演習"],
     };
   }
 
@@ -436,41 +430,42 @@ export function buildMaterialMechanicsGeneratedSpec(
 
   const length = random.int(4, 12) / 2;
   const intensity = random.int(3, 12) / 2;
-  const diameter = random.int(5, 12) * 10;
+  const width = random.int(6, 18) * 10;
+  const height = random.int(12, 26) * 10;
   const resultant = intensity * length;
   const reaction = resultant / 2;
   const maxMoment = intensity * length ** 2 / 8;
-  const sectionModulus = Math.PI * diameter ** 3 / 32;
+  const sectionModulus = width * height ** 2 / 6;
   const stress = maxMoment * 1e6 / sectionModulus;
   return {
     templateId,
     category: "はり・反力・SFD/BMD・曲げ応力",
     title: "反力からSFD/BMD・最大曲げ応力まで",
     prompt: "等価集中荷重と支点反力を求め、V(x)・M(x)を立ててSFD/BMDの形を判定し、最大曲げモーメントから最大曲げ応力を求めよ。解答欄には応力を入力する。",
-    context: `支間L=${length} mの単純支持ばり全体にw=${intensity} kN/m。断面は直径d=${diameter} mmの中実円。`,
+    context: `支間L=${length} mの単純支持ばり全体にw=${intensity} kN/m。断面は幅b=${width} mm、高さh=${height} mmの長方形。`,
     answer: `${rounded(stress, 2)} MPa`,
     numericAnswer: rounded(stress, 6),
     tolerance: Math.max(0.3, stress * 0.005),
     expectedUnit: "MPa",
     acceptedUnitScales: { MPa: 1, "N/mm2": 1, GPa: 1000 },
-    formula: "\\begin{aligned}R_A=R_B&=\\frac{wL}{2}\\\\V(x)&=R_A-wx\\\\M(x)&=R_Ax-\\frac{wx^2}{2}\\\\M_{max}&=\\frac{wL^2}{8}\\\\\\sigma_{max}&=\\frac{M_{max}}{\\frac{\\pi d^3}{32}}\\end{aligned}",
+    formula: "\\begin{aligned}R_A=R_B&=\\frac{wL}{2}\\\\V(x)&=R_A-wx\\\\M(x)&=R_Ax-\\frac{wx^2}{2}\\\\M_{max}&=\\frac{wL^2}{8}\\\\Z&=\\frac{bh^2}{6}\\\\\\sigma_{max}&=\\frac{M_{max}}{Z}\\end{aligned}",
     steps: [
       `\\(W=wL=${intensity}(${length})=${rounded(resultant, 2)}\\,\\mathrm{kN}\\)、\\(R_A=R_B=${rounded(reaction, 2)}\\,\\mathrm{kN}\\)。`,
       `\\(V(x)=${rounded(reaction, 2)}-${intensity}x\\)、\\(M(x)=${rounded(reaction, 2)}x-${rounded(intensity / 2, 3)}x^2\\)。SFDは直線、BMDは放物線。`,
       `\\(V=0\\)となる中央で \\(M_{max}=\\frac{${intensity}(${length})^2}{8}=${rounded(maxMoment, 4)}\\,\\mathrm{kN\\,m}\\)。`,
-      `\\(Z=\\frac{\\pi(${diameter})^3}{32}=${rounded(sectionModulus, 1)}\\,\\mathrm{mm^3}\\)、\\(\\sigma_{max}=\\frac{${rounded(maxMoment * 1e6, 0)}}{${rounded(sectionModulus, 1)}}=${rounded(stress, 2)}\\,\\mathrm{MPa}\\)。`,
+      `\\(Z=\\frac{${width}(${height})^2}{6}=${rounded(sectionModulus, 1)}\\,\\mathrm{mm^3}\\)、\\(\\sigma_{max}=\\frac{${rounded(maxMoment * 1e6, 0)}}{${rounded(sectionModulus, 1)}}=${rounded(stress, 2)}\\,\\mathrm{MPa}\\)。`,
     ],
-    reason: "形式2の範囲一致部と同じく、荷重図→反力→せん断力→曲げモーメント→断面応力を一つのはりで追う。",
-    explanation: `最終値は${rounded(stress, 2)} MPa。図では荷重と反力、SFDのゼロ交差、BMDの中央最大を対応させる。`,
-    parameters: { length, intensity, diameter, resultant, reaction, maxMoment, sectionModulus, stress },
-    sourceLabel: "材料力学範囲ZIP p.5〜8＋形式2第3問・第5問の範囲一致部",
-    sourcePages: [5, 6, 8],
-    sourceReferenceIds: ["mm-f-resultant", "mm-f-equilibrium", "mm-f-simple-udl", "mm-f-beam-diff", "mm-q-udl-mmax"],
-    finiteValues: [length, intensity, diameter, resultant, reaction, maxMoment, sectionModulus, stress],
-    denominators: [2, 8, sectionModulus],
+    reason: "範囲プリントにある等分布荷重の単純支持ばりについて、荷重図→反力→せん断力→曲げモーメント→長方形断面の曲げ応力を順に追う。",
+    explanation: `最終値は${rounded(stress, 2)} MPa。SFDのゼロ交差とBMDの中央最大を対応させ、曲げモーメントをN·mmへ換算して長方形断面係数で割る。`,
+    parameters: { length, intensity, width, height, resultant, reaction, maxMoment, sectionModulus, stress },
+    sourceLabel: "材料力学範囲ZIP p.5〜8・10・11",
+    sourcePages: [5, 6, 7, 8, 10, 11],
+    sourceReferenceIds: ["mm-f-resultant", "mm-f-equilibrium", "mm-f-simple-udl", "mm-f-beam-diff", "mm-f-bending-stress", "mm-f-rectangle-bending"],
+    finiteValues: [length, intensity, width, height, resultant, reaction, maxMoment, sectionModulus, stress],
+    denominators: [2, 6, 8, sectionModulus],
     radicands: [],
     difficulty: 3,
     subpartCount: 5,
-    sourceBasis: ["範囲ZIP p.5〜8の荷重・反力・SFD/BMD", "形式2第3問・第5問(1)(4)の範囲一致部"],
+    sourceBasis: ["範囲ZIP p.5〜8の荷重・反力・SFD/BMD", "追加範囲ZIP p.10・11の等分布荷重単純支持ばりと長方形断面の曲げ応力"],
   };
 }

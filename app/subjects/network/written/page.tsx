@@ -166,11 +166,13 @@ export default function NetworkWrittenPracticePage() {
             <h1 id="network-written-title">好きなプロトコルを選び、<br /><em>層＋20文字</em>で説明する。</h1>
           </div>
           <div className={styles.examRule}>
-            <strong>自動判定のクリア条件</strong>
+            <strong>過去問相当の10点基準</strong>
             <ol>
               <li>該当するOSIの層を正しく選ぶ</li>
-              <li>空白を除き20文字以上で書く</li>
-              <li>働きを示す内容キーワードを1つ以上含める</li>
+              <li>空白を除き20文字以上で書く（未満は0点）</li>
+              <li>対象・動作・固有の特徴から必要観点を満たす</li>
+              <li>「何を・どうする」を具体的な動作として書く</li>
+              <li>別プロトコルとの混同や中心的な矛盾を含めない</li>
             </ol>
             <small>添付の「ネットワーク形式1・2」は20文字記述という形式だけを参照し、印字された用語は今回の範囲へ追加していません。</small>
           </div>
@@ -178,7 +180,7 @@ export default function NetworkWrittenPracticePage() {
 
         <section className={styles.progressPanel} aria-label="記述練習の進捗">
           <div><span>挑戦</span><strong>{progress.attempts}</strong><small>回</small></div>
-          <div><span>3条件クリア</span><strong>{progress.qualified}</strong><small>回</small></div>
+          <div><span>満点基準クリア</span><strong>{progress.qualified}</strong><small>回</small></div>
           <div><span>確認済み用語</span><strong>{progress.completedIds.length}</strong><small> / {NETWORK_WRITTEN_TERMS.length}</small></div>
           <div className={styles.progressBar} aria-label={`用語確認率 ${completion}%`}><i style={{ width: `${completion}%` }} /><b>{completion}%</b></div>
         </section>
@@ -257,8 +259,8 @@ export default function NetworkWrittenPracticePage() {
           <section className={styles.answerSection} aria-labelledby="description-answer-title">
             <div className={styles.sectionHeading}>
               <span>03 / EXPLAIN</span>
-              <h2 id="description-answer-title">20文字以上で働きを説明</h2>
-              <p>用語名の書き写しではなく、「何を・どうする」を入れると採点されやすくなります。</p>
+              <h2 id="description-answer-title">20〜100文字で具体的に説明</h2>
+              <p>20文字は提出条件にすぎません。満点には「対象・動作・固有の特徴」を入れてください。</p>
             </div>
             <label className={styles.textareaLabel} htmlFor="network-written-answer">
               <textarea
@@ -272,7 +274,7 @@ export default function NetworkWrittenPracticePage() {
                 placeholder={`${current.term}は、……するための……です。`}
               />
               <span className={answerReady ? styles.counterReady : ""} aria-live="polite">
-                <strong>{characterCount}</strong> / 20文字 {answerReady ? "✓" : `（あと${20 - characterCount}文字）`}
+                <strong>{characterCount}</strong>文字 {answerReady ? "（提出可・内容採点あり）" : `（最低条件まであと${20 - characterCount}文字）`}
               </span>
             </label>
             <button className={styles.submit} type="submit" disabled={layerChoice === null || characterCount === 0}>
@@ -291,13 +293,15 @@ export default function NetworkWrittenPracticePage() {
             <div className={styles.scoreBlock}>
               <span>AUTO CHECK</span>
               <strong>{evaluation.estimatedScore}<small> / 10点目安</small></strong>
-              <h2 id="written-feedback-title">{evaluation.qualified ? "3条件クリア" : "条件を直して再挑戦"}</h2>
-              <p>自動採点は表記一致の目安です。最後は模範解答と意味が合うか、自分でも確認してください。</p>
+              <h2 id="written-feedback-title">{evaluation.qualified ? "過去問の満点基準クリア" : "部分点です・答案を修正"}</h2>
+              <p>20文字だけでは満点になりません。過去問と同じく、層・働きの核・具体性・矛盾を0／3／5／8／10点で判定します。</p>
             </div>
             <div className={styles.checks}>
-              <div data-ok={evaluation.enoughCharacters}><b>{evaluation.enoughCharacters ? "✓" : "×"}</b><span>20文字以上</span><small>{evaluation.characterCount}文字</small></div>
-              <div data-ok={evaluation.layerCorrect}><b>{evaluation.layerCorrect ? "✓" : "×"}</b><span>層の選択</span><small>{evaluation.layerCorrect ? "一致" : "要修正"}</small></div>
-              <div data-ok={evaluation.contentMatched}><b>{evaluation.contentMatched ? "✓" : "×"}</b><span>内容キーワード</span><small>{evaluation.matchedKeywords.length ? evaluation.matchedKeywords.join("・") : "要修正（別表現なら自己確認）"}</small></div>
+              <div data-ok={evaluation.enoughCharacters}><b>{evaluation.enoughCharacters ? "✓" : "×"}</b><span>最低20文字</span><small>{evaluation.characterCount}文字・未満は0点</small></div>
+              <div data-ok={evaluation.layerCorrect}><b>{evaluation.layerCorrect ? "✓" : "×"}</b><span>層の選択</span><small>{evaluation.layerCorrect ? "一致" : "誤層は最大3点"}</small></div>
+              <div data-ok={evaluation.detailMatched}><b>{evaluation.detailMatched ? "✓" : "×"}</b><span>必須観点</span><small>{evaluation.matchedRubricItems.length} / {evaluation.requiredRubricItems}：{evaluation.matchedRubricItems.join("・") || "該当なし"}</small></div>
+              <div data-ok={evaluation.actionMatched}><b>{evaluation.actionMatched ? "✓" : "×"}</b><span>具体的な動作</span><small>{evaluation.actionMatched ? "何を・どうするが明確" : "汎用説明だけでは不足"}</small></div>
+              <div data-ok={evaluation.contradictions.length === 0}><b>{evaluation.contradictions.length === 0 ? "✓" : "×"}</b><span>矛盾・混同</span><small>{evaluation.contradictions.length ? evaluation.contradictions.join("・") : "検出なし"}</small></div>
             </div>
             <div className={styles.answerGuide}>
               <section>
@@ -312,7 +316,7 @@ export default function NetworkWrittenPracticePage() {
                 )}
                 <p className={styles.modelAnswer}>{current.modelAnswer}</p>
                 <div className={styles.keywords} aria-label="説明へ入れたいキーワード">
-                  {current.keywords.map((keyword) => <b key={keyword}>{keyword}</b>)}
+                  {evaluation.expectedRubricItems.map((item) => <b key={item} data-matched={evaluation.matchedRubricItems.includes(item)}>{item}</b>)}
                 </div>
               </section>
             </div>

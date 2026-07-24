@@ -37,14 +37,9 @@ function assertSourceRefs(items) {
   for (const item of items) {
     assert.ok(item.sourceRefs.length > 0, `${item.id} has a source`);
     for (const ref of item.sourceRefs) {
-      assert.ok(ref.kind === "range-zip" || ref.kind === "format-2-overlap", `${item.id} source kind`);
-      if (ref.kind === "range-zip") {
-        assert.ok(Number.isInteger(ref.page) && ref.page >= 1 && ref.page <= 13, `${item.id} range page`);
-        assert.match(ref.filename, /\.(?:jpg|jpeg)$/i, `${item.id} range filename`);
-      } else {
-        assert.equal(ref.page, 1);
-        assert.ok([1, 2, 3, 4, 5].includes(ref.question), `${item.id} documented format-2 overlap`);
-      }
+      assert.equal(ref.kind, "range-zip", `${item.id} uses range ZIP only`);
+      assert.ok(Number.isInteger(ref.page) && ref.page >= 1 && ref.page <= 13, `${item.id} range page`);
+      assert.match(ref.filename, /\.(?:jpg|jpeg)$/i, `${item.id} range filename`);
     }
   }
 }
@@ -64,8 +59,9 @@ test("material-mechanics range truth is thirteen pages across four documented to
   assert.equal(data.MATERIAL_MECHANICS_EXAM_SPEC.totalPoints, 100);
   assert.equal(data.MATERIAL_MECHANICS_EXAM_SPEC.passPoints, 60);
   assert.equal(data.MATERIAL_MECHANICS_EXAM_SPEC.paper, "A4 portrait");
-  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.included.join(" "), /第5問\(1\)\(4\)/);
-  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /形式2.*第4問/);
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.included.join(" "), /合計13枚/);
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.formatOnly.join(" "), /形式2.*数値/);
+  assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /過去問固有/);
   assert.match(data.MATERIAL_MECHANICS_SOURCE_POLICY.excluded.join(" "), /Wahl/);
 });
 
@@ -73,7 +69,7 @@ test("material-mechanics cards and practice are source-backed, solved, diagramme
   const data = await loadModule(DATA_URL);
   const katex = await import(new URL("../app/vendor/katex/katex.mjs", import.meta.url));
   assert.equal(data.MATERIAL_MECHANICS_FORMULAS.length, 24);
-  assert.ok(data.MATERIAL_MECHANICS_QUESTIONS.length >= 37);
+  assert.ok(data.MATERIAL_MECHANICS_QUESTIONS.length >= 32);
   assert.equal(new Set(data.MATERIAL_MECHANICS_FORMULAS.map((item) => item.id)).size, data.MATERIAL_MECHANICS_FORMULAS.length);
   assert.equal(new Set(data.MATERIAL_MECHANICS_QUESTIONS.map((item) => item.id)).size, data.MATERIAL_MECHANICS_QUESTIONS.length);
   assertSourceRefs(data.MATERIAL_MECHANICS_FORMULAS);
@@ -101,10 +97,9 @@ test("material-mechanics cards and practice are source-backed, solved, diagramme
   assert.equal(byId.get("mm-q-hollow-diameter").numericAnswer, 75.6);
   assert.equal(byId.get("mm-q-spring-rate").numericAnswer, 33.33);
   assert.equal(byId.get("mm-q-spring-deflection").numericAnswer, 235.7);
-  assert.equal(byId.get("mm-q-udl-overhang-reactions").diagram, "overhang-udl");
-  assert.equal(byId.get("mm-q-udl-mmax-location").numericAnswer, 195.83);
-  assert.equal(byId.get("mm-q-udl-mmax").numericAnswer, 28.78);
-  assert.equal(byId.get("mm-q-overhang-sfd").diagram, "overhang-sfd-bmd");
+  for (const excludedId of ["mm-q-overhang-format2", "mm-q-overhang-sfd", "mm-q-udl-overhang-reactions", "mm-q-udl-mmax-location", "mm-q-udl-mmax"]) {
+    assert.equal(byId.has(excludedId), false, `${excludedId} past-paper copy is excluded`);
+  }
 });
 
 test("six expected A4 exams are 100-point, 60-pass, 5-major, all-topic solved papers", async () => {
@@ -167,7 +162,12 @@ test("material-mechanics UI provides searchable cards, timed drill, persistence,
   for (const mode of ["scope", "cards", "practice", "test", "expected", "guide"]) {
     assert.match(page, new RegExp(`mode === ["']${mode}["']`));
   }
-  assert.match(page, /type SourceFilter = "all" \| "range-zip" \| "format-2-overlap"/);
+  assert.match(page, /type SourceFilter = "range-zip"/);
+  assert.doesNotMatch(page, /SourceFilterControl|形式2・範囲一致部/);
+  assert.match(page, /範囲ZIP13枚だけが今回範囲の正本/);
+  assert.match(page, /形式2は形式のみ参照し、問題内容・数値は使用していません/);
+  assert.match(exams, /範囲ZIP13枚 p\./);
+  assert.doesNotMatch(exams, /形式2確認済み重複|形式2の確認済み範囲重複/);
   assert.match(page, /<CardDeckSearch/);
   assert.match(page, /href="\/rapid\/subject-5"/);
   assert.match(page, /href="\/generated-practice\?subject=subject-5"/);

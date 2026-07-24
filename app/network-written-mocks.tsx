@@ -125,7 +125,7 @@ export default function NetworkWrittenMocks() {
           <article className={styles.termCard}>
             <div><span>QUESTION {position + 1} / {paper.termIds.length}</span><small>残り {formatClock(remainingSeconds)}</small></div>
             <h2>{current.term}</h2>
-            <p>何層かを選び、何をするプロトコルか20文字以上で説明してください。層は解答まで表示しません。</p>
+            <p>何層かを選び、20〜100文字で対象・動作・固有の特徴まで説明してください。20文字だけでは満点になりません。</p>
           </article>
 
           <section className={styles.answerSection}>
@@ -153,7 +153,7 @@ export default function NetworkWrittenMocks() {
                 onChange={(event) => setAnswer(event.target.value)}
                 placeholder={`${current.term}は、……するための……です。`}
               />
-              <span className={characterCount >= 20 ? styles.counterReady : ""}><strong>{characterCount}</strong> / 20文字</span>
+              <span className={characterCount >= 20 ? styles.counterReady : ""}><strong>{characterCount}</strong>文字 / 最低20文字</span>
             </label>
             {!evaluation && <button className={styles.submit} type="submit" disabled={layerChoice === null || characterCount === 0}>採点する →</button>}
           </section>
@@ -162,7 +162,14 @@ export default function NetworkWrittenMocks() {
             <section className={`${styles.feedback} ${evaluation.qualified ? styles.feedbackQualified : styles.feedbackRetry}`} aria-live="polite">
               <div className={styles.scoreBlock}>
                 <span>AUTO CHECK</span><strong>{evaluation.estimatedScore}<small> / 10点</small></strong>
-                <h3>{evaluation.qualified ? "3条件クリア" : "答案を要復習"}</h3>
+                <h3>{evaluation.qualified ? "過去問の満点基準クリア" : "部分点・答案を要復習"}</h3>
+              </div>
+              <div className={styles.checks}>
+                <div data-ok={evaluation.enoughCharacters}><b>{evaluation.enoughCharacters ? "✓" : "×"}</b><span>20文字</span><small>{evaluation.characterCount}文字</small></div>
+                <div data-ok={evaluation.layerCorrect}><b>{evaluation.layerCorrect ? "✓" : "×"}</b><span>層</span><small>{evaluation.layerCorrect ? "一致" : "誤層は最大3点"}</small></div>
+                <div data-ok={evaluation.detailMatched}><b>{evaluation.detailMatched ? "✓" : "×"}</b><span>必須観点</span><small>{evaluation.matchedRubricItems.length} / {evaluation.requiredRubricItems}</small></div>
+                <div data-ok={evaluation.actionMatched}><b>{evaluation.actionMatched ? "✓" : "×"}</b><span>具体的動作</span><small>{evaluation.actionMatched ? "あり" : "不足"}</small></div>
+                <div data-ok={evaluation.contradictions.length === 0}><b>{evaluation.contradictions.length === 0 ? "✓" : "×"}</b><span>矛盾</span><small>{evaluation.contradictions.join("・") || "なし"}</small></div>
               </div>
               <div className={styles.answerGuide}>
                 <section><span>正しい層</span><h3>{current.layerLabel}</h3><p>{current.layerReason}</p></section>

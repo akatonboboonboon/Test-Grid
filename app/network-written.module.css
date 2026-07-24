@@ -480,7 +480,7 @@
 .checks {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
   margin: 20px 0;
 }
 
@@ -576,6 +576,10 @@
   color: var(--written-accent);
   font-size: 9px;
   padding: 6px 8px;
+}
+.keywords b[data-matched="true"] {
+  background: var(--written-accent);
+  color: var(--written-ink);
 }
 
 .feedbackActions {

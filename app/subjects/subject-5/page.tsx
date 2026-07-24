@@ -15,7 +15,6 @@ import {
   MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS,
   MATERIAL_MECHANICS_QUESTIONS,
   MATERIAL_MECHANICS_RANGE_PAGES,
-  MATERIAL_MECHANICS_SOURCE_POLICY,
   MATERIAL_MECHANICS_TOPICS,
 } from "../../material-mechanics-data";
 
@@ -28,7 +27,7 @@ type CardProgress = Record<string, CardState>;
 type Feedback = { response: string; correct: boolean };
 type TestPhase = "setup" | "active" | "result";
 type TestResult = { question: MaterialMechanicsQuestion; response: string; correct: boolean };
-type SourceFilter = "all" | "range-zip" | "format-2-overlap";
+type SourceFilter = "range-zip";
 type SavedTestSession = {
   version: 1;
   questionIds: string[];
@@ -208,7 +207,7 @@ function restoreTestSession(): SavedTestSession | null {
       version: 1,
       questionIds: parsed.questionIds,
       selectedTopics: selectedTopics.length ? selectedTopics : [...ALL_TOPIC_IDS],
-      sourceFilter: parsed.sourceFilter === "range-zip" || parsed.sourceFilter === "format-2-overlap" ? parsed.sourceFilter : "all",
+      sourceFilter: "range-zip",
       questionCountDraft: typeof parsed.questionCountDraft === "string" ? parsed.questionCountDraft : String(parsed.questionIds.length),
       timeMinutesDraft: typeof parsed.timeMinutesDraft === "string" ? parsed.timeMinutesDraft : "15",
       durationSeconds: typeof parsed.durationSeconds === "number" ? Math.min(10_800, Math.max(60, Math.floor(parsed.durationSeconds))) : 15 * 60,
@@ -244,28 +243,17 @@ function persistTestSession(session: SavedTestSession) {
   }
 }
 
-function matchesSource(question: MaterialMechanicsQuestion, source: SourceFilter) {
-  if (source === "all") return true;
+function matchesCurrentRange(question: MaterialMechanicsQuestion) {
   const refs = (question as unknown as { sourceRefs?: ReadonlyArray<{ kind?: string }> }).sourceRefs ?? [];
-  return refs.some((ref) => ref.kind === source);
+  return refs.some((ref) => ref.kind === "range-zip");
 }
 
-function SourceFilterControl({ value, onChange, name }: { value: SourceFilter; onChange: (value: SourceFilter) => void; name: string }) {
-  const options: Array<{ value: SourceFilter; label: string }> = [
-    { value: "all", label: "全教材" },
-    { value: "range-zip", label: "範囲ZIP" },
-    { value: "format-2-overlap", label: "形式2・範囲一致部" },
-  ];
+function CurrentRangeSourceNotice() {
   return (
-    <fieldset className="english-choice-answer english-test-groups statistics-topic-filter">
-      <legend>出典で絞り込む</legend>
-      {options.map((option) => (
-        <label key={option.value}>
-          <input type="radio" name={name} checked={value === option.value} onChange={() => onChange(option.value)} />
-          <span>{option.label}</span>
-        </label>
-      ))}
-    </fieldset>
+    <div className="english-guide-tip statistics-format-notice" aria-label="現在の出典">
+      <span>CURRENT RANGE SOURCE</span>
+      <p><b>範囲ZIP13枚だけが今回範囲の正本です。</b> 形式2は形式のみ参照し、問題内容・数値は使用していません。</p>
+    </div>
   );
 }
 function TopicFilter({
@@ -416,8 +404,7 @@ export default function MaterialMechanicsSubjectPage() {
   const [cardFlipped, setCardFlipped] = useState(false);
 
   const [practiceTopics, setPracticeTopics] = useState<MaterialMechanicsTopicId[]>([...ALL_TOPIC_IDS]);
-  const [practiceSourceFilter, setPracticeSourceFilter] = useState<SourceFilter>("all");
-  const [practiceDeck, setPracticeDeck] = useState([...MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS]);
+  const [practiceDeck, setPracticeDeck] = useState(() => MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter(matchesCurrentRange));
   const [practiceIndex, setPracticeIndex] = useState(0);
   const [practiceTypedAnswer, setPracticeTypedAnswer] = useState("");
   const [practiceSelectedChoice, setPracticeSelectedChoice] = useState("");
@@ -425,7 +412,6 @@ export default function MaterialMechanicsSubjectPage() {
 
   const [testPhase, setTestPhase] = useState<TestPhase>("setup");
   const [testTopics, setTestTopics] = useState<MaterialMechanicsTopicId[]>([...ALL_TOPIC_IDS]);
-  const [testSourceFilter, setTestSourceFilter] = useState<SourceFilter>("all");
   const [questionCountDraft, setQuestionCountDraft] = useState("20");
   const [timeMinutesDraft, setTimeMinutesDraft] = useState("15");
   const [testDurationSeconds, setTestDurationSeconds] = useState(15 * 60);
@@ -479,7 +465,7 @@ export default function MaterialMechanicsSubjectPage() {
       version: 1,
       questionIds: testQuestions.map((question) => question.id),
       selectedTopics: testTopics,
-      sourceFilter: testSourceFilter,
+      sourceFilter: "range-zip",
       questionCountDraft,
       timeMinutesDraft,
       durationSeconds: testDurationSeconds,
@@ -491,7 +477,7 @@ export default function MaterialMechanicsSubjectPage() {
       elapsedSeconds: testElapsedSeconds,
       savedAt: Date.now(),
     });
-  }, [hydrated, questionCountDraft, testDurationSeconds, testElapsedSeconds, testFeedback, testIndex, testPhase, testQuestions, testResults, testSelectedChoice, testSourceFilter, testTopics, testTypedAnswer, timeMinutesDraft]);
+  }, [hydrated, questionCountDraft, testDurationSeconds, testElapsedSeconds, testFeedback, testIndex, testPhase, testQuestions, testResults, testSelectedChoice, testTopics, testTypedAnswer, timeMinutesDraft]);
 
   const filteredCards = useMemo(
     () => MATERIAL_MECHANICS_FORMULAS.filter((card) => cardTopics.includes(card.topic)),
@@ -504,8 +490,8 @@ export default function MaterialMechanicsSubjectPage() {
 
   const currentPracticeQuestion = practiceDeck[practiceIndex];
   const availableTestQuestions = useMemo(
-    () => MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic) && matchesSource(question, testSourceFilter)),
-    [testSourceFilter, testTopics],
+    () => MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => testTopics.includes(question.topic) && matchesCurrentRange(question)),
+    [testTopics],
   );
   const currentTestQuestion = testQuestions[testIndex];
   const testScore = testResults.filter((result) => result.correct).length;
@@ -569,24 +555,16 @@ export default function MaterialMechanicsSubjectPage() {
 
   function changePracticeTopics(nextTopics: MaterialMechanicsTopicId[]) {
     setPracticeTopics(nextTopics);
-    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => nextTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
+    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => nextTopics.includes(question.topic) && matchesCurrentRange(question))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
     setPracticeFeedback(null);
   }
 
-  function changePracticeSource(source: SourceFilter) {
-    setPracticeSourceFilter(source);
-    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, source))));
-    setPracticeIndex(0);
-    setPracticeTypedAnswer("");
-    setPracticeSelectedChoice("");
-    setPracticeFeedback(null);
-  }
 
   function shufflePractice() {
-    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesSource(question, practiceSourceFilter))));
+    setPracticeDeck(randomize(MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.filter((question) => practiceTopics.includes(question.topic) && matchesCurrentRange(question))));
     setPracticeIndex(0);
     setPracticeTypedAnswer("");
     setPracticeSelectedChoice("");
@@ -679,7 +657,7 @@ export default function MaterialMechanicsSubjectPage() {
       version: 1,
       questionIds: testQuestions.map((question) => question.id),
       selectedTopics: testTopics,
-      sourceFilter: testSourceFilter,
+      sourceFilter: "range-zip",
       questionCountDraft,
       timeMinutesDraft,
       durationSeconds: testDurationSeconds,
@@ -706,7 +684,7 @@ export default function MaterialMechanicsSubjectPage() {
     if (!savedTestSession) return;
     const questions = savedTestSession.questionIds.flatMap((id) => {
       const found = MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.find((question) => question.id === id);
-      return found ? [found] : [];
+      return found && matchesCurrentRange(found) ? [found] : [];
     });
     if (!questions.length) {
       deleteSavedTest();
@@ -714,10 +692,9 @@ export default function MaterialMechanicsSubjectPage() {
     }
     const results = savedTestSession.results.flatMap((savedResult) => {
       const question = MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.find((item) => item.id === savedResult.questionId);
-      return question ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
+      return question && matchesCurrentRange(question) ? [{ question, response: savedResult.response, correct: savedResult.correct }] : [];
     });
     setTestTopics(savedTestSession.selectedTopics);
-    setTestSourceFilter(savedTestSession.sourceFilter);
     setQuestionCountDraft(savedTestSession.questionCountDraft);
     setTimeMinutesDraft(savedTestSession.timeMinutesDraft);
     setTestDurationSeconds(savedTestSession.durationSeconds);
@@ -766,7 +743,7 @@ export default function MaterialMechanicsSubjectPage() {
           <div className="english-hero-copy statistics-hero-copy">
             <p><span>SUBJECT 05</span><span>RANGE-VERIFIED ONLY</span></p>
             <h1 id="statistics-title">材料力学</h1>
-            <small>範囲ZIPの{MATERIAL_MECHANICS_RANGE_PAGES.length}ページを正本に、ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを学習します。形式2はQ1〜3の範囲一致部だけを照合し、Q4は追加曲げ範囲の出典に使わず、形式1・3は紙面構成の参照に限定しています。</small>
+            <small>範囲ZIP13枚だけを今回範囲の正本として、ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを学習します。形式1・2・3は形式のみ参照し、問題内容・数値は使用していません。</small>
           </div>
           <button className="english-hero-memory-button statistics-hero-card-button" type="button" onClick={() => changeMode("cards")}>
             <span>FORMULAS FIRST</span>
@@ -779,7 +756,7 @@ export default function MaterialMechanicsSubjectPage() {
           <div><span>TOPICS</span><strong>{MATERIAL_MECHANICS_TOPICS.length}</strong><small>単元</small></div>
           <div><span>FORMULAS</span><strong>{MATERIAL_MECHANICS_FORMULAS.length}</strong><small>枚</small></div>
           <div><span>QUESTIONS</span><strong>{MATERIAL_MECHANICS_PRINT_LEVEL_QUESTIONS.length}</strong><small>本番大問</small></div>
-          <p>範囲ZIP{MATERIAL_MECHANICS_RANGE_PAGES.length}ページのねじり・はり・曲げ範囲と、形式2 Q1〜3の範囲一致部だけを演習へ収録。A4想定試験{MATERIAL_MECHANICS_EXPECTED_EXAMS.length}回を、50分初期値・練習用100点・60点ラインで解けます。公式は {totalMastered}枚暗記済み。</p>
+          <p>範囲ZIP13枚のねじり・はり・曲げ範囲だけを演習へ収録。A4想定試験{MATERIAL_MECHANICS_EXPECTED_EXAMS.length}回を、50分初期値・練習用100点・60点ラインで解けます。形式2の問題内容・数値は使っていません。公式は {totalMastered}枚暗記済み。</p>
         </section>
 
         <section ref={workspaceRef} id="statistics-workspace" className="english-workspace statistics-workspace">
@@ -796,11 +773,11 @@ export default function MaterialMechanicsSubjectPage() {
             <section className="english-guide-workspace statistics-scope-workspace" aria-labelledby="statistics-scope-title">
               <div className="english-panel-heading statistics-panel-heading">
                 <div><span>COURSE RANGE</span><h2 id="statistics-scope-title">今回の試験範囲</h2></div>
-                <p>テスト範囲ZIPの{MATERIAL_MECHANICS_RANGE_PAGES.length}ページを正本として整理した{MATERIAL_MECHANICS_TOPICS.length}単元です。追加ページ10〜13の曲げ応力・断面量・単純支持/片持ちばりも含み、形式2はQ1〜3の範囲一致部だけを照合資料として使います。</p>
+                <p>範囲ZIP13枚だけを正本として整理した{MATERIAL_MECHANICS_TOPICS.length}単元です。追加ページ10〜13の曲げ応力・断面量・単純支持/片持ちばりも含みます。形式2は形式のみ参照し、問題内容・数値は使用していません。</p>
               </div>
               <div className="english-guide-tip statistics-source-policy">
                 <span>SOURCE POLICY</span>
-                <p><b>出題する：</b>範囲ZIP{MATERIAL_MECHANICS_RANGE_PAGES.length}ページ（曲げ応力・長方形/中空円断面I/Zを含む）＋形式2 Q1〜3の範囲一致部　／　<b>出典除外：</b>形式2 Q4、形式1・3の旧範囲内容　／　<b>範囲外：</b>EIによるたわみ、曲率、カスティリアーノの定理<br /><small>{MATERIAL_MECHANICS_SOURCE_POLICY.note} 正式な試験時間と配点は資料で確認できないため、50分・100点・60点は練習用です。</small></p>
+                <p><b>出題する：</b>範囲ZIP13枚のみ（曲げ応力・長方形/中空円断面I/Zを含む）　／　<b>形式資料：</b>形式1・2・3は形式のみ参照、問題内容・数値は不使用　／　<b>範囲外：</b>EIによるたわみ、曲率、カスティリアーノの定理<br /><small>正式な試験時間と配点は資料で確認できないため、50分・100点・60点は練習用です。</small></p>
               </div>
               <div className="english-guide-grid statistics-topic-grid">
                 {MATERIAL_MECHANICS_TOPICS.map((topic) => {
@@ -897,7 +874,7 @@ export default function MaterialMechanicsSubjectPage() {
                 <p>全角数字、小数、分数、%を採点できます。記述問題はキーワードで判定し、誤判定なら自己修正できます。</p>
               </div>
               <TopicFilter legend="演習に含める単元" selected={practiceTopics} onChange={changePracticeTopics} />
-              <SourceFilterControl value={practiceSourceFilter} onChange={changePracticeSource} name="mechanical-practice-source" />
+              <CurrentRangeSourceNotice />
               <div className="english-result-actions statistics-practice-tools"><span>{practiceDeck.length}問を出題対象に設定</span><button type="button" disabled={!practiceDeck.length} onClick={shufflePractice}>問題順をシャッフル</button></div>
 
               {currentPracticeQuestion ? (
@@ -919,7 +896,7 @@ export default function MaterialMechanicsSubjectPage() {
             <section className="generic-test-workspace english-test-workspace statistics-test-workspace" aria-labelledby="statistics-test-title">
               {testPhase === "setup" && (
                 <div className="english-test-setup statistics-test-setup">
-                  <div className="english-panel-heading statistics-panel-heading"><div><span>MOCK EXAM</span><h2 id="statistics-test-title">模擬テストを作る</h2></div><p>選んだ単元と出典から、範囲ZIP・形式2の範囲一致部をランダム出題します。</p></div>
+                  <div className="english-panel-heading statistics-panel-heading"><div><span>MOCK EXAM</span><h2 id="statistics-test-title">模擬テストを作る</h2></div><p>選んだ単元から、範囲ZIP13枚に基づく問題だけをランダム出題します。</p></div>
                   {savedTestSession && (
                     <div className="generic-test-answer english-test-feedback english-saved-test statistics-saved-test" aria-label="保存中の模擬テスト">
                       <strong>途中の模擬テストがあります</strong>
@@ -929,7 +906,7 @@ export default function MaterialMechanicsSubjectPage() {
                     </div>
                   )}
                   <TopicFilter legend="模試に含める単元" selected={testTopics} onChange={setTestTopics} />
-                  <SourceFilterControl value={testSourceFilter} onChange={setTestSourceFilter} name="mechanical-test-source" />
+                  <CurrentRangeSourceNotice />
                   <div className="english-test-settings statistics-test-settings">
                     <label><span>問題数 <small>最大 {availableTestQuestions.length}問</small></span><input type="number" min="1" max={Math.max(1, availableTestQuestions.length)} inputMode="numeric" value={questionCountDraft} onChange={(event) => setQuestionCountDraft(event.target.value)} /></label>
                     <label><span>制限時間 <small>1〜180分</small></span><input type="number" min="1" max="180" inputMode="numeric" value={timeMinutesDraft} onChange={(event) => setTimeMinutesDraft(event.target.value)} /></label>
@@ -986,8 +963,8 @@ export default function MaterialMechanicsSubjectPage() {
 
           {mode === "guide" && (
             <section className="english-guide-workspace statistics-guide-workspace" aria-labelledby="statistics-guide-title">
-              <div className="english-panel-heading statistics-panel-heading"><div><span>FORMAT GUIDE</span><h2 id="statistics-guide-title">出題形式ガイド</h2></div><p>形式1・3は紙面構成だけを参照し、形式2はQ1〜3の範囲一致部だけを演習へ反映します。Q4は出典に使わず、曲げ応力・断面量は範囲ZIP追加ページ10〜13に基づきます。</p></div>
-              <div className="english-guide-tip statistics-format-notice"><span>SOURCE POLICY</span><p>範囲ZIP{MATERIAL_MECHANICS_RANGE_PAGES.length}ページが今回範囲の正本です。EIによるたわみ、曲率、カスティリアーノの定理は対象外です。A4模試は{MATERIAL_MECHANICS_EXAM_SPEC.bigQuestionCount}大問・練習用{MATERIAL_MECHANICS_EXAM_SPEC.totalPoints}点で構成し、正式時間と配点は未確認です。初期値50分、{MATERIAL_MECHANICS_EXAM_SPEC.passPoints}点ラインで練習します。</p></div>
+              <div className="english-panel-heading statistics-panel-heading"><div><span>FORMAT GUIDE</span><h2 id="statistics-guide-title">出題形式ガイド</h2></div><p>形式1・2・3は形式のみ参照し、問題内容・数値は使用していません。曲げ応力・断面量を含む学習内容は、範囲ZIP13枚だけに基づきます。</p></div>
+              <div className="english-guide-tip statistics-format-notice"><span>SOURCE POLICY</span><p><b>範囲ZIP13枚だけが今回範囲の正本です。</b> 形式2は形式のみ参照し、問題内容・数値は使用していません。EIによるたわみ、曲率、カスティリアーノの定理は対象外です。A4模試は{MATERIAL_MECHANICS_EXAM_SPEC.bigQuestionCount}大問・練習用{MATERIAL_MECHANICS_EXAM_SPEC.totalPoints}点で構成し、正式時間と配点は未確認です。初期値50分、{MATERIAL_MECHANICS_EXAM_SPEC.passPoints}点ラインで練習します。</p></div>
               <div className="english-guide-grid statistics-guide-grid">
                 {MATERIAL_MECHANICS_EXAM_FORMATS.map((format, index) => (
                   <article key={format.id}>

@@ -164,15 +164,12 @@ function sectionPages(sections: ExpectedSection[]) {
 }
 
 function sourceLabel(question: ExpectedQuestion) {
-  const sourcePages = question.sourcePages ?? question.sourceRefs?.flatMap((source) => (
-    typeof source.page === "number" ? [source.page] : []
-  )) ?? [];
+  const sourcePages = question.sourceRefs?.flatMap((source) => (
+    source.kind === "range-zip" && typeof source.page === "number" ? [source.page] : []
+  )) ?? question.sourcePages ?? [];
   const pages = Array.from(new Set(sourcePages)).sort((left, right) => left - right);
-  const includesOverlap = question.sourceRefs?.some((source) => source.kind === "format-2-overlap");
-  if (pages.length) return `${includesOverlap ? "範囲資料・形式2確認済み重複" : "範囲資料"} p.${pages.join("・")}`;
-  return includesOverlap ? "形式2の確認済み範囲重複" : "試験範囲資料";
+  return pages.length ? `範囲ZIP13枚 p.${pages.join("・")}` : "範囲ZIP13枚";
 }
-
 function parseStoredExam(raw: string | null): StoredMaterialMechanicsExam | null {
   if (!raw) return null;
   try {
@@ -359,7 +356,7 @@ function MaterialMechanicsExpectedExamLab({ firstExam }: { firstExam: ExpectedEx
           <div><span>SCORE</span><strong>100</strong><small>点換算</small></div>
           <div><span>PASS</span><strong>60</strong><small>練習用</small></div>
         </div>
-        <aside className={styles.scopeWarning}><strong>範囲境界</strong><p>範囲ZIP13ページを正本とし、ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを採用。形式2はQ1〜3の範囲一致部だけを照合し、Q4は追加曲げ範囲の出典に使いません。EIによるたわみ、曲率、カスティリアーノの定理と、形式1・3の旧範囲内容は出題しません。</p></aside>
+        <aside className={styles.scopeWarning}><strong>範囲境界</strong><p><b>範囲ZIP13枚だけが今回範囲の正本です。</b> ねじり・軸設計・コイルばね・はり反力・SFD/BMD・曲げ応力・長方形/中空円断面のI・Zを採用します。形式2は形式のみ参照し、問題内容・数値は使用していません。EIによるたわみ、曲率、カスティリアーノの定理は出題しません。</p></aside>
 
         {savedExam && (
           <aside className={styles.savedCard} aria-label="保存された想定試験">
