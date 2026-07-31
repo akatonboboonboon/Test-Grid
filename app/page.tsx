@@ -14,6 +14,21 @@ import { MECHANICAL_DYNAMICS_FORMULAS } from "./mechanical-dynamics-data";
 import { MATERIAL_MECHANICS_FORMULAS } from "./material-mechanics-data";
 import { DIGITAL_CIRCUIT_ALL_FORMULAS } from "./digital-circuits-extra-data";
 import {
+  ACADEMIC_YEARS,
+  DEFAULT_ACADEMIC_VIEW,
+  EXAM_PERIODS,
+  academicPeriodLabel,
+  buildAcademicCatalog,
+  matchesAcademicPlacement,
+  type AcademicYear,
+  type ExamPeriod,
+} from "./academic-catalog";
+import {
+  TEST_BUILDER_STORAGE_KEY,
+  readProjects,
+  type TestBuilderProject,
+} from "./test-builder-engine";
+import {
   DEFAULT_SUBJECTS,
   EXAM_SCHEDULE,
   SUBJECT_ACCENTS,
@@ -144,10 +159,21 @@ function readMetrics(subjects: StudySubject[]) {
   })) as Record<SubjectId, SubjectMetric>;
 }
 
+function restoreBuilderProjects(): TestBuilderProject[] {
+  try {
+    return readProjects(window.localStorage.getItem(TEST_BUILDER_STORAGE_KEY));
+  } catch {
+    return [];
+  }
+}
+
 export default function StudyHub() {
   const [subjects, setSubjects] = useState<StudySubject[]>(DEFAULT_SUBJECTS);
   const [metrics, setMetrics] = useState<Record<string, SubjectMetric>>({});
   const [editing, setEditing] = useState<SubjectDraft | null>(null);
+  const [selectedYear, setSelectedYear] = useState<AcademicYear>(DEFAULT_ACADEMIC_VIEW.year);
+  const [selectedPeriod, setSelectedPeriod] = useState<ExamPeriod>(DEFAULT_ACADEMIC_VIEW.period);
+  const [builderProjects, setBuilderProjects] = useState<TestBuilderProject[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -166,6 +192,21 @@ export default function StudyHub() {
   useEffect(() => {
     if (hydrated) saveSubjects(subjects);
   }, [subjects, hydrated]);
+
+  useEffect(() => {
+    const refreshBuilderProjects = () => setBuilderProjects(restoreBuilderProjects());
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === TEST_BUILDER_STORAGE_KEY || event.key === null) refreshBuilderProjects();
+    };
+
+    refreshBuilderProjects();
+    window.addEventListener("test-grid:test-builder-projects-changed", refreshBuilderProjects);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("test-grid:test-builder-projects-changed", refreshBuilderProjects);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   useEffect(() => {
     if (!dialogOpen) return;
@@ -211,6 +252,24 @@ export default function StudyHub() {
       mastered: result.mastered + metric.mastered,
     };
   }, { cards: 0, mastered: 0 }), [subjects, metrics]);
+  const academicCatalog = useMemo(() => buildAcademicCatalog(subjects), [subjects]);
+  const selectedEntries = useMemo(
+    () => academicCatalog.filter((entry) => matchesAcademicPlacement(entry, selectedYear, selectedPeriod)),
+    [academicCatalog, selectedPeriod, selectedYear],
+  );
+  const visibleSubjects = selectedEntries.flatMap((entry) => (
+    entry.kind === "legacy-subject" ? [entry.subject] : []
+  ));
+  const showsToeic = selectedEntries.some((entry) => entry.id === "toeic-lr-ip");
+  const visibleBuilderProjects = useMemo(
+    () => builderProjects.filter((candidate) => (
+      candidate.test.grade === selectedYear && candidate.test.period === selectedPeriod
+    )),
+    [builderProjects, selectedPeriod, selectedYear],
+  );
+  const selectedItemCount = selectedEntries.length + visibleBuilderProjects.length;
+  const isFourthYearFirstFinal = selectedYear === 4 && selectedPeriod === "first-final";
+  const selectedPeriodLabel = academicPeriodLabel(selectedPeriod);
 
   function beginEdit(subject: StudySubject) {
     setEditing({
@@ -241,15 +300,15 @@ export default function StudyHub() {
   return (
     <div className="app-frame hub-page">
       <header className="topbar hub-topbar">
-        <Link className="brand" href="/" aria-label="9教科とTOEIC IPの学習一覧">
-          <span className="brand-mark hub-brand-mark" aria-hidden="true">T/+1</span>
+        <Link className="brand" href="/" aria-label="1〜5年の学習一覧">
+          <span className="brand-mark hub-brand-mark" aria-hidden="true">T/5</span>
           <span>
             <strong>TEST//GRID</strong>
-            <small>9 SUBJECTS + TOEIC IP</small>
+            <small>5 YEARS / EXAMS + QUALIFICATIONS</small>
           </span>
         </Link>
         <div className="header-actions">
-          <span className="card-count-label"><i aria-hidden="true" /> {configuredCount} / 9 NAMED</span>
+          <span className="card-count-label"><i aria-hidden="true" /> 4年前期末 {configuredCount} / 9</span>
           <Link className="outline-button header-link" href="/essentials">これだけは覚える</Link>
           <Link className="outline-button header-link hub-generated-header-link" href="/generated-practice">自動生成問題・共有履歴</Link>
           <Link className="outline-button header-link" href="/foundations?subject=subject-7">基礎公式一覧</Link>
@@ -260,9 +319,9 @@ export default function StudyHub() {
       <main className="hub-main">
         <section className="hub-hero" aria-labelledby="hub-title">
           <div>
-            <p className="eyebrow"><span>REGULAR EXAM / 9 SUBJECTS</span><span>LOCAL STUDY DESK</span></p>
-            <h1 id="hub-title">9教科を、<br /><em>ひとつずつ潰す。</em></h1>
-            <p>英語はZIP教材の専用演習、ネットワークは本試験の20文字以上記述と追試用の層暗算、熱・流体力学は追加範囲を含む熱力学9枚・7単元の公式と全範囲想定試験、確率統計も追加範囲5ページとA4想定試験、応用数学もA4想定試験まで収録。ほかの科目もここでまとめて回せます。</p>
+            <p className="eyebrow"><span>ACADEMIC YEAR 1-5 / EXAM ARCHIVE</span><span>LOCAL STUDY DESK</span></p>
+            <h1 id="hub-title">5年間の試験を、<br /><em>ひとつずつ潰す。</em></h1>
+            <p>1年から5年までを、前期中間・前期末・後期中間・後期末・資格などに整理。今回の9教科は4年前期末、TOEIC IPは4年の「その他」から開けます。</p>
           </div>
           <Link className="hub-primary-link" href="/subjects/network/written">
             <span>READY NOW</span>
@@ -272,12 +331,26 @@ export default function StudyHub() {
         </section>
 
         <Link
+          className="hub-memory-launch hub-builder-launch"
+          href="/test-builder"
+          aria-label="ローカルテスト作成室を開く（AIと外部APIは不要）"
+        >
+          <span>
+            <small>LOCAL TEST STUDIO / DEVICE ONLY</small>
+            <strong>ローカルテスト作成室</strong>
+            <em>範囲と出題形式を貼るだけ。AI/API不要で、解答付きテストをこの端末に保存</em>
+          </span>
+          <b aria-hidden="true">新しいテストを作る →</b>
+        </Link>
+
+
+        <Link
           className="hub-memory-launch hub-essentials-launch"
           href="/essentials"
           style={{ background: "var(--lime)", boxShadow: "9px 9px 0 var(--cyan)" }}
         >
           <span>
-            <small>EXAM EVE / 9 SUBJECTS</small>
+            <small>4TH YEAR / FIRST FINAL</small>
             <strong>試験直前、これだけは覚える。</strong>
             <em>全教科の最重要単語・公式・見分け方を、一目で確認</em>
           </span>
@@ -303,13 +376,55 @@ export default function StudyHub() {
         </Link>
 
         <section className="hub-summary" aria-label="全体の学習状況">
-          <div><span>SUBJECTS NAMED</span><strong>{configuredCount}<small>/9</small></strong></div>
+          <div><span>4Y FIRST FINAL</span><strong>{configuredCount}<small>/9</small></strong></div>
           <div><span>STUDY CARDS</span><strong>{totals.cards}<small>枚</small></strong></div>
           <div><span>MASTERED</span><strong>{totals.mastered}<small>枚</small></strong></div>
-          <p>データはこの端末に自動保存。科目名も教材もあとから変更できます。</p>
+          <p>既存の教科IDと進捗はそのまま。学年と試験区分を切り替えて、必要な勉強机だけを表示します。</p>
+        </section>
+        <section className="hub-academic-browser" aria-labelledby="academic-browser-title">
+          <div className="hub-academic-browser-head">
+            <div>
+              <span>ACADEMIC CATALOG / YEAR 1-5</span>
+              <h2 id="academic-browser-title">学年と試験区分を選ぶ</h2>
+            </div>
+            <p>学年を選び、次に定期試験または資格の区分を選んでください。</p>
+          </div>
+          <nav className="hub-academic-year-tabs" aria-label="学年を選択">
+            {ACADEMIC_YEARS.map((year) => (
+              <button
+                type="button"
+                key={year}
+                aria-pressed={selectedYear === year}
+                className={selectedYear === year ? "is-active" : ""}
+                onClick={() => setSelectedYear(year)}
+              >
+                <span>YEAR {String(year).padStart(2, "0")}</span>
+                <strong>{year}年</strong>
+              </button>
+            ))}
+          </nav>
+          <nav className="hub-academic-period-tabs" aria-label="試験区分を選択">
+            {EXAM_PERIODS.map((period) => (
+              <button
+                type="button"
+                key={period.id}
+                aria-pressed={selectedPeriod === period.id}
+                className={selectedPeriod === period.id ? "is-active" : ""}
+                onClick={() => setSelectedPeriod(period.id)}
+              >
+                {period.label}
+              </button>
+            ))}
+          </nav>
+          <div className="hub-academic-current" role="status" aria-live="polite">
+            <span>OPEN DESK</span>
+            <strong>{selectedYear}年 / {selectedPeriodLabel}</strong>
+            <small>{selectedItemCount}件の学習ページ・テスト</small>
+          </div>
         </section>
 
-        <section className="hub-exam-schedule" aria-labelledby="exam-schedule-title">
+        {isFourthYearFirstFinal && (
+          <section className="hub-exam-schedule" aria-labelledby="exam-schedule-title">
           <div className="hub-exam-schedule-head">
             <div>
               <span>EXAM SCHEDULE / 2026</span>
@@ -339,15 +454,16 @@ export default function StudyHub() {
               );
             })}
           </ol>
-        </section>
+          </section>
+        )}
         <section className="hub-subject-section" aria-labelledby="subject-list-title">
           <div className="hub-section-heading">
-            <div><span>SUBJECT GRID</span><h2 id="subject-list-title">科目別の勉強机</h2></div>
-            <p>まず科目名を設定し、授業ノートやプリントから問題と答えを登録してください。</p>
+            <div><span>SUBJECT GRID / YEAR {selectedYear}</span><h2 id="subject-list-title">{selectedYear}年・{selectedPeriodLabel}</h2></div>
+            <p>選択した学年と試験区分に登録されている勉強机だけを表示しています。</p>
           </div>
 
           <div className="subject-grid">
-            {subjects.map((subject) => {
+            {visibleSubjects.map((subject) => {
               const metric = metrics[subject.id] ?? { cards: 0, mastered: 0 };
               const completion = metric.cards ? Math.round((metric.mastered / metric.cards) * 100) : 0;
               const hasMaterial = subject.module === "network" || subject.id === "subject-3" || subject.id === "subject-4" || subject.id === "subject-6" || subject.id === "subject-7" || subject.id === "subject-8" || metric.cards > 0;
@@ -408,8 +524,50 @@ export default function StudyHub() {
               );
             })}
           </div>
+          {visibleBuilderProjects.length > 0 && (
+            <section className="hub-builder-projects" aria-labelledby="saved-tests-title">
+              <div className="hub-builder-projects-heading">
+                <div>
+                  <span>LOCAL TEST ARCHIVE</span>
+                  <h3 id="saved-tests-title">作成済みテスト</h3>
+                </div>
+                <small>{visibleBuilderProjects.length}件</small>
+              </div>
+              <div className="hub-builder-project-grid" role="list" aria-label={`${selectedYear}年・${selectedPeriodLabel}の作成済みテスト`}>
+                {visibleBuilderProjects.map((savedProject) => (
+                  <article className="hub-builder-project-card" role="listitem" key={savedProject.projectId}>
+                    <div className="hub-builder-project-meta">
+                      <span>{savedProject.test.subject}</span>
+                      <strong>{savedProject.test.questions.length}問</strong>
+                    </div>
+                    <h4>{savedProject.test.title}</h4>
+                    <dl>
+                      <div><dt>時間</dt><dd>{savedProject.test.durationMinutes}分</dd></div>
+                      <div><dt>満点</dt><dd>{savedProject.test.totalPoints}点</dd></div>
+                      <div><dt>難度</dt><dd>LEVEL {savedProject.test.difficulty}</dd></div>
+                    </dl>
+                    <Link
+                      href={`/test-builder?project=${encodeURIComponent(savedProject.projectId)}`}
+                      aria-label={`${savedProject.test.title}を開く`}
+                    >
+                      問題用紙と解答を開く <b aria-hidden="true">→</b>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+          {!visibleSubjects.length && !showsToeic && !visibleBuilderProjects.length && (
+            <div className="hub-academic-empty" role="status">
+              <span>NO SUBJECTS YET</span>
+              <h3>{selectedYear}年・{selectedPeriodLabel}には、まだ科目がありません。</h3>
+              <p>範囲資料とテスト形式を入れて、この区分に新しいテストを作れます。</p>
+              <Link href="/test-builder">ローカルテスト作成室を開く <b aria-hidden="true">→</b></Link>
+            </div>
+          )}
         </section>
-        <section className="hub-toeic-section" aria-labelledby="toeic-ip-title">
+        {showsToeic && (
+          <section className="hub-toeic-section" aria-labelledby="toeic-ip-title">
           <div className="hub-section-heading">
             <div><span>QUALIFICATION / SUBJECT 10</span><h2 id="toeic-ip-title">TOEIC IP対策</h2></div>
             <p>英語とは進捗を分けた専用科目。2026年12月25日に向けて、Listening・Readingの全Partを回します。</p>
@@ -426,11 +584,14 @@ export default function StudyHub() {
               <small>実過去問は非公開のため、公式形式に準拠した独自問題と公式サンプルへのリンクを収録</small>
             </div>
           </article>
-        </section>
-        <ComprehensiveChallenge subjects={subjects} />
+          </section>
+        )}
+        {isFourthYearFirstFinal && (
+          <ComprehensiveChallenge subjects={subjects} />
+        )}
       </main>
 
-      <footer><span>TEST//GRID</span><p>9 SUBJECTS + TOEIC IP · AUTO SAVE · ACCOUNT SYNC</p><span>HUB 01</span></footer>
+      <footer><span>TEST//GRID</span><p>5 YEARS · EXAMS + QUALIFICATIONS · AUTO SAVE</p><span>HUB 01</span></footer>
 
       {editing && (
         <div className="subject-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="subject-dialog-title">

@@ -143,15 +143,19 @@ async function render(path = "/", init = {}) {
   );
 }
 
-test("server-renders the nine-subject study hub", async () => {
+test("server-renders the five-year academic study hub at fourth-year first-final", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   assert.match(html, /<title>TEST\/\/GRID/);
-  assert.match(html, /9教科を/);
-  assert.match(html, /科目別の勉強机/);
+  assert.match(html, /5年間の試験を/);
+  assert.match(html, /学年と試験区分を選ぶ/);
+  assert.match(html, /前期中間/);
+  assert.match(html, /その他（資格・TOEICなど）/);
+  assert.match(html, /4<!-- -->年・<!-- -->前期末/);
+  assert.match(html, /今回の9教科は4年前期末/);
   assert.match(html, /ネットワーク記述対策から始める/);
   assert.match(html, /暗記帳と検索はここです/);
   assert.match(html, /9教科総合/);

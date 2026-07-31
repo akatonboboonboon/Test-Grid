@@ -15,6 +15,13 @@ import {
   mergeRapidRankingProfiles,
   normalizeRankingName,
 } from "./rapid-ranking-profile";
+import {
+  TEST_BUILDER_MAX_COLLECTION_BYTES,
+  TEST_BUILDER_STORAGE_KEY,
+  readProjects,
+  writeProjects,
+  type TestBuilderProject,
+} from "./test-builder-engine";
 
 type AccountUser = {
   displayName: string;
@@ -64,7 +71,54 @@ function mergeProgress(remoteValue: string, localValue: string) {
   return JSON.stringify(merged);
 }
 
+function parseTestBuilderProjects(value: string): TestBuilderProject[] | null {
+  try {
+    return readProjects(value);
+  } catch {
+    return null;
+  }
+}
+
+function uniqueTestBuilderProjects(projects: readonly TestBuilderProject[]) {
+  const seen = new Set<string>();
+  return projects.filter((project) => {
+    if (seen.has(project.projectId)) return false;
+    seen.add(project.projectId);
+    return true;
+  });
+}
+
+function writeLargestTestBuilderPrefix(projects: readonly TestBuilderProject[]) {
+  for (let length = projects.length; length >= 0; length -= 1) {
+    try {
+      const serialized = writeProjects(projects.slice(0, length));
+      if (new TextEncoder().encode(serialized).byteLength > TEST_BUILDER_MAX_COLLECTION_BYTES) continue;
+      return serialized;
+    } catch {
+      // The engine owns collection limits. Preserve the local-first prefix that fits.
+    }
+  }
+  return "[]";
+}
+
+export function mergeTestBuilderProjectCollections(remoteValue: string, localValue: string) {
+  const remote = parseTestBuilderProjects(remoteValue);
+  const local = parseTestBuilderProjects(localValue);
+
+  if (!remote && !local) return "[]";
+  if (!remote) return writeLargestTestBuilderPrefix(uniqueTestBuilderProjects(local ?? []));
+  if (!local) return writeLargestTestBuilderPrefix(uniqueTestBuilderProjects(remote));
+
+  return writeLargestTestBuilderPrefix(uniqueTestBuilderProjects([
+    ...local,
+    ...remote,
+  ]));
+}
+
 function mergeRawValue(key: string, remoteValue: string, localValue: string) {
+  if (key === TEST_BUILDER_STORAGE_KEY) {
+    return mergeTestBuilderProjectCollections(remoteValue, localValue);
+  }
   if (key === RAPID_HISTORY_STORAGE_KEY) {
     try {
       return JSON.stringify(mergeRapidHistories(JSON.parse(remoteValue), JSON.parse(localValue)));

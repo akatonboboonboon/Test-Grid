@@ -3980,6 +3980,16 @@ footer p {
   transform: translate(-3px, -3px);
 }
 
+.hub-builder-launch {
+  background: var(--yellow);
+  box-shadow: 9px 9px 0 var(--violet);
+  margin-top: -8px;
+}
+
+.hub-builder-launch:hover {
+  box-shadow: 12px 12px 0 var(--violet);
+}
+
 .hub-memory-launch span {
   display: grid;
   gap: 5px;
@@ -4009,6 +4019,11 @@ footer p {
   font-size: 11px;
   padding: 13px 16px;
   white-space: nowrap;
+}
+
+.hub-builder-launch b {
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .hub-summary {
@@ -4061,6 +4076,222 @@ footer p {
   line-height: 1.8;
 }
 
+.hub-academic-browser {
+  background: rgba(21, 26, 34, 0.94);
+  border: 1px solid var(--line);
+  margin: -18px 0 54px;
+  padding: clamp(18px, 3vw, 30px);
+}
+
+.hub-academic-browser-head {
+  align-items: end;
+  display: flex;
+  gap: 40px;
+  justify-content: space-between;
+}
+
+.hub-academic-browser-head span {
+  color: rgba(244, 240, 230, 0.5);
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.hub-academic-browser-head h2 {
+  font-size: clamp(28px, 3.2vw, 44px);
+  letter-spacing: -0.055em;
+  margin: 8px 0 0;
+}
+
+.hub-academic-browser-head > p {
+  color: rgba(244, 240, 230, 0.54);
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+  max-width: 390px;
+}
+
+.hub-academic-year-tabs,
+.hub-academic-period-tabs {
+  display: grid;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.hub-academic-year-tabs {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.hub-academic-period-tabs {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+.hub-academic-year-tabs button,
+.hub-academic-period-tabs button {
+  background: rgba(244, 240, 230, 0.035);
+  border: 1px solid rgba(244, 240, 230, 0.2);
+  color: var(--paper);
+  cursor: pointer;
+  min-height: 64px;
+  padding: 12px;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.hub-academic-year-tabs button:hover,
+.hub-academic-period-tabs button:hover {
+  border-color: var(--cyan);
+  transform: translateY(-2px);
+}
+
+.hub-academic-year-tabs button:focus-visible,
+.hub-academic-period-tabs button:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+}
+
+.hub-academic-year-tabs button.is-active,
+.hub-academic-period-tabs button.is-active {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: var(--ink);
+}
+
+.hub-academic-year-tabs button span {
+  display: block;
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  opacity: 0.72;
+}
+
+.hub-academic-year-tabs button strong {
+  display: block;
+  font-size: 20px;
+  margin-top: 5px;
+}
+
+.hub-academic-period-tabs button {
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.hub-academic-current {
+  align-items: center;
+  border-left: 5px solid var(--lime);
+  display: grid;
+  gap: 4px 18px;
+  grid-template-columns: auto 1fr auto;
+  margin-top: 18px;
+  padding: 11px 14px;
+}
+
+.hub-academic-current span,
+.hub-academic-current small {
+  color: rgba(244, 240, 230, 0.58);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.hub-academic-current strong {
+  font-size: clamp(18px, 2vw, 25px);
+}
+
+.hub-academic-empty {
+  background: rgba(21, 26, 34, 0.64);
+  border: 1px dashed rgba(244, 240, 230, 0.36);
+  margin-top: 16px;
+  min-height: 260px;
+  padding: clamp(28px, 5vw, 64px);
+}
+
+.hub-academic-empty > span {
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.hub-academic-empty h3 {
+  font-size: clamp(25px, 3vw, 40px);
+  letter-spacing: -0.05em;
+  margin: 18px 0 10px;
+}
+
+.hub-academic-empty p {
+  color: rgba(244, 240, 230, 0.62);
+  line-height: 1.8;
+  margin: 0 0 24px;
+}
+
+.hub-academic-empty a {
+  background: var(--lime);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  display: inline-flex;
+  font-weight: 900;
+  gap: 22px;
+  padding: 14px 17px;
+}
+
+@media (max-width: 760px) {
+  .hub-academic-browser {
+    margin-top: -22px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .hub-academic-browser-head {
+    align-items: start;
+    display: block;
+  }
+
+  .hub-academic-browser-head > p {
+    margin-top: 12px;
+  }
+
+  .hub-academic-year-tabs,
+  .hub-academic-period-tabs {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    margin-left: -14px;
+    margin-right: -14px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding: 3px 14px 8px;
+    scroll-snap-type: inline mandatory;
+  }
+
+  .hub-academic-year-tabs {
+    grid-auto-columns: minmax(104px, 1fr);
+  }
+
+  .hub-academic-period-tabs {
+    grid-auto-columns: minmax(168px, 1fr);
+  }
+
+  .hub-academic-year-tabs button,
+  .hub-academic-period-tabs button {
+    scroll-snap-align: start;
+  }
+
+  .hub-academic-current {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .hub-academic-empty {
+    min-height: 0;
+    padding: 28px 20px;
+  }
+}
 .hub-exam-schedule {
   margin: -18px 0 54px;
 }
@@ -4285,6 +4516,127 @@ footer p {
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hub-builder-projects {
+  border-top: 1px solid var(--line);
+  margin-top: 34px;
+  padding-top: 28px;
+}
+
+.hub-builder-projects-heading {
+  align-items: end;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.hub-builder-projects-heading span,
+.hub-builder-projects-heading small {
+  color: rgba(244, 240, 230, 0.52);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.hub-builder-projects-heading h3 {
+  font-size: clamp(24px, 2.7vw, 36px);
+  letter-spacing: -0.05em;
+  margin: 7px 0 0;
+}
+
+.hub-builder-project-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hub-builder-project-card {
+  background: rgba(21, 26, 34, 0.9);
+  border: 1px solid rgba(244, 240, 230, 0.2);
+  border-top: 5px solid var(--cyan);
+  display: flex;
+  flex-direction: column;
+  min-height: 270px;
+  min-width: 0;
+  padding: 22px;
+}
+
+.hub-builder-project-meta {
+  align-items: center;
+  color: var(--cyan);
+  display: flex;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 850;
+  gap: 12px;
+  justify-content: space-between;
+  letter-spacing: 0.08em;
+}
+
+.hub-builder-project-meta span,
+.hub-builder-project-card h4 {
+  overflow-wrap: anywhere;
+}
+
+.hub-builder-project-card h4 {
+  font-size: clamp(22px, 2.1vw, 30px);
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+  margin: 24px 0;
+}
+
+.hub-builder-project-card dl {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: auto 0 18px;
+}
+
+.hub-builder-project-card dl > div {
+  background: rgba(244, 240, 230, 0.055);
+  min-width: 0;
+  padding: 10px 8px;
+}
+
+.hub-builder-project-card dt {
+  color: rgba(244, 240, 230, 0.48);
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
+.hub-builder-project-card dd {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 850;
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.hub-builder-project-card > a {
+  align-items: center;
+  background: var(--cyan);
+  color: var(--ink);
+  display: flex;
+  font-size: 11px;
+  font-weight: 900;
+  gap: 16px;
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 11px 13px;
+  text-decoration: none;
+}
+
+.hub-builder-project-card > a:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.hub-builder-project-card > a:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
 }
 
 .subject-tile {
@@ -5134,7 +5486,8 @@ footer p {
     min-height: auto;
   }
 
-  .subject-grid {
+  .subject-grid,
+  .hub-builder-project-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -5225,8 +5578,24 @@ footer p {
     margin-top: 12px;
   }
 
-  .subject-grid {
+  .subject-grid,
+  .hub-builder-project-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hub-builder-projects-heading {
+    align-items: start;
+    display: block;
+  }
+
+  .hub-builder-projects-heading small {
+    display: block;
+    margin-top: 10px;
+  }
+
+  .hub-builder-project-card {
+    min-height: 0;
+    padding: 20px 16px;
   }
 
   .subject-tile {

@@ -31,14 +31,16 @@ test("defines the five 2026 exam dates and covers all nine subjects", async () =
   ]));
 });
 
-test("renders the schedule directly after the hub summary with dates, subjects, and countdowns", async () => {
+test("renders the fourth-year first-final schedule after the academic selector", async () => {
   const page = await readFile(PAGE_URL, "utf8");
   const summaryPosition = page.indexOf('className="hub-summary"');
+  const academicPosition = page.indexOf('className="hub-academic-browser"');
   const schedulePosition = page.indexOf('className="hub-exam-schedule"');
   const subjectsPosition = page.indexOf('className="hub-subject-section"');
 
   assert.match(page, /EXAM_SCHEDULE/);
-  assert.ok(summaryPosition >= 0 && schedulePosition > summaryPosition && subjectsPosition > schedulePosition);
+  assert.ok(summaryPosition >= 0 && academicPosition > summaryPosition && schedulePosition > academicPosition && subjectsPosition > schedulePosition);
+  assert.match(page, /isFourthYearFirstFinal && \(\s*<section className="hub-exam-schedule"/);
   assert.match(page, /EXAM_SCHEDULE\.map\(\(entry, index\)/);
   assert.match(page, /<time dateTime=\{entry\.date\}>\{entry\.displayDate\}<\/time>/);
   assert.match(page, /subjects\.find\(\(subject\) => subject\.id === subjectId\)/);

@@ -88,5 +88,5 @@ test("study hub treats thermodynamics as ready material with real card metrics",
   assert.match(hub, /import \{ THERMODYNAMICS_FORMULAS \}/);
   assert.match(hub, /subject\.id === "subject-4"[\s\S]*?cards: THERMODYNAMICS_FORMULAS\.length/);
   assert.match(hub, /subject\.id === "subject-4"[^\n]*\|\| subject\.id === "subject-6"/);
-  assert.match(hub, /熱・流体力学は追加範囲を含む熱力学9枚・7単元/);
+  assert.match(hub, /\? subject\.memo \|\|/);
 });

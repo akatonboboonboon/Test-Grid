@@ -7,8 +7,8 @@ import "./globals.css";
 
 export const dynamic = "force-dynamic";
 
-const title = "TEST//GRID — 9教科＋TOEIC IP対策ハブ";
-const description = "9教科の定期試験とTOEIC L&R IPを、暗記カード・一問一答・本番形式演習・音声付きリスニングで繰り返せる学習サイト。";
+const title = "TEST//GRID — 1〜5年の試験・資格対策ハブ（TOEIC IP）";
+const description = "1年から5年までの定期試験と資格・TOEIC IP対策を、学年と試験区分に分けて繰り返し学べる学習サイト。";
 
 export async function generateMetadata(): Promise<Metadata> {
   const incomingHeaders = await headers();
