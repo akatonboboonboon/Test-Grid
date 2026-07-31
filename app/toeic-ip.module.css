@@ -533,61 +533,50 @@
 }
 
 .scene {
-  background: linear-gradient(180deg, #cceef0 0 57%, #d3cab8 57% 100%);
+  background: #091117;
   border: 8px solid white;
   box-shadow: 0 0 0 1px rgba(16, 24, 32, 0.4);
-  min-height: 270px;
+  margin: 18px 0;
   overflow: hidden;
-  position: relative;
 }
 
-.scene::before,
-.scene::after {
-  content: "";
-  position: absolute;
+.scenePhoto {
+  background: #091117;
+  display: block;
+  height: auto;
+  max-height: 620px;
+  object-fit: contain;
+  width: 100%;
 }
 
-.scene::before {
-  background: #fff8d7;
-  border: 3px solid #1f4c57;
-  height: 86px;
-  left: 12%;
-  top: 18%;
-  width: 31%;
+.sceneCaption {
+  align-items: center;
+  background: #091117;
+  color: var(--paper);
+  display: flex;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  gap: 8px 18px;
+  justify-content: space-between;
+  line-height: 1.55;
+  padding: 10px 12px;
 }
 
-.scene::after {
-  background: #293b45;
-  bottom: 19%;
-  box-shadow: 110px -18px 0 -28px #da835d, 148px 8px 0 -12px #456d7c, 285px 12px 0 -6px #876d55;
-  height: 48px;
-  left: 16%;
-  width: 190px;
+.sceneCaption a {
+  color: #6ee7d8;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
-.scene[data-scene*="station"] {
-  background: linear-gradient(180deg, #cce9f2 0 62%, #68767e 62% 68%, #d6d0c6 68% 100%);
-}
-
-.scene[data-scene*="warehouse"] {
-  background: linear-gradient(180deg, #cfd5d2 0 66%, #9c8066 66% 100%);
-}
-
-.scene[data-scene*="restaurant"],
-.scene[data-scene*="cafe"] {
-  background: linear-gradient(180deg, #f7ddb0 0 60%, #825f46 60% 100%);
-}
-
-.scene[data-scene*="outdoor"] {
-  background: linear-gradient(180deg, #a9dbe7 0 52%, #8bb974 52% 100%);
-}
-
-.sceneLabel {
-  background: rgba(9, 17, 23, 0.88);
-  bottom: 12px;
-  left: 12px;
-  padding: 8px 10px;
-  position: absolute;
+.sceneAnswer {
+  background: #e2ece7;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.65;
+  margin: 0;
+  padding: 12px;
 }
 
 .choices {
@@ -699,9 +688,40 @@
 .vocabToolbar {
   align-items: end;
   display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  grid-template-columns: minmax(260px, 1.8fr) repeat(4, minmax(125px, 0.6fr));
   margin-top: 22px;
+}
+
+.filterBox {
+  display: grid;
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 900;
+  gap: 7px;
+  letter-spacing: 0.08em;
+}
+
+.filterBox select {
+  background: white;
+  border: 1px solid rgba(16, 24, 32, 0.4);
+  color: var(--ink);
+  min-height: 45px;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.vocabStats {
+  align-items: center;
+  background: #e2ece7;
+  display: flex;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 9px;
+  gap: 8px 20px;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 12px 14px;
 }
 
 .vocabGrid {
@@ -714,7 +734,28 @@
 .vocabCard {
   background: white;
   border: 1px solid rgba(16, 24, 32, 0.28);
+  contain-intrinsic-size: 300px;
+  content-visibility: auto;
   min-height: 215px;
+  padding: 20px;
+}
+
+.vocabMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.loadMoreRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.emptyState {
+  background: #e2ece7;
+  border-left: 6px solid var(--accent);
+  margin-top: 18px;
   padding: 20px;
 }
 
@@ -949,6 +990,14 @@
   .resourceGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .vocabToolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vocabToolbar .searchBox {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1054,7 +1103,16 @@
   }
 
   .scene {
-    min-height: 220px;
+    min-height: 0;
+  }
+
+  .scenePhoto {
+    max-height: 480px;
+  }
+
+  .sceneCaption {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .questionPane h3 {

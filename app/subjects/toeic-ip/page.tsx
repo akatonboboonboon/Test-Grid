@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import styles from "../../toeic-ip.module.css";
 import {
@@ -27,6 +33,7 @@ type TabId =
   | "mock"
   | "resources";
 type DifficultyFilter = "all" | Difficulty;
+type VocabStatusFilter = "all" | "unmastered" | "mastered";
 
 type Settings = {
   activeTab: TabId;
@@ -121,6 +128,32 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   basic: "基礎",
   standard: "標準",
   advanced: "発展",
+};
+
+const VOCAB_BATCH_SIZE = 90;
+
+const TOPIC_LABELS: Record<string, string> = {
+  "corporate-development": "企業・事業開発",
+  dining: "飲食",
+  entertainment: "娯楽・イベント",
+  finance: "財務・会計",
+  "general-business": "一般ビジネス",
+  health: "医療・健康",
+  property: "不動産・施設",
+  manufacturing: "製造",
+  office: "オフィス",
+  personnel: "人事・採用",
+  purchasing: "購買・物流",
+  technology: "技術",
+  travel: "旅行・交通",
+};
+
+const POS_LABELS: Record<string, string> = {
+  noun: "名詞",
+  verb: "動詞",
+  adjective: "形容詞",
+  adverb: "副詞",
+  phrase: "熟語・定型表現",
 };
 
 const PAPER_DISTRIBUTION: Record<Part, number> = {
@@ -488,16 +521,43 @@ function QuestionView({
         </div>
 
         {question.scene ? (
-          <div
-            className={styles.scene}
-            data-scene={question.scene.key}
-            role="img"
-            aria-label={question.scene.altJa}
-          >
-            <span className={styles.sceneLabel}>
-              場面イメージ：{question.scene.altJa}
-            </span>
-          </div>
+          <figure className={styles.scene}>
+            <img
+              alt={question.scene.image.alt}
+              className={styles.scenePhoto}
+              decoding="async"
+              height={question.scene.image.height}
+              loading="eager"
+              src={question.scene.image.src}
+              width={question.scene.image.width}
+            />
+            <figcaption className={styles.sceneCaption}>
+              <span>Part 1 練習写真</span>
+              <span>
+                Photo:{" "}
+                <a
+                  href={question.scene.image.sourceUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  {question.scene.image.credit}
+                </a>
+                {" · "}
+                <a
+                  href={question.scene.image.licenseUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  {question.scene.image.licenseName}
+                </a>
+              </span>
+            </figcaption>
+            {answered ? (
+              <p className={styles.sceneAnswer}>
+                写真の要点：{question.scene.altJa}
+              </p>
+            ) : null}
+          </figure>
         ) : null}
 
         {question.script ? (
@@ -690,6 +750,13 @@ export default function ToeicIpPage() {
   );
   const [listeningAnswered, setListeningAnswered] = useState(false);
   const [vocabSearch, setVocabSearch] = useState("");
+  const [vocabTopic, setVocabTopic] = useState("all");
+  const [vocabDifficulty, setVocabDifficulty] = useState("all");
+  const [vocabPartOfSpeech, setVocabPartOfSpeech] = useState("all");
+  const [vocabStatus, setVocabStatus] = useState<VocabStatusFilter>("all");
+  const [vocabVisibleCount, setVocabVisibleCount] =
+    useState(VOCAB_BATCH_SIZE);
+  const deferredVocabSearch = useDeferredValue(vocabSearch);
   const [mockCount, setMockCount] = useState<MockCount>(40);
   const [mockSession, setMockSession] = useState<MockSession | null>(null);
   const [mockResult, setMockResult] = useState<MockResult | null>(null);
@@ -1017,11 +1084,16 @@ export default function ToeicIpPage() {
     [settings.difficulty, settings.listeningParts],
   );
 
+  const masteredVocabSet = useMemo(
+    () => new Set(masteredVocab),
+    [masteredVocab],
+  );
+
   const normalizedVocab = useMemo(
     () =>
       (TOEIC_VOCAB as readonly unknown[]).map((item, index) => {
         const raw = unknownRecord(item);
-        return {
+        const normalized = {
           id: textField(raw, ["id"], `toeic-vocab-${index + 1}`),
           term: textField(raw, ["term", "word", "phrase"], `Word ${index + 1}`),
           pronunciation: textField(raw, ["pronunciation", "phonetic"]),
@@ -1029,30 +1101,61 @@ export default function ToeicIpPage() {
           collocation: textField(raw, ["collocation", "phraseJa"]),
           example: textField(raw, ["example", "exampleEn"]),
           exampleJa: textField(raw, ["exampleJa", "translationJa"]),
-          tag: textField(raw, ["part", "topic", "category"], "TOEIC"),
+          topic: textField(raw, ["topic", "category"], "general-business"),
+          difficulty: textField(raw, ["difficulty"], "basic"),
+          partOfSpeech: textField(raw, ["partOfSpeech"], "phrase"),
+        };
+        return {
+          ...normalized,
+          searchText: Object.values(normalized).join(" ").toLowerCase(),
         };
       }),
     [],
   );
 
   const filteredVocab = useMemo(() => {
-    const query = vocabSearch.trim().toLowerCase();
-    if (!query) return normalizedVocab;
-    return normalizedVocab.filter((item) =>
-      [
-        item.term,
-        item.pronunciation,
-        item.meaning,
-        item.collocation,
-        item.example,
-        item.exampleJa,
-        item.tag,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query),
-    );
-  }, [normalizedVocab, vocabSearch]);
+    const query = deferredVocabSearch.trim().toLowerCase();
+    return normalizedVocab.filter((item) => {
+      if (query && !item.searchText.includes(query)) return false;
+      if (vocabTopic !== "all" && item.topic !== vocabTopic) return false;
+      if (
+        vocabDifficulty !== "all" &&
+        item.difficulty !== vocabDifficulty
+      ) {
+        return false;
+      }
+      if (
+        vocabPartOfSpeech !== "all" &&
+        item.partOfSpeech !== vocabPartOfSpeech
+      ) {
+        return false;
+      }
+      const mastered = masteredVocabSet.has(item.id);
+      if (vocabStatus === "mastered" && !mastered) return false;
+      if (vocabStatus === "unmastered" && mastered) return false;
+      return true;
+    });
+  }, [
+    deferredVocabSearch,
+    masteredVocabSet,
+    normalizedVocab,
+    vocabDifficulty,
+    vocabPartOfSpeech,
+    vocabStatus,
+    vocabTopic,
+  ]);
+
+  const visibleVocab = filteredVocab.slice(0, vocabVisibleCount);
+
+  useEffect(() => {
+    setVocabVisibleCount(VOCAB_BATCH_SIZE);
+  }, [
+    deferredVocabSearch,
+    vocabDifficulty,
+    vocabPartOfSpeech,
+    vocabStatus,
+    vocabTopic,
+  ]);
 
   const attempts = Object.values(progress).reduce(
     (sum, item) => sum + (Number(item.attempts) || 0),
@@ -1176,7 +1279,7 @@ export default function ToeicIpPage() {
             <h1>TOEIC IP 対策</h1>
             <p>
               英語を基礎に、TOEIC Listening & Readingを独立した教科として学習。
-              Part別演習、音声・ディクテーション、60語の単語帳、時間制模試をまとめています。
+              Part別演習、音声・ディクテーション、{TOEIC_VOCAB.length.toLocaleString("ja-JP")}語の大規模単語帳、時間制模試をまとめています。
             </p>
           </div>
           <div className={styles.heroSide}>
@@ -1317,7 +1420,7 @@ export default function ToeicIpPage() {
                   </div>
                   <div className={styles.resultCard}>
                     <span>暗記済み</span>
-                    <strong>{masteredVocab.length}/60</strong>
+                    <strong>{masteredVocab.length.toLocaleString("ja-JP")}/{TOEIC_VOCAB.length.toLocaleString("ja-JP")}</strong>
                   </div>
                 </div>
               </article>
@@ -1471,12 +1574,12 @@ export default function ToeicIpPage() {
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <div>
-                <p className={styles.sectionKicker}>VOCABULARY 60</p>
-                <h2>TOEIC頻出語・60語</h2>
+                <p className={styles.sectionKicker}>VOCABULARY {TOEIC_VOCAB.length.toLocaleString("ja-JP")}</p>
+                <h2>TOEIC頻出語・{TOEIC_VOCAB.length.toLocaleString("ja-JP")}語</h2>
               </div>
               <p>
                 検索と暗記済みチェックは端末に保存されます（暗記済み{" "}
-                {masteredVocab.length}/60）。
+                {masteredVocab.length.toLocaleString("ja-JP")}/{TOEIC_VOCAB.length.toLocaleString("ja-JP")}）。
               </p>
             </div>
 
@@ -1490,47 +1593,154 @@ export default function ToeicIpPage() {
                   value={vocabSearch}
                 />
               </label>
-              <strong>{filteredVocab.length}語を表示</strong>
+              <label className={styles.filterBox}>
+                <span>カテゴリ</span>
+                <select
+                  onChange={(event) => setVocabTopic(event.target.value)}
+                  value={vocabTopic}
+                >
+                  <option value="all">すべて</option>
+                  {Object.entries(TOPIC_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.filterBox}>
+                <span>難度</span>
+                <select
+                  onChange={(event) => setVocabDifficulty(event.target.value)}
+                  value={vocabDifficulty}
+                >
+                  <option value="all">すべて</option>
+                  {Object.entries(DIFFICULTY_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.filterBox}>
+                <span>品詞</span>
+                <select
+                  onChange={(event) =>
+                    setVocabPartOfSpeech(event.target.value)
+                  }
+                  value={vocabPartOfSpeech}
+                >
+                  <option value="all">すべて</option>
+                  {Object.entries(POS_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.filterBox}>
+                <span>暗記状態</span>
+                <select
+                  onChange={(event) =>
+                    setVocabStatus(event.target.value as VocabStatusFilter)
+                  }
+                  value={vocabStatus}
+                >
+                  <option value="all">すべて</option>
+                  <option value="unmastered">未暗記</option>
+                  <option value="mastered">暗記済み</option>
+                </select>
+              </label>
             </div>
 
-            <div className={styles.vocabGrid}>
-              {filteredVocab.map((item) => {
-                const mastered = masteredVocab.includes(item.id);
-                return (
-                  <article
-                    className={cx(
-                      styles.vocabCard,
-                      mastered && styles.mastered,
-                    )}
-                    key={item.id}
-                  >
-                    <span className={styles.vocabTag}>{item.tag}</span>
-                    <h3>{item.term}</h3>
-                    {item.pronunciation ? <small>{item.pronunciation}</small> : null}
-                    <p>
-                      <strong>{item.meaning}</strong>
-                    </p>
-                    {item.collocation ? <p>{item.collocation}</p> : null}
-                    {item.example ? <p lang="en">{item.example}</p> : null}
-                    {item.exampleJa ? <small>{item.exampleJa}</small> : null}
-                    <button
-                      aria-pressed={mastered}
-                      className={styles.secondaryButton}
-                      onClick={() =>
-                        setMasteredVocab((current) =>
-                          current.includes(item.id)
-                            ? current.filter((id) => id !== item.id)
-                            : [...current, item.id],
-                        )
-                      }
-                      type="button"
-                    >
-                      {mastered ? "✓ 暗記済み" : "暗記済みにする"}
-                    </button>
-                  </article>
-                );
-              })}
+            <div className={styles.vocabStats} aria-live="polite">
+              <strong>
+                表示 {visibleVocab.length.toLocaleString("ja-JP")} / 絞込{" "}
+                {filteredVocab.length.toLocaleString("ja-JP")} / 全体{" "}
+                {TOEIC_VOCAB.length.toLocaleString("ja-JP")}
+              </strong>
+              <span>
+                暗記済み {masteredVocab.length.toLocaleString("ja-JP")}語
+              </span>
             </div>
+
+            {filteredVocab.length ? (
+              <div className={styles.vocabGrid}>
+                {visibleVocab.map((item) => {
+                  const mastered = masteredVocabSet.has(item.id);
+                  return (
+                    <article
+                      className={cx(
+                        styles.vocabCard,
+                        mastered && styles.mastered,
+                      )}
+                      key={item.id}
+                    >
+                      <div className={styles.vocabMeta}>
+                        <span className={styles.vocabTag}>
+                          {TOPIC_LABELS[item.topic] ?? item.topic}
+                        </span>
+                        <span className={styles.vocabTag}>
+                          {POS_LABELS[item.partOfSpeech] ?? item.partOfSpeech}
+                        </span>
+                        <span className={styles.vocabTag}>
+                          {DIFFICULTY_LABELS[item.difficulty] ?? item.difficulty}
+                        </span>
+                      </div>
+                      <h3>{item.term}</h3>
+                      {item.pronunciation ? (
+                        <small>{item.pronunciation}</small>
+                      ) : null}
+                      <p>
+                        <strong>{item.meaning}</strong>
+                      </p>
+                      {item.collocation ? <p>{item.collocation}</p> : null}
+                      {item.example ? <p lang="en">{item.example}</p> : null}
+                      {item.exampleJa ? <small>{item.exampleJa}</small> : null}
+                      <button
+                        aria-pressed={mastered}
+                        className={styles.secondaryButton}
+                        onClick={() =>
+                          setMasteredVocab((current) =>
+                            current.includes(item.id)
+                              ? current.filter((id) => id !== item.id)
+                              : [...current, item.id],
+                          )
+                        }
+                        type="button"
+                      >
+                        {mastered ? "✓ 暗記済み" : "暗記済みにする"}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={styles.emptyState}>
+                条件に合う単語がありません。検索語や絞り込みを変更してください。
+              </p>
+            )}
+
+            {visibleVocab.length < filteredVocab.length ? (
+              <div className={styles.loadMoreRow}>
+                <button
+                  className={styles.primaryButton}
+                  onClick={() =>
+                    setVocabVisibleCount((current) =>
+                      Math.min(
+                        current + VOCAB_BATCH_SIZE,
+                        filteredVocab.length,
+                      ),
+                    )
+                  }
+                  type="button"
+                >
+                  次の{Math.min(
+                    VOCAB_BATCH_SIZE,
+                    filteredVocab.length - visibleVocab.length,
+                  )}語を表示
+                </button>
+              </div>
+            ) : null}
           </section>
         ) : null}
 
@@ -1756,7 +1966,7 @@ export default function ToeicIpPage() {
               <h3>過去問・著作権について</h3>
               <p>
                 TOEICの実際の過去問や公式教材本文・音声は転載していません。
-                このページの40問・60語は、公開されている公式の出題形式と能力領域を参考に作成した独自練習素材です。
+                このページの40問と{TOEIC_VOCAB.length.toLocaleString("ja-JP")}語の語彙データは、公開されている公式の出題形式と能力領域を参考に作成した独自練習素材です。
                 本番相当の問題は、上記の公式サンプルと「公式問題集12」を利用してください。
               </p>
             </div>

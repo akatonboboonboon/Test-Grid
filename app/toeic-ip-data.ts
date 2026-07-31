@@ -6,6 +6,8 @@
  * official sample, a recalled test, or a commercially published question.
  */
 
+import { TOEIC_EXPANDED_VOCABULARY } from "./toeic-ip-vocabulary-expanded";
+
 export type ToeicPart = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type ToeicSection = "listening" | "reading";
 export type ToeicDifficulty = "basic" | "standard" | "advanced";
@@ -52,6 +54,16 @@ export type ToeicScene = {
   key: string;
   altJa: string;
   setting: "office" | "warehouse" | "restaurant" | "street";
+  image: {
+    src: string;
+    width: number;
+    height: number;
+    alt: string;
+    credit: string;
+    sourceUrl: string;
+    licenseName: string;
+    licenseUrl: string;
+  };
   layers: Array<{
     kind: "background" | "person" | "furniture" | "object" | "vehicle";
     token: string;
@@ -83,7 +95,7 @@ export type ToeicQuestion = {
   difficulty: ToeicDifficulty;
   /** Full original transcript. A test UI should hide it until the answer is submitted. */
   script?: string;
-  /** A CSS-renderable scene; no external photograph is required. */
+  /** A licensed local practice photograph with attribution metadata. */
   scene?: ToeicScene;
   /** Full original reading stimulus. */
   passage?: string;
@@ -358,9 +370,20 @@ export const TOEIC_STUDY_PHASES: ToeicStudyPhase[] = [
 ];
 
 const OFFICE_SHELF_SCENE: ToeicScene = {
-  key: "office-person-placing-folders",
-  altJa: "オフィスで女性が壁際の棚へ青いフォルダーを置いている。中央には空の机があり、窓や他の人物はいない。",
+  key: "office-person-reaching-for-folder",
+  altJa: "オフィスで女性が机の上方にある棚のフォルダーへ手を伸ばしている。",
   setting: "office",
+  image: {
+    src: "/toeic-ip/part1-office-folders.jpg",
+    width: 1600,
+    height: 1067,
+    alt: "TOEIC Part 1練習写真。オフィス内の人物と物の配置を観察してください。",
+    credit: "Karola G / Kaboompics.com",
+    sourceUrl:
+      "https://www.pexels.com/photo/a-woman-reaching-for-a-folder-above-her-desk-7679598/",
+    licenseName: "Pexels License",
+    licenseUrl: "https://www.pexels.com/license/",
+  },
   layers: [
     { kind: "background", token: "office-wall", position: "background" },
     { kind: "furniture", token: "tall-shelf", position: "right" },
@@ -374,6 +397,17 @@ const LOADING_VAN_SCENE: ToeicScene = {
   key: "warehouse-worker-loading-van",
   altJa: "倉庫前で男性が段ボール箱を開いた配送車の後部へ持ち上げている。左側の地面には台車がある。",
   setting: "warehouse",
+  image: {
+    src: "/toeic-ip/part1-loading-van.jpg",
+    width: 1600,
+    height: 1067,
+    alt: "TOEIC Part 1練習写真。配送車付近の人物と荷物を観察してください。",
+    credit: "Tima Miroshnichenko",
+    sourceUrl:
+      "https://www.pexels.com/photo/delivery-man-getting-packages-from-a-van-6169177/",
+    licenseName: "Pexels License",
+    licenseUrl: "https://www.pexels.com/license/",
+  },
   layers: [
     { kind: "background", token: "warehouse-door", position: "background" },
     { kind: "vehicle", token: "open-delivery-van", position: "right" },
@@ -386,6 +420,17 @@ const RESTAURANT_SCENE: ToeicScene = {
   key: "restaurant-set-empty-tables",
   altJa: "無人のレストランで、複数のテーブルに皿、グラス、ナプキンが整然と並び、椅子は各テーブルの周りに置かれている。",
   setting: "restaurant",
+  image: {
+    src: "/toeic-ip/part1-restaurant-tables.jpg",
+    width: 1600,
+    height: 1067,
+    alt: "TOEIC Part 1練習写真。レストラン内のテーブルと備品を観察してください。",
+    credit: "Masood Aslami",
+    sourceUrl:
+      "https://www.pexels.com/photo/tables-set-in-an-empty-restaurant-room-19351564/",
+    licenseName: "Pexels License",
+    licenseUrl: "https://www.pexels.com/license/",
+  },
   layers: [
     { kind: "background", token: "restaurant-wall", position: "background" },
     { kind: "furniture", token: "round-tables", position: "center" },
@@ -398,6 +443,17 @@ const PRINTER_SCENE: ToeicScene = {
   key: "office-technician-checking-printer",
   altJa: "オフィスの複合機の前で作業員がひざをつき、開いた給紙トレイを確認している。床に紙は散らばっていない。",
   setting: "office",
+  image: {
+    src: "/toeic-ip/part1-printer-technician.jpg",
+    width: 1600,
+    height: 2845,
+    alt: "TOEIC Part 1練習写真。大型プリンター付近の人物の動作を観察してください。",
+    credit: "Bulat843",
+    sourceUrl:
+      "https://www.pexels.com/photo/technician-repairing-office-printer-in-workshop-37492296/",
+    licenseName: "Pexels License",
+    licenseUrl: "https://www.pexels.com/license/",
+  },
   layers: [
     { kind: "background", token: "office-hallway", position: "background" },
     { kind: "object", token: "large-printer", position: "right" },
@@ -481,18 +537,18 @@ export const TOEIC_QUESTIONS: ToeicQuestion[] = [
     kind: "photograph",
     prompt: "場面を最も正確に表す説明を選んでください。",
     choices: [
-      "A woman is placing folders on a shelf.",
+      "A woman is reaching for a folder on a shelf.",
       "Some windows are being washed.",
       "Several people are seated around a table.",
       "A cabinet is being moved through a doorway.",
     ],
     answerIndex: 0,
-    explanationJa: "女性がフォルダーを棚へ置いている場面なのでAが正解です。placing A on Bは「AをBの上へ置いている」。",
-    evidence: "正解音声: “A woman is placing folders on a shelf.” 場面の人物・動作・対象がすべて一致する。",
+    explanationJa: "女性が棚のフォルダーへ手を伸ばしているためAが正解です。reach for Aは「Aを取ろうとして手を伸ばす」という動作を表します。",
+    evidence: "正解音声: “A woman is reaching for a folder on a shelf.” 人物・動作・対象が写真と一致します。",
     ability: ["L_GIST_SHORT", "L_DETAIL_SHORT"],
     topic: "office",
     difficulty: "basic",
-    script: "(A) A woman is placing folders on a shelf. (B) Some windows are being washed. (C) Several people are seated around a table. (D) A cabinet is being moved through a doorway.",
+    script: "(A) A woman is reaching for a folder on a shelf. (B) Some windows are being washed. (C) Several people are seated around a table. (D) A cabinet is being moved through a doorway.",
     scene: OFFICE_SHELF_SCENE,
   },
   {
@@ -1181,7 +1237,7 @@ const TOEIC_VOCABULARY_SEEDS: ToeicVocabularySeed[] = [
   ["orientation", "noun", "研修、説明会", "employee orientation", "The employee orientation includes a tour of the laboratory.", "社員研修には研究所見学が含まれる。", "personnel", "standard"],
 ];
 
-export const TOEIC_VOCAB: ToeicVocabulary[] = TOEIC_VOCABULARY_SEEDS.map(
+const TOEIC_BASE_VOCAB: ToeicVocabulary[] = TOEIC_VOCABULARY_SEEDS.map(
   ([term, partOfSpeech, meaningJa, collocation, example, exampleJa, topic, difficulty], index) => ({
     id: `toeic-vocab-${String(index + 1).padStart(3, "0")}`,
     term,
@@ -1194,3 +1250,18 @@ export const TOEIC_VOCAB: ToeicVocabulary[] = TOEIC_VOCABULARY_SEEDS.map(
     difficulty,
   }),
 );
+
+export const TOEIC_VOCAB: ToeicVocabulary[] = [
+  ...TOEIC_BASE_VOCAB,
+  ...TOEIC_EXPANDED_VOCABULARY.map((entry, index) => ({
+    id: `toeic-vocab-${String(TOEIC_BASE_VOCAB.length + index + 1).padStart(3, "0")}`,
+    ...entry,
+  })),
+];
+
+const TOEIC_VOCAB_TERMS = TOEIC_VOCAB.map(({ term }) =>
+  term.normalize("NFKC").trim().toLocaleLowerCase("en-US"),
+);
+if (new Set(TOEIC_VOCAB_TERMS).size !== TOEIC_VOCAB_TERMS.length) {
+  throw new Error("Duplicate terms detected in TOEIC vocabulary bank");
+}
