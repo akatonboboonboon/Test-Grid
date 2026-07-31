@@ -142,6 +142,29 @@ test("six written mocks are 50 minutes, 10 terms, 100 points and cover every lis
   }
 });
 
+test("written mock shows the past-paper partial-credit rubric before and after the exam", async () => {
+  const [mocks, css] = await Promise.all([
+    readFile(new URL("network-written-mocks.tsx", appUrl), "utf8"),
+    readFile(new URL("network-written.module.css", appUrl), "utf8"),
+  ]);
+
+  const guideScores = [...mocks.matchAll(/\{ score: (0|3|5|8|10), label:/gu)]
+    .map((match) => Number(match[1]));
+  assert.deepEqual(guideScores, [0, 3, 5, 8, 10]);
+  assert.match(mocks, /過去問どおりの途中点/u);
+  assert.match(mocks, /0点（不正解）・5点（一部不正確、不十分）・10点（適切）/u);
+  assert.match(mocks, /3点・8点の中間点/u);
+  assert.match(mocks, /結果の採点基準/u);
+  assert.match(mocks, /10点目安/u);
+  assert.match(mocks, /100点目安/u);
+  assert.match(mocks, /自動採点[^。]*目安/u);
+  assert.match(mocks, /const result = evaluateNetworkWrittenAnswer\(current, answer, layerChoice\)/u);
+  assert.match(mocks, /score: result\.estimatedScore/u);
+  assert.match(mocks, /results\.reduce\(\(sum, result\) => sum \+ result\.score, 0\)/u);
+  assert.match(css, /\.scoreGuide\s*\{/u);
+  assert.match(css, /grid-template-columns: repeat\(auto-fit, minmax\(86px, 1fr\)\)/u);
+});
+
 test("written UI identifies the official PDF, explains strict dimensions, and prunes legacy progress IDs", async () => {
   const [page, mocks, layout, css] = await Promise.all([
     readFile(new URL("subjects/network/written/page.tsx", appUrl), "utf8"),

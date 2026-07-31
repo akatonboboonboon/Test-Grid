@@ -241,11 +241,11 @@ export default function StudyHub() {
   return (
     <div className="app-frame hub-page">
       <header className="topbar hub-topbar">
-        <Link className="brand" href="/" aria-label="9教科の学習一覧">
-          <span className="brand-mark hub-brand-mark" aria-hidden="true">T/9</span>
+        <Link className="brand" href="/" aria-label="9教科とTOEIC IPの学習一覧">
+          <span className="brand-mark hub-brand-mark" aria-hidden="true">T/+1</span>
           <span>
             <strong>TEST//GRID</strong>
-            <small>9-SUBJECT STUDY HUB</small>
+            <small>9 SUBJECTS + TOEIC IP</small>
           </span>
         </Link>
         <div className="header-actions">
@@ -409,10 +409,28 @@ export default function StudyHub() {
             })}
           </div>
         </section>
+        <section className="hub-toeic-section" aria-labelledby="toeic-ip-title">
+          <div className="hub-section-heading">
+            <div><span>QUALIFICATION / SUBJECT 10</span><h2 id="toeic-ip-title">TOEIC IP対策</h2></div>
+            <p>英語とは進捗を分けた専用科目。2026年12月25日に向けて、Listening・Readingの全Partを回します。</p>
+          </div>
+          <article className="hub-toeic-card">
+            <div className="hub-toeic-copy">
+              <p><span>EXAM</span><time dateTime="2026-12-25">2026.12.25</time><strong>{dateLabel("2026-12-25")}</strong></p>
+              <h3>紙200問とオンライン90問、<br />どちらでも崩れない。</h3>
+              <p>Part 1〜7、職場頻出語彙、文法、単一・複数文書、4アクセント対応の音声練習、時間制模試、復習履歴をひとつにまとめました。</p>
+            </div>
+            <div className="hub-toeic-actions">
+              <span>ORIGINAL PRACTICE · LISTENING AUDIO · AUTO SAVE</span>
+              <Link href="/subjects/toeic-ip">TOEIC IPの勉強を始める <b aria-hidden="true">→</b></Link>
+              <small>実過去問は非公開のため、公式形式に準拠した独自問題と公式サンプルへのリンクを収録</small>
+            </div>
+          </article>
+        </section>
         <ComprehensiveChallenge subjects={subjects} />
       </main>
 
-      <footer><span>TEST//GRID</span><p>9 SUBJECTS · AUTO SAVE · ACCOUNT SYNC</p><span>HUB 01</span></footer>
+      <footer><span>TEST//GRID</span><p>9 SUBJECTS + TOEIC IP · AUTO SAVE · ACCOUNT SYNC</p><span>HUB 01</span></footer>
 
       {editing && (
         <div className="subject-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="subject-dialog-title">

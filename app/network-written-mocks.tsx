@@ -31,6 +31,18 @@ function formatClock(totalSeconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+const PAST_PAPER_SCORE_GUIDE = [
+  { score: 0, label: "不正解" },
+  { score: 3, label: "中間点" },
+  { score: 5, label: "一部不正確・不十分" },
+  { score: 8, label: "中間点（満点目前）" },
+  { score: 10, label: "適切" },
+] as const;
+
+function scoreLabel(score: MockResult["score"]) {
+  return PAST_PAPER_SCORE_GUIDE.find((item) => item.score === score)?.label ?? "採点目安";
+}
+
 export default function NetworkWrittenMocks() {
   const [phase, setPhase] = useState<MockPhase>("setup");
   const [paperId, setPaperId] = useState(NETWORK_WRITTEN_MOCKS[0]?.id ?? "");
@@ -112,13 +124,28 @@ export default function NetworkWrittenMocks() {
       </div>
 
       {phase === "setup" && (
-        <div className={styles.pickerControls} role="group" aria-label="記述模試を選ぶ">
-          {NETWORK_WRITTEN_MOCKS.map((mock) => (
-            <button key={mock.id} type="button" onClick={() => startMock(mock.id)}>
-              模試 {String(mock.number).padStart(2, "0")}・50分
-            </button>
-          ))}
-        </div>
+        <>
+          <aside className={styles.scoreGuide} aria-labelledby="network-written-score-guide-title">
+            <div>
+              <span>PAST PAPER RUBRIC</span>
+              <h3 id="network-written-score-guide-title">過去問どおりの途中点</h3>
+              <p>0点（不正解）・5点（一部不正確、不十分）・10点（適切）を基本とし、答案の出来に応じて3点・8点の中間点を付けます。</p>
+            </div>
+            <ol>
+              {PAST_PAPER_SCORE_GUIDE.map((item) => (
+                <li key={item.score}><strong>{item.score}</strong><span>点</span><small>{item.label}</small></li>
+              ))}
+            </ol>
+            <small>自動採点は過去問基準に沿った目安です。実際の採点者による判断とは異なる場合があります。</small>
+          </aside>
+          <div className={styles.pickerControls} role="group" aria-label="記述模試を選ぶ">
+            {NETWORK_WRITTEN_MOCKS.map((mock) => (
+              <button key={mock.id} type="button" onClick={() => startMock(mock.id)}>
+                模試 {String(mock.number).padStart(2, "0")}・50分
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {phase === "active" && current && paper && (
@@ -162,8 +189,8 @@ export default function NetworkWrittenMocks() {
           {evaluation && (
             <section className={`${styles.feedback} ${evaluation.qualified ? styles.feedbackQualified : styles.feedbackRetry}`} aria-live="polite">
               <div className={styles.scoreBlock}>
-                <span>AUTO CHECK</span><strong>{evaluation.estimatedScore}<small> / 10点</small></strong>
-                <h3>{evaluation.qualified ? "過去問の満点基準クリア" : "部分点・答案を要復習"}</h3>
+                <span>AUTO CHECK / ESTIMATE</span><strong>{evaluation.estimatedScore}<small> / 10点目安</small></strong>
+                <h3>{evaluation.qualified ? "適切・過去問の満点基準クリア" : `${scoreLabel(evaluation.estimatedScore)}・答案を要復習`}</h3>
               </div>
               <div className={styles.checks}>
                 <div data-ok={evaluation.enoughCharacters}><b>{evaluation.enoughCharacters ? "✓" : "×"}</b><span>20文字</span><small>{evaluation.characterCount}文字</small></div>
@@ -185,7 +212,20 @@ export default function NetworkWrittenMocks() {
 
       {phase === "result" && paper && (
         <section className={`${styles.feedback} ${score >= 60 ? styles.feedbackQualified : styles.feedbackRetry}`} aria-live="polite">
-          <div className={styles.scoreBlock}><span>RESULT</span><strong>{score}<small> / 100点</small></strong><h3>{score >= 60 ? "合格ライン到達" : "60点まで要復習"}</h3><p>解答済み {results.length} / {paper.termIds.length}語</p></div>
+          <div className={styles.scoreBlock}><span>RESULT / ESTIMATE</span><strong>{score}<small> / 100点目安</small></strong><h3>{score >= 60 ? "合格ライン到達" : "60点まで要復習"}</h3><p>解答済み {results.length} / {paper.termIds.length}語</p></div>
+          <aside className={styles.scoreGuide} aria-labelledby="network-written-result-score-guide-title">
+            <div>
+              <span>PAST PAPER RUBRIC</span>
+              <h3 id="network-written-result-score-guide-title">結果の採点基準</h3>
+              <p>0点（不正解）・5点（一部不正確、不十分）・10点（適切）を基本とし、3点・8点も途中点として合計しています。</p>
+            </div>
+            <ol>
+              {PAST_PAPER_SCORE_GUIDE.map((item) => (
+                <li key={item.score}><strong>{item.score}</strong><span>点</span><small>{item.label}</small></li>
+              ))}
+            </ol>
+            <small>表示点は専用ルーブリックによる自動採点の目安です。</small>
+          </aside>
           <div className={styles.checks}>
             {paper.termIds.map((termId, index) => {
               const term = termsById.get(termId);

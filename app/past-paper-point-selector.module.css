@@ -1,0 +1,78 @@
+.grader {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+
+.grader legend {
+  padding: 0 0.35rem;
+  font-weight: 800;
+}
+
+.intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  opacity: 0.78;
+}
+
+.bands {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.bands button {
+  min-height: 4.5rem;
+  padding: 0.65rem;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bands button[aria-pressed="true"] {
+  outline: 3px solid #18c7b3;
+  outline-offset: 1px;
+  background: color-mix(in srgb, #18c7b3 18%, transparent);
+}
+
+.bands strong,
+.bands small {
+  display: block;
+}
+
+.bands small {
+  margin-top: 0.35rem;
+  line-height: 1.45;
+}
+
+.manual {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-weight: 700;
+}
+
+.manual input {
+  width: 5rem;
+  padding: 0.55rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+@media (max-width: 640px) {
+  .bands {
+    grid-template-columns: 1fr;
+  }
+
+  .manual {
+    justify-content: flex-start;
+  }
+}

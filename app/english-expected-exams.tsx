@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ENGLISH_EXPECTED_EXAMS,
   ENGLISH_EXPECTED_EXAM_SECTIONS,
@@ -10,20 +10,32 @@ import {
   type EnglishExpectedSectionId,
 } from "./english-expected-exams-data";
 import EnglishWeatherFigure from "./english-weather-figure";
+import { clampPartialCredit } from "./past-paper-partial-credit";
+import PastPaperPointSelector from "./past-paper-point-selector";
 import styles from "./english-expected-exams.module.css";
 
 type ExamPhase = "setup" | "active" | "paused" | "result";
 type AnswerMap = Record<string, string>;
-type CorrectMap = Record<string, boolean>;
+type PointMap = Record<string, number>;
 
 type StoredExpectedExam = {
-  version: 1;
+  version: 2;
   examId: string;
   phase: "paused" | "result";
   answers: AnswerMap;
-  manualCorrect: CorrectMap;
+  awardedPoints: PointMap;
   remainingSeconds: number;
   updatedAt: string;
+};
+
+type LegacyStoredExpectedExam = {
+  version: 1;
+  examId?: string;
+  phase?: "paused" | "result";
+  answers?: AnswerMap;
+  manualCorrect?: Record<string, boolean>;
+  remainingSeconds?: number;
+  updatedAt?: string;
 };
 
 const FULL_DURATION_SECONDS = 50 * 60;
@@ -81,23 +93,52 @@ function formatSavedAt(value: string) {
   return date.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+function initialPoints(exam: EnglishExpectedExam, answers: AnswerMap): PointMap {
+  return Object.fromEntries(exam.questions.map((question) => [
+    question.id,
+    isEnglishExpectedAnswerCorrect(question, answers[question.id] ?? "") ? question.points : 0,
+  ]));
+}
+
+function awardedFor(question: EnglishExpectedQuestion, awardedPoints: PointMap) {
+  return clampPartialCredit(question.points, awardedPoints[question.id] ?? 0);
+}
+
+function supportsPartialCredit(question: EnglishExpectedQuestion) {
+  return question.section === "order"
+    || question.section === "sentence-ja-en"
+    || question.section === "translation";
+}
+
 function parseSnapshot(value: string | null): StoredExpectedExam | null {
   if (!value) return null;
   try {
-    const parsed = JSON.parse(value) as Partial<StoredExpectedExam>;
+    const parsed = JSON.parse(value) as Partial<StoredExpectedExam> | LegacyStoredExpectedExam;
     const exam = ENGLISH_EXPECTED_EXAMS.find((candidate) => candidate.id === parsed.examId);
-    if (parsed.version !== 1 || !exam || typeof parsed.answers !== "object" || parsed.answers === null) return null;
-    const validIds = new Set(exam.questions.map((question) => question.id));
-    const answers = Object.fromEntries(Object.entries(parsed.answers).filter(([id, answer]) => validIds.has(id) && typeof answer === "string"));
-    const manualCorrect = typeof parsed.manualCorrect === "object" && parsed.manualCorrect !== null
-      ? Object.fromEntries(Object.entries(parsed.manualCorrect).filter(([id, correct]) => validIds.has(id) && correct === true))
-      : {};
+    if ((parsed.version !== 1 && parsed.version !== 2) || !exam || typeof parsed.answers !== "object" || parsed.answers === null) return null;
+    const validQuestions = new Map(exam.questions.map((question) => [question.id, question]));
+    const answers = Object.fromEntries(Object.entries(parsed.answers).filter(([id, answer]) => validQuestions.has(id) && typeof answer === "string"));
+    let awardedPoints: PointMap;
+    if (parsed.version === 2) {
+      const storedPoints = typeof parsed.awardedPoints === "object" && parsed.awardedPoints !== null ? parsed.awardedPoints : {};
+      awardedPoints = Object.fromEntries(Object.entries(storedPoints)
+        .filter(([id]) => validQuestions.has(id))
+        .map(([id, points]) => [id, clampPartialCredit((validQuestions.get(id) as EnglishExpectedQuestion).points, points)]));
+    } else {
+      const legacyManual = typeof parsed.manualCorrect === "object" && parsed.manualCorrect !== null ? parsed.manualCorrect : {};
+      awardedPoints = Object.fromEntries(exam.questions.map((question) => [
+        question.id,
+        legacyManual[question.id] === true || isEnglishExpectedAnswerCorrect(question, answers[question.id] ?? "")
+          ? question.points
+          : 0,
+      ]));
+    }
     return {
-      version: 1,
+      version: 2,
       examId: exam.id,
       phase: parsed.phase === "result" ? "result" : "paused",
       answers,
-      manualCorrect,
+      awardedPoints,
       remainingSeconds: typeof parsed.remainingSeconds === "number"
         ? Math.max(0, Math.min(FULL_DURATION_SECONDS, Math.floor(parsed.remainingSeconds)))
         : FULL_DURATION_SECONDS,
