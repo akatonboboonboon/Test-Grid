@@ -6,7 +6,15 @@ Drizzle support.
 
 ## Prerequisites
 
-- Node.js `>=22.13.0`
+- Node.js `22.23.4` (pinned in `.node-version`), or a later patched release
+  matching `^22.23.4 || ^24.22.1 || ^26.12.1`
+
+These minimum versions include the certificate trust fixes described in
+[Render's eMudhra advisory](https://render.com/docs/advisory-emudhra). Use a
+patched Node.js version for both builds and any Node.js runtime. If the hosting
+platform overrides `.node-version`, update its build/runtime version setting
+before rebuilding. Cloudflare Workers use a separate runtime, so a Node.js build
+pin alone does not establish the deployed worker's certificate trust status.
 
 ## Quick Start
 
